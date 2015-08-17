@@ -1,0 +1,10 @@
+################################
+# Dune module information file #
+################################
+
+#Name of the module
+Module: dune-vof
+Version: 1.0
+Maintainer: sambu@posteo.de
+#depending on
+Depends: dune-common dune-grid dune-geometry
