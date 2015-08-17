@@ -106,7 +106,7 @@ namespace Dune
 	  return points[i % points.size()]; 
 	}
 
-	void addVertex ( const V &vertex, const double TOL = 1e-10 )
+	void addVertex ( const V &vertex, const double TOL = 2e-14 )
 	{
 	  std::size_t n = points.size();
 	  
@@ -137,7 +137,7 @@ namespace Dune
 	  
 	}
 	
-	const int corners() const
+	const std::size_t corners() const
 	{
 	  return points.size();
 	}    
@@ -173,7 +173,7 @@ namespace Dune
 	
     private:
     
-	const int SkalarProdTest ( V vertex, V p1, V p2, const double TOL = 1e-10 ) const
+	const int SkalarProdTest ( V vertex, V p1, V p2, const double TOL = 1e-14 ) const
 	{
 	  V n = p2 - p1;
 	  rotate90degreesCounterClockwise( n );
@@ -189,6 +189,9 @@ namespace Dune
     template < class V >
     double polygonIntersectionVolume( const Polygon2D<V> polygon1, const Polygon2D<V> polygon2 )
     {
+      if ( polygon1.corners() <= 2 || polygon2.corners() <= 2 ) return 0;
+      
+      
       Polygon2D<V> intersectionPolygon;
       bool lastInside = false, thisInside = false;
       std::vector<std::pair<V,V>> cuttingLines;
@@ -204,7 +207,7 @@ namespace Dune
 	cuttingLines.clear();
       
 	// Ecken in anderem Polygon
-	for ( auto i = 0;  i < p1.corners() + 2; ++i )
+	for ( std::size_t i = 0;  i < p1.corners() + 2; ++i )
 	{
 	  if ( p2.pointInBorders( p1[i] ) )
 	  {
@@ -224,7 +227,7 @@ namespace Dune
 	
 	//Schnittpunkte
 	V is;
-	for ( auto i = 0;  i < p2.corners(); ++i )
+	for ( std::size_t i = 0;  i < p2.corners(); ++i )
 	{
 	  for ( std::size_t j = 0; j < cuttingLines.size(); j++ )
 	  {
@@ -241,26 +244,7 @@ namespace Dune
 	p1 = polygon2;
 	p2 = polygon1;
       }
-      
-      /*
-      std::cout << "P1: ";
-      for( auto e : polygon1.points )
-	std::cout << e << "   ";
-      std::cout << std::endl;
-      
-      std::cout << "P2: ";
-      for( auto e : polygon2.points )
-	std::cout << e << "   ";
-      std::cout << std::endl;
-	
-      if ( DEBUG )
-      {
-	std::cout << "Pschnitt: ";
-	for( auto e : intersectionPolygon.points )
-	  std::cout << e << "   ";
-	std::cout << std::endl << std::endl;
-      }*/
-      
+            
       return intersectionPolygon.volume();
       
     }
@@ -269,7 +253,7 @@ namespace Dune
 
 
     template < class GV, class E, class Geo, class V >
-    std::vector<V> lineIntersectionPoints( const GV& gridView, const E& entity, const Geo& geo, const Line2D<V>& g, const double TOL = 1e-10 )
+    std::vector<V> lineIntersectionPoints( const GV& gridView, const E& entity, const Geo& geo, const Line2D<V>& g, const double TOL = 2e-14 )
     {
       typedef typename GV::IntersectionIterator IntersectionIterator;
       typedef typename GV::Intersection Intersection;

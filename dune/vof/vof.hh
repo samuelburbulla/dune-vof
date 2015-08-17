@@ -13,8 +13,6 @@ namespace Dune
       if (argc > 1)
 	numberOfCells = atoi( argv[1] );
 	
-	
-	sprintf( folderName, "default" );
 
 	// arguments
 	if (argc > 2)

@@ -29,7 +29,7 @@ namespace Dune
 
       
     template < class G, class C, class R, class F, class D >
-    void reconstruct ( const G& grid, C& concentration, R& reconstruction, const F& cellIsMixed, const D& domain, const double TOL, const double eps )
+    void reconstruct ( const G& grid, C& concentration, R& reconstruction, const F& cellIsMixed, const D& domain, const double eps )
     {
       const int dimworld = G::dimensionworld;
       typedef typename Dune::FieldVector<double, dimworld> fvector;
@@ -141,20 +141,12 @@ namespace Dune
 	      g.n *= 1.0 / sumCount;
 	    }
 	    
-	      if ( g.n.two_norm() < TOL )
-		assert( false );
+	    assert( g.n.two_norm() > 1e-14 );
 	      
-	    
 	    count++;
 	    
-	  } while ( (g.n - normalOld).two_norm() > 1e-8 && count < 100 );   
-	  
-	  
-	  //TODO: why does the normal sometimes do not converge?
-	  if ( count == 100 ) {
-	    std::cout << " #forced stop# " << entityIndex << " error: " << (g.n - normalOld).two_norm() << std::endl;
-	    //assert(false);
-	  }
+	  } while ( (g.n - normalOld).two_norm() > 1e-8 && count < 30 );   // limit number of loops
+	
 	  
 	  auto entityIntersections = 
 	      computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
@@ -266,7 +258,7 @@ namespace Dune
     template < class F >
     double brentsMethod ( double a, double b, F f )
     {
-      const double TOL = 1e-10;
+      const double TOL = 1e-14;
       
       double fa,fb,fc,c,d,e,p,q,m,s,tol,r;
       

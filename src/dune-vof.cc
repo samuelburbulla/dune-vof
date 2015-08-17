@@ -22,8 +22,6 @@
 #include <dune/vof/evolve.hh>
 #include <dune/vof/reconstruct.hh>
 
-    
-    double TOL = 1e-8;
 
     double eps = 1e-3;
 
@@ -31,7 +29,7 @@
     template < class G, class C, class R, class D >
     void timeloop ( const G& grid, C& concentration, R& reconstruction, D& domain, 
 		    std::vector<bool>& cellIsMixed, std::vector<bool>& cellIsActive, double tEnd, double dt, 
-		    const int numberOfCells, const double TOL, const double eps, const char* folderName )
+		    const int numberOfCells, const double eps, const char* folderName )
     {
       double t = 0;
       int k = 0;
@@ -40,9 +38,9 @@
       int saveNumber = 1;
       
       
-      Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, eps );
-      Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, TOL, eps ); 
-      Dune::VoF::vtkout( grid, concentration, "concentration", folderName, numberOfCells, reconstruction, 0, t );
+      Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, numberOfCells, cellIsMixed, cellIsActive, eps );
+      Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps ); 
+      Dune::VoF::vtkout( grid, concentration, "concentration", folderName, numberOfCells, reconstruction, 0, cellIsMixed, cellIsActive, t );
       
             
       
@@ -50,9 +48,9 @@
       {
 	++k;   
 	
-	Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, eps );
+	Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, numberOfCells, cellIsMixed, cellIsActive, eps );
 	
-	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, TOL, eps ); 
+	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps ); 
 	  
 	Dune::VoF::evolve( grid, concentration, reconstruction, domain, numberOfCells, t, dt, eps, cellIsMixed, cellIsActive );
 	
@@ -60,7 +58,7 @@
 	
 	if ( t >= saveStep )
 	{
-	  Dune::VoF::vtkout( grid, concentration, "concentration", folderName, numberOfCells, reconstruction, saveNumber, t );
+	  Dune::VoF::vtkout( grid, concentration, "concentration", folderName, numberOfCells, reconstruction, saveNumber, cellIsMixed, cellIsActive, t );
 	  saveStep += saveInterval;
 	  ++saveNumber;
 	}
@@ -140,7 +138,7 @@
 	
 	    
 	// start time integration
-	timeloop( grid, concentration, reconstruction, domain, cellIsMixed, cellIsActive, 2 * M_PI, dt, numberOfCells, TOL, eps, folderName ); 
+	timeloop( grid, concentration, reconstruction, domain, cellIsMixed, cellIsActive, 2 * M_PI, dt, numberOfCells, eps, folderName ); 
 	
 	
 	//concentration on the end to check the error

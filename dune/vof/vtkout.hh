@@ -69,23 +69,53 @@ namespace Dune
       myfile.close();
     }
 
-    template < class R >
-    void writeReconstructionToGnuplot( const int k, const R& reconstruction, const char* folderName )
+    template < class R, class G >
+    void writeReconstructionToGnuplot( const int k, const R& reconstruction, 
+				       const std::vector<bool>& cellIsMixed, 
+				       const std::vector<bool>& cellIsActive,
+				       const G& grid,
+				       const int numberOfCells, const char* folderName )
     {  
       std::ofstream myfile;
       char name[128];
       sprintf( name, "../Animations/%s/recValues/recVal_%d", folderName, k );
-
       myfile.open ( name );
       
-      for ( std::size_t i = 0; i < reconstruction.size(); i++ )
+      std::ofstream mixed;
+      char name2[128];
+      sprintf( name2, "../Animations/%s/recValues/recValMixed_%d", folderName, k );
+      mixed.open ( name2 );
+      
+      std::ofstream active;
+      char name3[128];
+      sprintf( name3, "../Animations/%s/recValues/recValActive_%d", folderName, k );
+      active.open ( name3 );
+    
+      
+      for ( auto entity : elements( grid.leafGridView() ) )
       {
+	int i = grid.leafGridView().indexSet().index( entity );
+	
 	myfile << reconstruction[i][0][0] << " " << reconstruction[i][0][1] << std::endl;
 	myfile << reconstruction[i][1][0] << " " << reconstruction[i][1][1] << std::endl;
-	
 	myfile << std::endl;
+	
+	auto geo = entity.geometry();
+	
+	if ( cellIsMixed[i] )
+	{
+	  mixed << geo.center()[0] << " " << geo.center()[1] << std::endl;
+	}
+	if ( cellIsActive[i] )
+	{
+	  active << geo.center()[0] << " " << geo.center()[1] << std::endl;
+	}
+	
+	
       }
       myfile.close();
+      mixed.close();
+      active.close();
 	
 	
       
@@ -95,8 +125,8 @@ namespace Dune
       fprintf( gnuplotPipe, "set output \"../Animations/%s/recImages/recImage_%d.png\"\n", folderName, k );  
       fprintf( gnuplotPipe, "set xrange[0:1]\n" );
       fprintf( gnuplotPipe, "set yrange[0:1]\n" );
-      fprintf( gnuplotPipe, "plot \"%s\" with lines ls 1 linecolor 1 linewidth 2, \"../Animations/%s/recValues/mesh\" with lines ls 1 lt rgb \"#CCCCCC\" \n", name, folderName );
-      
+      fprintf( gnuplotPipe, "plot \"%s\" with lines ls 1 linecolor 1 linewidth 2, \"%s\" w p ls 1 pt 5, \"%s\" w p ls 2 pt 5, \"../Animations/%s/recValues/mesh\" with lines ls 1 lt rgb \"#CCCCCC\" \n", name, name2, name3, folderName );
+
       fclose(gnuplotPipe);
       
 
@@ -104,7 +134,11 @@ namespace Dune
     }
 
     template < class G, class V, class R >
-    void vtkout( const G& grid, const V& c, const char * name, const char* folderName, const int numberOfCells, const R& reconstruction, int k, double time = 0.0 )
+    void vtkout( const G& grid, const V& c, const char * name, const char* folderName, 
+		 const int numberOfCells, const R& reconstruction, int k,
+		 const std::vector<bool>& cellIsMixed, 
+		 const std::vector<bool>& cellIsActive,
+		 double time = 0.0 )
     {
       
       
@@ -121,7 +155,7 @@ namespace Dune
       vtkwriter.write( fname, Dune::VTK::ascii );
       
       
-      writeReconstructionToGnuplot( k, reconstruction, folderName );
+      writeReconstructionToGnuplot( k, reconstruction, cellIsMixed, cellIsActive, grid, numberOfCells, folderName );
       
       //Massenerhaltung
       std::ofstream massenFile;

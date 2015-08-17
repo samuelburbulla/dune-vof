@@ -62,11 +62,12 @@ namespace Dune
       
 	const Entity &entity = *leaf;
 	int entityIndex = gridView.indexSet().index( entity );
-      
-	
+     
 	if ( cellIsMixed[ entityIndex ] || cellIsActive[ entityIndex ] )
 	{
 	
+	  
+	  
 	  const Geometry geo = entity.geometry();
 	  double entityVolume = geo.volume();
 	    
@@ -94,7 +95,7 @@ namespace Dune
 	    double edgeVolumeFlux = 0.0;
 	  
 	    fvector outerNormal = intersection.centerUnitOuterNormal();
-		    
+	    
 	    
 	    // build time integration polygon
 	    Polygon2D<fvector> timeIntegrationPolygon;
@@ -110,9 +111,6 @@ namespace Dune
 	    if ( velocity * outerNormal > 0 ) 
 	    {
 
-	      if ( c[ entityIndex ] >= eps )
-	      {
-		
 		// build phase polygon of entity  
 		Polygon2D<fvector> phasePolygon;
 	      
@@ -126,7 +124,7 @@ namespace Dune
 		    phasePolygon.addVertex( v );
 		} 
 	      
-		else // cell is full
+		else if ( c[ entityIndex ] > 1 - eps )
 		{
 		  for ( int i = 0; i < geo.corners(); ++i )
 		    phasePolygon.addVertex( geo.corner(i) );
@@ -136,7 +134,6 @@ namespace Dune
 		edgeVolumeFlux = polygonIntersectionVolume( timeIntegrationPolygon, phasePolygon );  
 		
 		update[entityIndex] -= edgeVolumeFlux / entityVolume;
-	      }
 	      
 	    }
 	  
@@ -145,8 +142,6 @@ namespace Dune
 	    {  
 	      if ( is -> neighbor() )
 	      { 
-		if ( c[ neighborIndex ] >= eps )
-		{
 		  // build phase polygon of the neighbor
 		  Polygon2D<fvector> phasePolygon;
 	      
@@ -159,17 +154,15 @@ namespace Dune
 		    for ( auto v : getInnerVertices( neighbor.geometry(), reconstLine ) )
 		      phasePolygon.addVertex( v );
 		  }
-		  else
+		  else if ( c[ neighborIndex ] > 1 - eps )
 		  {
 		    for ( int i = 0; i < neighborGeo.corners(); ++i )
 		      phasePolygon.addVertex( neighborGeo.corner(i) );
 		  }
-
 	    
 		  edgeVolumeFlux = polygonIntersectionVolume( timeIntegrationPolygon, phasePolygon );  
 		      
 		  update[entityIndex] += edgeVolumeFlux / entityVolume;    
-		}
 
 	      }
 	    }
@@ -182,20 +175,22 @@ namespace Dune
 
 
       double sumVol = 0;
+      
       // Advance volume fractions f in time
-      for (unsigned int i = 0; i < c.size(); ++i)
+      for ( std::size_t i = 0; i < c.size(); ++i)
       {
-	  // discrete velocity divergence correction
-	
-	  update[ i ] += dt * c[ i ] * divergence[ i ] * 0.5;
-	  c[i] += update[i] / ( 1 - dt * divergence[ i ] * 0.5 );
+	  // discrete velocity divergence correction and advantage
+	  //update[i] += c[i] * dt * divergence[i] * 0.5;
+	  c[i] += update[i];// / ( 1 - dt * divergence[i] * 0.5 );
+	  
 	  
 	  sumVol += c[i] * 1.0 / ( numberOfCells * numberOfCells );
       }
+      
       std::cout << "sum=" << sumVol << " ";  
 	
 	
-      // 6. Look if any volume fraction undershoots or overshoots
+      // Look if any volume fraction undershoots or overshoots
       for (unsigned int i = 0; i < c.size(); ++i)
       {
 	c[i] = std::max( 0.0, c[i] );

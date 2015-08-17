@@ -9,7 +9,7 @@ namespace Dune
   {
     
     template < class GV, class C, class R, class D >
-    void flagCells ( const GV& gridView, const C& c, R& reconstruction, const D& domain, 
+    void flagCells ( const GV& gridView, const C& c, R& reconstruction, const D& domain, const int numberOfCells,
 		     std::vector<bool> &cellIsMixed,  std::vector<bool> &cellIsActive, const double eps )
     {  
       typedef typename Dune::FieldVector<double, 2> fvector;
@@ -20,8 +20,11 @@ namespace Dune
       typedef typename GV::Intersection Intersection;
     
       // clear cellIsMixed and cellIsActive vectors
-      cellIsMixed.clear();
-      cellIsActive.clear();
+      for ( std::size_t i = 0; i < cellIsMixed.size(); ++i )
+	cellIsMixed[i] = false;
+      for ( std::size_t i = 0; i < cellIsActive.size(); ++i )
+	cellIsActive[i] = false;
+     
       
       // mixed cells
       for (LeafIterator leaf = gridView.template begin<0>(); leaf != gridView.template end<0>(); ++leaf)
@@ -51,7 +54,8 @@ namespace Dune
 	      n *= -1.0;
 	      
 	      reconstruction[ entityIndex ] = std::array<fvector,3> ( { isGeo.corner(0), isGeo.corner(1), n } ); 
-	      break;
+	      std::cout << "full mixed cell found" << std::endl;
+	      continue;
 	    }
 	  }
 	}
