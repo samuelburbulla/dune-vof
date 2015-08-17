@@ -4,7 +4,7 @@
 
 #Name of the module
 Module: dune-vof
-Version: 1.0
+Version: 2015.08
 Maintainer: sambu@posteo.de
 #depending on
-Depends: dune-common dune-grid dune-geometry
+Depends: dune-grid (>= 2.3) dune-geometry (>= 2.3) dune-common (>= 2.3)
