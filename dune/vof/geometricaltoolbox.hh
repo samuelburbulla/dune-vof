@@ -250,10 +250,23 @@ namespace Dune
     }
 
 
+    template < class V >
+    void insertElementIfNotExists( const V& v, std::vector<V>& list, const double TOL = 1e-14 )    
+    {
+      bool found = false;
+      
+      for ( std::size_t i = 0; i < list.size(); ++i )
+	if ( ( list[i] - v).two_norm() < TOL ) 
+	  found = true;
+      
+      if ( !found )
+	list.push_back( v );
+      
+    }
 
 
     template < class GV, class E, class Geo, class V >
-    std::vector<V> lineIntersectionPoints( const GV& gridView, const E& entity, const Geo& geo, const Line2D<V>& g, const double TOL = 2e-14 )
+    std::vector<V> lineIntersectionPoints( const GV& gridView, const E& entity, const Geo& geo, const Line2D<V>& g, const double TOL = 1e-14 )
     {
       typedef typename GV::IntersectionIterator IntersectionIterator;
       typedef typename GV::Intersection Intersection;
@@ -264,67 +277,89 @@ namespace Dune
       {
 	  const Intersection &edge  = *is;
 	  
-	  const auto &refElement = Dune::ReferenceElements<double,2>::general( entity.type() );   
+	  const V c0 = edge.geometry().corner(0);
+	  const V c1 = edge.geometry().corner(1);
 	  
-	  V n = edge.centerUnitOuterNormal();
-	  
-	  const Line2D<V> lineThroughEdge ( n, edge.geometry().corner(0) );
-	  
-	  const V newPoint = lineIntersection( g, lineThroughEdge );
-	  
-	  V newPointLocal = geo.local( newPoint );
-
-	  
-	  //safety factor
-	  for ( int i = 0; i <= 1; ++i )
+	  // reconstruction line intersects with edge
+	  if ( 
+		( isInner( c0, g, TOL ) && isOuter( c1, g, TOL ) )
+	     || ( isInner( c1, g, TOL ) && isOuter( c0, g, TOL ) )   )
 	  {
-	    if ( -TOL < newPointLocal[i] && newPointLocal[i] < 0 ) 
-	      newPointLocal[i] = 0;
-	    if ( 1 < newPointLocal[i] && newPointLocal[i] < 1 + TOL ) 
-	      newPointLocal[i] = 1;
-	  }
 	  
-	  
-	  if ( refElement.checkInside( newPointLocal ) )
-	  {
-	    // noch kein Schnittpunkt gefunden
-	    if ( intersectionPoints.size() == 0 )
-	      intersectionPoints.push_back( newPoint ); 
+	    // build line through edge for intersection
+	    const Line2D<V> lineThroughEdge ( edge.centerUnitOuterNormal(), c0 );
 	    
-	    // bereits ein Schnittpunkt gefunden; pruefe, ob von erstem verschieden
-	    else 
-	      if ( ( intersectionPoints[0] - newPoint ).one_norm() > TOL )
-		intersectionPoints.push_back( newPoint );
+	    // add intersection point
+	    intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );
 	  }
 	  
-	  // alle Schnittpunkte gefunden
-	  if ( intersectionPoints.size() == 2 ) break;
+	  // reconstruction line intersects with c0
+	  else if ( isOnRecLine( c0, g, TOL ) )
+	  { 
+	    insertElementIfNotExists( c0, intersectionPoints );
+	  }
+	  //reconstruction line intersects with c1
+	  else if ( isOnRecLine( c1, g, TOL ) )
+	  {
+	    insertElementIfNotExists( c1, intersectionPoints );
+	  }
+	  
       }
-      
+     
       return intersectionPoints;
     }
 
+    
+    
 
+    template < class V >
+    bool isInner ( const V& vertex, const Line2D<V>& g, const double TOL )
+    {
+      return vertex * g.n + g.p >= TOL; 
+    }
+    
+    template < class V >
+    bool isOuter ( const V& vertex, const Line2D<V>& g, const double TOL )
+    {
+      return vertex * g.n + g.p <= -TOL; 
+    }
+    
+    template < class V >
+    bool isOnRecLine ( const V& vertex, const Line2D<V>& g, const double TOL )
+    {
+      return std::abs( vertex * g.n + g.p ) < TOL; 
+    }
+    
+    
+    
+    
     template < class Geo, class V >
-    std::vector<V> getInnerVertices( const Geo& geo, const Line2D<V>& g )
+    std::vector<V> getInnerVertices( const Geo& geo, const Line2D<V>& g, const double TOL = 1e-8 )
     {
       std::vector<V> innerVertices;
     
       for ( int i = 0; i < geo.corners(); ++i )
-	if ( geo.corner(i) * g.n + g.p > 0 )
+	
+	if ( isInner( geo.corner(i), g, TOL ) )
 	  innerVertices.push_back( geo.corner(i) );
+	
 	
       return innerVertices;
     }  
 
+    
+    
+    
     template < class Geo, class V >
-    std::vector<V> getOuterVertices( const Geo& geo, const Line2D<V>& g )
+    std::vector<V> getOuterVertices( const Geo& geo, const Line2D<V>& g, const double TOL = 1e-8 )
     {
       std::vector<V> outerVertices;
     
       for ( int i = 0; i < geo.corners(); ++i )
-	if ( geo.corner(i) * g.n + g.p < 0 )
+	
+	if ( isOuter( geo.corner(i), g, TOL ) )
 	  outerVertices.push_back( geo.corner(i) );
+	
 	
       return outerVertices;
     }   

@@ -29,7 +29,7 @@
     template < class G, class C, class R, class D >
     void timeloop ( const G& grid, C& concentration, R& reconstruction, D& domain, 
 		    std::vector<bool>& cellIsMixed, std::vector<bool>& cellIsActive, double tEnd, double dt, 
-		    const int numberOfCells, const double eps, const char* folderName )
+		    const int numberOfCells, const double eps, const std::string &folderName )
     {
       double t = 0;
       int k = 0;
@@ -78,13 +78,15 @@
 	
 	//mesh size
 	int numberOfCells = 32;
+	
 	// folder to store the plots
-	char folderName[128] = "default";
+	std::string folderPath = "Results/";
+	std::string nameOfSeries = "default";
 	
-	Dune::VoF::handleInput ( argc, argv, numberOfCells, folderName );
+	Dune::VoF::handleInput ( argc, argv, numberOfCells, nameOfSeries );
       
+	std::string folderName ( folderPath + nameOfSeries + "/" );
 	Dune::VoF::createFolders( folderName );
-	
 	
 	// type declarations
 	const int dim = 2;
@@ -138,7 +140,7 @@
 	
 	    
 	// start time integration
-	timeloop( grid, concentration, reconstruction, domain, cellIsMixed, cellIsActive, 2 * M_PI, dt, numberOfCells, eps, folderName ); 
+	timeloop( grid, concentration, reconstruction, domain, cellIsMixed, cellIsActive, 2.0, dt, numberOfCells, eps, folderName ); 
 	
 	
 	//concentration on the end to check the error

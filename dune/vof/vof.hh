@@ -7,26 +7,16 @@ namespace Dune
   {
 	
     // handle commandline input
-    void handleInput ( int argc, char** argv, int numberOfCells, char* folderName )
+    void handleInput ( int argc, char** argv, int numberOfCells, std::string &nameOfSeries )
     {
       // given mesh size
       if (argc > 1)
+      {
 	numberOfCells = atoi( argv[1] );
+     
+	nameOfSeries = numberOfCells + "x" + numberOfCells;
+      }
 	
-
-	// arguments
-	if (argc > 2)
-	{
-	  for( int i = 2;  i < argc; ++i)
-	  {
-	  
-	    if ( strcmp( argv[i], "folder") == 0 )
-	    {
-	      if ( i+1 < argc )
-		sprintf( folderName , "%s", argv[i+1] );
-	    }
-	  }
-	}
     }
 
   }

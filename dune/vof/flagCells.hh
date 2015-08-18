@@ -54,7 +54,6 @@ namespace Dune
 	      n *= -1.0;
 	      
 	      reconstruction[ entityIndex ] = std::array<fvector,3> ( { isGeo.corner(0), isGeo.corner(1), n } ); 
-	      std::cout << "full mixed cell found" << std::endl;
 	      continue;
 	    }
 	  }
