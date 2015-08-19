@@ -38,7 +38,7 @@ namespace Dune
 	}
       
     template < class G, class C, class R, class F, class D >
-    void reconstruct ( const G& grid, C& concentration, R& reconstruction, const F& cellIsMixed, const D& domain, const double eps )
+    void reconstruct ( const G& grid, C& concentration, R& reconstruction, F& cellIsMixed, const D& domain, const double eps )
     {
       const int dimworld = G::dimensionworld;
       typedef typename Dune::FieldVector<double, dimworld> fvector;
@@ -86,7 +86,8 @@ namespace Dune
 	    // reconstruction doesn't intersect
 	    if ( entityIntersections.size() == 0 )
 		{
-			throw 10;
+			cellIsMixed[ entityIndex ] = false;
+			break;
 		}
 		// get middle of intersections
 		else
@@ -129,7 +130,8 @@ namespace Dune
 	    		// reconstruction doesn't intersect
 	    		if ( neighborIntersections.size() == 0 )
 				{
-					throw 10;
+					cellIsMixed[ neighborIndex ] = false;
+					continue;
 				}
 				// get middle of intersections
 				else
@@ -180,8 +182,9 @@ namespace Dune
 	  
 	  auto entityIntersections = 
 	      computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
-	      
-	  reconstruction[entityIndex] = std::array<fvector,3> ( { entityIntersections[0], entityIntersections[1], g.n } );
+	     
+	   if ( entityIntersections.size() != 0 )    
+	  		reconstruction[entityIndex] = std::array<fvector,3> ( { entityIntersections[0], entityIntersections[1], g.n } );
 	  
 	}
       }
