@@ -37,7 +37,7 @@
       double saveStep = 0.01;
       int saveNumber = 1;
       
-      
+      Dune::VoF::clearReconstruction( reconstruction );
       Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, numberOfCells, cellIsMixed, cellIsActive, eps );
       Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps ); 
       Dune::VoF::vtkout( grid, concentration, "concentration", folderName, numberOfCells, reconstruction, 0, cellIsMixed, cellIsActive, t );
@@ -128,7 +128,7 @@
 	
 	
 	// calculate dt
-	double dt = 0.01 * ( 1.0 / numberOfCells ) / Dune::VoF::psiMax();
+	double dt = 0.1 * ( 1.0 / numberOfCells ) / Dune::VoF::psiMax();
 	
 	
 	
@@ -140,7 +140,7 @@
 	
 	    
 	// start time integration
-	timeloop( grid, concentration, reconstruction, domain, cellIsMixed, cellIsActive, 2.0, dt, numberOfCells, eps, folderName ); 
+	timeloop( grid, concentration, reconstruction, domain, cellIsMixed, cellIsActive, 6.0, dt, numberOfCells, eps, folderName ); 
 	
 	
 	//concentration on the end to check the error

@@ -43,12 +43,13 @@ namespace Dune
 
     // === Single-Vortex ===
     //Velocity Field
-    template < class ct >
-    Dune::FieldVector<double, 2> psi( const Dune::FieldVector <ct, 2>& x, double t )
+    
+    Dune::FieldVector<double,2> psi( const Dune::FieldVector<double,2> &x, double t )
     {
-      Dune::FieldVector<double, 2> r;
-      r[0] = /*- sqr( sin( M_PI * x[0] ) ) * 2 * sin( M_PI * x[1] ) * cos( M_PI * x[1] ); */  x[1] - 0.5; 
-      r[1] = /*sqr( sin( M_PI * x[1] ) ) * 2 * sin( M_PI * x[0] ) * cos( M_PI * x[0] ); */    0.5 - x[0]; 
+      
+      Dune::FieldVector<double,2> r;
+      r[0] =  x[1] - 0.5; 	/*- sqr( sin( M_PI * x[0] ) ) * 2 * sin( M_PI * x[1] ) * cos( M_PI * x[1] ); */ 
+      r[1] =  0.5 - x[0]; 	/*sqr( sin( M_PI * x[1] ) ) * 2 * sin( M_PI * x[0] ) * cos( M_PI * x[0] ); */
       
       return r;
     }

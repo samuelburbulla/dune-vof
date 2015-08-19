@@ -26,7 +26,14 @@ namespace Dune
 
     double brentsMethod ( double a, double b, double (*f) ( double p ) );
 
-
+    template< class R >
+    void clearReconstruction ( R& reconstruction )
+    { 
+      typedef typename Dune::FieldVector<double, 2> fvector;
+      fvector null; null = 0;
+      for ( std::size_t i = 0; i < reconstruction.size(); ++i )
+		reconstruction[i] = std::array<fvector,3> ( { null, null, null } );
+	}
       
     template < class G, class C, class R, class F, class D >
     void reconstruct ( const G& grid, C& concentration, R& reconstruction, const F& cellIsMixed, const D& domain, const double eps )
@@ -36,13 +43,7 @@ namespace Dune
       typedef typename G::LeafGridView GridView;
       typedef typename GridView::template Codim<0>::Iterator LeafIterator;
       typedef typename LeafIterator::Entity Entity;
-      typedef typename Entity::Geometry Geometry;  
-
-      // clear reconstruction
-      fvector null; null = 0;
-      for ( std::size_t i = 0; i < reconstruction.size(); ++i )
-	reconstruction[i] = std::array<fvector,3> ( { null, null, null } );
-      
+      typedef typename Entity::Geometry Geometry;     
       
       
       int count = 0;

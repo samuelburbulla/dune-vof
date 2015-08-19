@@ -82,6 +82,8 @@ namespace Dune
       
       A.solve( x, b );
       
+      //assert( isOnRecLine( x, g, 1e-14) );
+      //assert( isOnRecLine( x, l, 1e-14) );
       
       return x;  
     }
@@ -106,7 +108,7 @@ namespace Dune
 	  return points[i % points.size()]; 
 	}
 
-	void addVertex ( const V &vertex, const double TOL = 2e-14 )
+	void addVertex ( const V &vertex, const double TOL = 1e-14 )
 	{
 	  std::size_t n = points.size();
 	  
@@ -114,6 +116,7 @@ namespace Dune
 	  for ( std::size_t i = 0; i < n; i++ )
 	    if ( (vertex - points[i]).two_norm() < TOL ) return; 
 
+	  // insert new vertex in counterclockwise order
 	  if ( n == 0 || n == 1)
 	  {
 	    points.push_back( vertex );
@@ -189,63 +192,64 @@ namespace Dune
     template < class V >
     double polygonIntersectionVolume( const Polygon2D<V> polygon1, const Polygon2D<V> polygon2 )
     {
-      if ( polygon1.corners() <= 2 || polygon2.corners() <= 2 ) return 0;
+      	
+      	if ( polygon1.corners() <= 2 || polygon2.corners() <= 2 ) return 0;
       
       
-      Polygon2D<V> intersectionPolygon;
-      bool lastInside = false, thisInside = false;
-      std::vector<std::pair<V,V>> cuttingLines;
+      	Polygon2D<V> intersectionPolygon;
+      	bool lastInside = false, thisInside = false;
+      	std::vector<std::pair<V,V>> cuttingLines;
       
       
-      // Schleife einmal fuer jedes Polygon
-      Polygon2D<V> p1 = polygon1;
-      Polygon2D<V> p2 = polygon2;
+      	// Schleife einmal fuer jedes Polygon
+      	Polygon2D<V> p1 = polygon1;
+      	Polygon2D<V> p2 = polygon2;
       
-      for ( std::size_t p = 0; p <= 1; p++ )
-      {
-	lastInside = false;
-	cuttingLines.clear();
+      	for ( std::size_t p = 0; p <= 1; p++ )
+      	{
+			lastInside = false;
+			cuttingLines.clear();
       
-	// Ecken in anderem Polygon
-	for ( std::size_t i = 0;  i < p1.corners() + 2; ++i )
-	{
-	  if ( p2.pointInBorders( p1[i] ) )
-	  {
-	    intersectionPolygon.addVertex( p1[i] );
-	    
-	    thisInside = true;
-	  }
-	  
-	  if ( lastInside != thisInside && i > 0 )
-	  {
-	    cuttingLines.push_back( std::pair<V,V>( p1[i-1], p1[i] ) );
-	  }
-	  
-	  lastInside = thisInside;  
-	  thisInside = false;
-	}
+			// Ecken in anderem Polygon
+			for ( std::size_t i = 0;  i < p1.corners() + 2; ++i )
+			{
+				if ( p2.pointInBorders( p1[i] ) )
+				{
+					intersectionPolygon.addVertex( p1[i] );
+				    
+				    thisInside = true;
+				}
+				  
+				if ( lastInside != thisInside && i > 0 )
+				{
+				    cuttingLines.push_back( std::pair<V,V>( p1[i-1], p1[i] ) );
+				}
+				  
+				lastInside = thisInside;  
+				thisInside = false;
+			}
 	
-	//Schnittpunkte
-	V is;
-	for ( std::size_t i = 0;  i < p2.corners(); ++i )
-	{
-	  for ( std::size_t j = 0; j < cuttingLines.size(); j++ )
-	  {
-	    Line2D<V> cut ( cuttingLines[j] );
+			//Schnittpunkte
+			V is;
+			for ( std::size_t i = 0;  i < p2.corners(); ++i )
+			{
+			  	for ( std::size_t j = 0; j < cuttingLines.size(); j++ )
+			  	{
+				    Line2D<V> cut ( cuttingLines[j] );
+				    
+				    is = lineIntersection( Line2D<V>( std::pair<V,V>( p2[i], p2[i+1] ) ), cut );
+				    
+				    if ( (cuttingLines[j].first - is) * (cuttingLines[j].second - is) < 0 
+				      && (p2[i] - is) * (p2[i+1] - is) < 0 )
+				      	intersectionPolygon.addVertex( is );
+			  	}
+			}    
 	    
-	    is = lineIntersection( Line2D<V>( std::pair<V,V>( p2[i], p2[i+1] ) ), cut );
-	    
-	    if ( (cuttingLines[j].first - is) * (cuttingLines[j].second - is) < 0 
-	      && (p2[i] - is) * (p2[i+1] - is) < 0 )
-	      intersectionPolygon.addVertex( is );
-	  }
-	}    
-	    
-	p1 = polygon2;
-	p2 = polygon1;
-      }
+			p1 = polygon2;
+			p2 = polygon1;
+      	}
             
-      return intersectionPolygon.volume();
+      	return intersectionPolygon.volume();
       
     }
 
@@ -266,7 +270,7 @@ namespace Dune
 
 
     template < class GV, class E, class Geo, class V >
-    std::vector<V> lineIntersectionPoints( const GV& gridView, const E& entity, const Geo& geo, const Line2D<V>& g, const double TOL = 1e-14 )
+    std::vector<V> lineIntersectionPoints( const GV& gridView, const E& entity, const Geo& geo, const Line2D<V>& g, const double TOL = 1e-12 )
     {
       typedef typename GV::IntersectionIterator IntersectionIterator;
       typedef typename GV::Intersection Intersection;
@@ -321,7 +325,7 @@ namespace Dune
     template < class V >
     bool isOuter ( const V& vertex, const Line2D<V>& g, const double TOL )
     {
-      return vertex * g.n + g.p <= -TOL; 
+      return vertex * g.n + g.p <= TOL; 
     }
     
     template < class V >
@@ -334,7 +338,7 @@ namespace Dune
     
     
     template < class Geo, class V >
-    std::vector<V> getInnerVertices( const Geo& geo, const Line2D<V>& g, const double TOL = 1e-8 )
+    std::vector<V> getInnerVertices( const Geo& geo, const Line2D<V>& g, const double TOL = 1e-12 )
     {
       std::vector<V> innerVertices;
     
@@ -351,7 +355,7 @@ namespace Dune
     
     
     template < class Geo, class V >
-    std::vector<V> getOuterVertices( const Geo& geo, const Line2D<V>& g, const double TOL = 1e-8 )
+    std::vector<V> getOuterVertices( const Geo& geo, const Line2D<V>& g, const double TOL = 1e-12 )
     {
       std::vector<V> outerVertices;
     

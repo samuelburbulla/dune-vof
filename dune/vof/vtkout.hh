@@ -144,6 +144,8 @@ namespace Dune
       std::string fname ( folderName + "vtk/concentration-" + s );
       std::string sername ( "plot.series" );
       vtkwriter.addCellData ( c, "celldata" );
+      vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
+      vtkwriter.addCellData ( cellIsActive, "cellactive" );
       
       vtkwriter.write( fname, Dune::VTK::ascii );
       
