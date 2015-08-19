@@ -1,2 +1,2 @@
-add_executable("dune-vof" dune-vof.cc dune-vof-plotbuilder)
+add_executable("dune-vof" main.cc )
 target_link_dune_default_libraries("dune-vof")

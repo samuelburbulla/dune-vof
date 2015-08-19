@@ -12,24 +12,7 @@
 namespace Dune
 {
   namespace VoF
-  {
-    
-    
-    int createFolders( const std::string &folderName ) 
-    {      
-      mkdir( folderName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-      mkdir( (folderName + "values").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-      mkdir( (folderName + "images").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-      mkdir( (folderName + "vtk").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-      
-      // empty massenerhaltung file
-      std::ofstream massenFile;
-      massenFile.open ( folderName + "massenerhaltung" );
-      massenFile.close();
-      
-      return 0;
-    }
-    
+  { 
 
 
     void createMeshforPlot( const int numberOfCells, const std::string &folderName )

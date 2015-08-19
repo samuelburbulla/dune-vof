@@ -20,7 +20,7 @@ namespace Dune
       typedef typename Grid::template Codim<0>::EntitySeed EntitySeed;
       
       
-      DomainOfCells( Grid& grid ) {
+      DomainOfCells( const Grid& grid ) {
       
       
 	
@@ -39,7 +39,7 @@ namespace Dune
     private: 
       
       
-    void getCellsInDomain( Grid& grid )
+    void getCellsInDomain( const Grid& grid )
     {
       
       GridView gridView = grid.leafGridView();

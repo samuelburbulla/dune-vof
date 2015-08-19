@@ -2,6 +2,8 @@
 #define __DUNE_GRID_REC_VOL_RECONSTRUCT_HH__
 
 #include <stdio.h>
+#include <stdexcept>
+
 #include <dune/common/fvector.hh>
 #include <dune/grid/common/geometry.hh>
 #include <dune/common/dynmatrix.hh>
@@ -77,59 +79,86 @@ namespace Dune
 	    sumNormals = 0;
 
 	    
-	    auto entityIntersections = 
-	      computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
+	    auto entityIntersections = computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
 	    
-	    fvector centroid1 = entityIntersections[0] + entityIntersections[1];
-	    centroid1 *= 0.5;
+
+	    fvector centroid1;
+	    // reconstruction doesn't intersect
+	    if ( entityIntersections.size() == 0 )
+		{
+			throw 10;
+		}
+		// get middle of intersections
+		else
+		{
+			int c = 0;
+			for ( std::size_t i = 0; i < entityIntersections.size(); ++i )
+			{
+				centroid1 += entityIntersections[i];
+				c++;
+			}
+			centroid1 *= 1.0 / c;
+		}
+
 	    
+
 	    for( int neighborIndex : domain.cellsInDomain[ entityIndex ] )
 	    {
 		      
-		if ( cellIsMixed[ neighborIndex ] && concentration[ neighborIndex ] <= 1 - eps ) 
-		{
-		  
-		  const Entity &neighbor = grid.entity( domain.seeds[ neighborIndex ] );
+			if ( cellIsMixed[ neighborIndex ] && concentration[ neighborIndex ] <= 1 - eps ) 
+			{
 			  
-		  Line2D<fvector> h;
-		  
-		  // nimm diese Zelle nur, wenn die geratene Normal schon in eine aehnliche Richtung zeigt
-		  guessNormal( grid, concentration, neighbor, neighborIndex, domain, h );
-		  if ( g.n * h.n < 0 )
-		    continue;
-		  
-		  
-		  
-		  const Geometry geoNeighbor = neighbor.geometry();
-
-		  h.n = g.n;     
-			  
-		  auto neighborIntersections = 
-		    computeInterfaceLinePosition( gridView, neighbor, geoNeighbor, concentration[ neighborIndex ], h );  	      
-			
-		  
-		  assert( entityIntersections.size() == 2 );
-		  assert( neighborIntersections.size() == 2 );
-		  
-		  fvector centroid2 = neighborIntersections[0] + neighborIntersections[1];
-		  centroid2 *= 0.5;
+			  	const Entity &neighbor = grid.entity( domain.seeds[ neighborIndex ] );
 				  
-		  centroidLineNormal = centroid2 - centroid1;    
-		  rotate90degreesCounterClockwise( centroidLineNormal );
-		  
-		  
-		  assert( centroidLineNormal.two_norm() > 0 );
-		  
-		  
-		  
-		  // errechnete Normale muss in eine aehnliche Richtung wie geschaetze Normale auf jeder Zelle zeigen
-		  if ( centroidLineNormal * g.n < 0 )
-		    centroidLineNormal *= -1.0;      
+				Line2D<fvector> h;
+				  
+				// nimm diese Zelle nur, wenn die geratene Normal schon in eine aehnliche Richtung zeigt
+				guessNormal( grid, concentration, neighbor, neighborIndex, domain, h );
+				if ( g.n * h.n < 0 )
+				  continue;
+				  
+				  
+				  
+				const Geometry geoNeighbor = neighbor.geometry();
+
+				g.n = g.n;     
+					  
+				auto neighborIntersections = computeInterfaceLinePosition( gridView, neighbor, geoNeighbor, concentration[ neighborIndex ], h );  	      
+				
+			  	fvector centroid2;
+	    		// reconstruction doesn't intersect
+	    		if ( neighborIntersections.size() == 0 )
+				{
+					throw 10;
+				}
+				// get middle of intersections
+				else
+				{
+					int c = 0;
+					for ( std::size_t i = 0; i < neighborIntersections.size(); ++i )
+					{
+						centroid2 += neighborIntersections[i];
+						c++;
+					}
+					centroid2 *= 1.0 / c;
+				}
+					  
+			    centroidLineNormal = centroid2 - centroid1;    
+			    rotate90degreesCounterClockwise( centroidLineNormal );
+			  
+			  
+			    assert( centroidLineNormal.two_norm() > 0 );
+			  
+			  
+			  
+			    // errechnete Normale muss in eine aehnliche Richtung wie geschaetze Normale auf jeder Zelle zeigen
+			    if ( centroidLineNormal * g.n < 0 )
+			      centroidLineNormal *= -1.0;      
 
 
-		  sumNormals.axpy( 1.0 / (geoEntity.center() - centroid2).two_norm(), centroidLineNormal );
-		  sumCount++;
-		}
+			    sumNormals.axpy( 1.0 / (geoEntity.center() - centroid2).two_norm(), centroidLineNormal );
+			    sumCount++;
+			}
 	      
 	    }
 	    
@@ -180,7 +209,8 @@ namespace Dune
 	
 	
 	V xk = neighbor.geometry().center();
-	double wk = 1.0 / ( sqr ( (xk - xi).one_norm() ) );
+	double wk = 1.0 / ( (xk - xi).one_norm()  );
+	wk *= wk;
 
 	A[i][0] = wk * ( xk[0] - xi[0] );
 	A[i][1] = wk * ( xk[1] - xi[1] );

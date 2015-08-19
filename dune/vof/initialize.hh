@@ -11,8 +11,8 @@ namespace Dune
   {
     
     
-    template < class G, class V >
-    void initialize ( const G& grid, V& c )
+    template < class G, class V, class F >
+    void initialize ( const G& grid, V& c, F& f )
     {
       const int dimworld = G::dimensionworld;
       
@@ -40,7 +40,7 @@ namespace Dune
 	double result = 0;
 	for ( typename Dune::QuadratureRule<double, dimworld>::const_iterator i = rule.begin(); i != rule.end(); ++i )
 	{
-	  double fval = f0( geo.global( i->position() ) );
+	  double fval = f( geo.global( i->position() ) );
 	  double weight = i->weight();
 	  double detjac = geo.integrationElement( i->position() );
 	  result += fval * weight * detjac;

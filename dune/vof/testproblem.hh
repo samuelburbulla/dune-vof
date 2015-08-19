@@ -8,21 +8,29 @@ namespace Dune
   namespace VoF
   {
     
-	
-    template < class ct >
-    ct sqr ( const ct x )
+
+    //Initial Condition
+    template < class DomainVector >
+    double f ( const DomainVector& x, const double t )
     {
-      return x * x;
+        DomainVector center { 0.5, 0.5 };
+        DomainVector offset { 0, 0.25 };
+        DomainVector normal { -0.25, 0 };
+
+        center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
+        center.axpy( std::sin( ( 2 * M_PI / 10 ) * t ), normal );
+
+        double dist = ( x - center ).two_norm();
+
+        return ( dist < 0.15 ) ? 1 : 0; 
+
     }
 
     //Initial Condition
     template < class V >
     double f0 ( const V& x )
     {
-      if ( sqr(x[0] - 0.5) + sqr(x[1] - 0.75) <= sqr( 0.15 ) )
-	return 1.0;
-      else 
-	return 0.0;
+        return f( x, 0.0 );
     }
 
     //Velocity Field
@@ -44,20 +52,24 @@ namespace Dune
     // === Single-Vortex ===
     //Velocity Field
     
-    Dune::FieldVector<double,2> psi( const Dune::FieldVector<double,2> &x, double t )
+
+    Dune::FieldVector<double,2> psi( const Dune::FieldVector<double,2> &x, const double t )
     {
       
       Dune::FieldVector<double,2> r;
+
       r[0] =  x[1] - 0.5; 	/*- sqr( sin( M_PI * x[0] ) ) * 2 * sin( M_PI * x[1] ) * cos( M_PI * x[1] ); */ 
       r[1] =  0.5 - x[0]; 	/*sqr( sin( M_PI * x[1] ) ) * 2 * sin( M_PI * x[0] ) * cos( M_PI * x[0] ); */
       
+      r *= 2 * M_PI / 10;
+
       return r;
     }
 
 
     double psiMax( )
     {
-      return 1.0;
+      return 2 * M_PI / 10;
     }
 
 

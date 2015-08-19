@@ -108,7 +108,7 @@ namespace Dune
 	  return points[i % points.size()]; 
 	}
 
-	void addVertex ( const V &vertex, const double TOL = 1e-14 )
+	void addVertex ( const V &vertex, const double TOL = 1e-12 )
 	{
 	  std::size_t n = points.size();
 	  
@@ -176,7 +176,7 @@ namespace Dune
 	
     private:
     
-	const int SkalarProdTest ( V vertex, V p1, V p2, const double TOL = 1e-14 ) const
+	const int SkalarProdTest ( V vertex, V p1, V p2, const double TOL = 1e-12 ) const
 	{
 	  V n = p2 - p1;
 	  rotate90degreesCounterClockwise( n );
@@ -255,7 +255,7 @@ namespace Dune
 
 
     template < class V >
-    void insertElementIfNotExists( const V& v, std::vector<V>& list, const double TOL = 1e-14 )    
+    void insertElementIfNotExists( const V& v, std::vector<V>& list, const double TOL = 1e-12 )    
     {
       bool found = false;
       
