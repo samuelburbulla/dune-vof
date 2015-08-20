@@ -30,6 +30,8 @@ namespace Dune
       std::vector< double > divergence( gridView.size( 0 ) );
 
 
+      std::map< std::pair<int,int>, double > intersectionFluxes;
+
 
       // Calculate volume fluxes for each cell
       V update( c.size() );
@@ -56,24 +58,23 @@ namespace Dune
             int neighborIndex = gridView.indexSet().index( neighbor );
 
 
+            const auto isGeo = intersection.geometry();
+
             fvector outerNormal = intersection.centerUnitOuterNormal();
+            fvector velocity = psi( isGeo.center(), t );
 
             // discrete divergence
-            const auto isGeo = intersection.geometry();
-            divergence[ entityIndex ] += outerNormal * psi( isGeo.center(), t ) * isGeo.volume();
+            //divergence[ entityIndex ] += outerNormal * velocity * isGeo.volume();
 
 
+            std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
+            
             // do not calculate fluxes twice
-            if ( entityIndex < neighborIndex )  
+            if ( intersectionFluxes.find( fluxIndex ) == intersectionFluxes.end() )
             {
-              
+
               auto neighborGeo = neighbor.geometry();
-
-              fvector velocity = psi( isGeo.center(), t );
-              velocity *= dt;
-
-              assert( std::abs( velocity[ 0 ] ) < 1.0/numberOfCells && fabs( velocity[ 1 ] ) < 1.0/numberOfCells );
-
+           
 
 
               //Compute edge volume fluxes
@@ -81,6 +82,8 @@ namespace Dune
 
 
               // build time integration polygon
+              velocity *= dt;
+
               Polygon2D< fvector > timeIntegrationPolygon;
 
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
@@ -90,7 +93,7 @@ namespace Dune
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - velocity );
 
 
-              //outflow
+              // outflows
               if( velocity * outerNormal > 0 )
               {
 
@@ -115,8 +118,8 @@ namespace Dune
                 edgeVolumeFlux = polygonIntersectionVolume( timeIntegrationPolygon, phasePolygon );
 
                 update[ entityIndex ] -= edgeVolumeFlux / entityGeo.volume();
-                update[ neighborIndex ] += edgeVolumeFlux / neighborGeo.volume();
 
+                intersectionFluxes.insert( std::pair<std::pair<int,int>,double>( fluxIndex , -edgeVolumeFlux ) );
               }
 
               //inflow
@@ -142,10 +145,15 @@ namespace Dune
                   edgeVolumeFlux = polygonIntersectionVolume( timeIntegrationPolygon, phasePolygon );
 
                   update[ entityIndex ] += edgeVolumeFlux / entityGeo.volume();
-                  update[ neighborIndex ] -= edgeVolumeFlux / neighborGeo.volume();
-                }
 
+                  intersectionFluxes.insert( std::pair<std::pair<int,int>,double>( fluxIndex , edgeVolumeFlux ) );
+                }
             }
+            else // intersection was already calculated 
+            {
+              update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume();
+            }
+            
           }
         }
       }
@@ -156,9 +164,11 @@ namespace Dune
       for( std::size_t i = 0; i < c.size(); ++i )
       {
         // discrete velocity divergence correction and advantage
-        update[ i ] += c[ i ] * dt * divergence[ i ] * 0.5;
-        c[ i ] += update[ i ] / ( 1 - dt * divergence[ i ] * 0.5 );
-
+        if ( cellIsMixed[ i ] || cellIsActive[ i ] )
+        {
+          //update[ i ] += c[ i ] * dt * divergence[ i ] * 0.5;
+          c[ i ] += update[ i ];/// ( 1 - dt * divergence[ i ] * 0.5 );
+        }
       }
 
 

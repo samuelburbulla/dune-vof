@@ -176,7 +176,7 @@ int main(int argc, char** argv)
 
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
-		for ( std::size_t i = 0; i < 2; ++i )
+		for ( std::size_t i = 0; i < 1; ++i )
 		{
 
 			// build Grid

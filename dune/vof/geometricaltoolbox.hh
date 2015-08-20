@@ -67,18 +67,18 @@ namespace Dune
     const V lineIntersection ( const Line2D< V > &g, const Line2D< V > &l  )
     {
 
-      Dune::DynamicMatrix< double > A( 2, 2 );
+      Dune::FieldMatrix< double, 2, 2 > A;
       A[ 0 ][ 0 ] = g.n[ 0 ];
       A[ 0 ][ 1 ] = g.n[ 1 ];
       A[ 1 ][ 0 ] = l.n[ 0 ];
       A[ 1 ][ 1 ] = l.n[ 1 ];
 
-      Dune::DynamicVector< double > b( 2 );
+      Dune::FieldVector< double,2  > b;
       b[ 0 ] = -g.p;
       b[ 1 ] = -l.p;
 
 
-      Dune::DynamicVector< double > x( 2 );
+      Dune::FieldVector< double, 2 > x;
 
       A.solve( x, b );
 
@@ -111,13 +111,13 @@ namespace Dune
 
         std::size_t n = points.size();
 
-// check, if point is already here
+        // check, if point is already here
         for( std::size_t i = 0; i < n; i++ )
           if( (vertex - points[ i ]).two_norm() < TOL )
             return;
 
 
-// insert new vertex in counterclockwise order
+        // insert new vertex in counterclockwise order
         if( n == 0 || n == 1 )
         {
           points.push_back( vertex );
@@ -288,6 +288,8 @@ namespace Dune
 
 
 
+
+
       for( auto edge : edges )
       {
 
@@ -380,10 +382,14 @@ namespace Dune
     {
       Polygon2D< V > polygonVertices;
 
-      for( auto v : lineIntersectionPoints( gridView, entity, geo, g ) )
+
+      auto lip = lineIntersectionPoints( gridView, entity, geo, g );
+      for( auto &v : lip )
         polygonVertices.addVertex( v );
 
-      for( auto v : getInnerVertices( geo, g ) )
+
+      auto giv = getInnerVertices( geo, g );
+      for( auto &v : giv )
         polygonVertices.addVertex( v );
 
 
