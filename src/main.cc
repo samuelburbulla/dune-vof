@@ -66,8 +66,10 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	int n = grid.leafGridView().size(0);
 
+
+
 	// allocate and initialize vectors for data representation
-	std::vector<double> concentration( n );
+	std::vector<double> concentration ( n );
 	std::vector< std::array<fvector,3> > reconstruction( n );
 	std::vector<bool> cellIsMixed ( n );
 	std::vector<bool> cellIsActive ( n );
@@ -75,7 +77,6 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
 	 
-
 
 
 	// calculate dt
@@ -86,7 +87,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	int k = 0;
 
 	  
-	Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, params.numberOfCells, cellIsMixed, cellIsActive, params.eps );
+	Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps ); 
 	  
 	int saveNumber = 1;  
@@ -114,7 +115,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 		Dune::VoF::clearReconstruction( reconstruction );
 
-		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, params.numberOfCells, cellIsMixed, cellIsActive, params.eps );
+		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 		Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps ); 
 		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive );
 
@@ -175,7 +176,7 @@ int main(int argc, char** argv)
 
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
-		for ( std::size_t i = 0; i < 3; ++i )
+		for ( std::size_t i = 0; i < 2; ++i )
 		{
 
 			// build Grid
@@ -197,7 +198,7 @@ int main(int argc, char** argv)
 				double eocL1 = log( std::get<0> ( errorTuple ) / std::get<0> ( lastErrorTuple ) ) / log ( 2 );
 				double eocL2 = log( std::get<1> ( errorTuple ) / std::get<1> ( lastErrorTuple ) ) / log ( 2 );
 
-				std::cout << "\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
+				std::cout << "\t\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
 
 			}
 

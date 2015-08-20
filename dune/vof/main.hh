@@ -5,21 +5,19 @@ namespace Dune
 {
   namespace VoF
   {
-	
+
     // handle commandline input
-    template < class Parameters >
-    void handleInput ( int argc, char** argv, Parameters& params)
+    template< class Parameters >
+    void handleInput ( int argc, char **argv, Parameters &params )
     {
       // given mesh size
-      if (argc > 1)
-      {
-	      params.numberOfCells = atoi( argv[1] );
-     
-	      //params.nameOfSeries = params.numberOfCells + "x" + params.numberOfCells;
+      if( argc > 1 )
+        params.numberOfCells = atoi( argv[ 1 ] );
 
-        //params.folderName = params.folderPath + params.nameOfSeries + "/";
-      }
-	
+      //params.nameOfSeries = params.numberOfCells + "x" + params.numberOfCells;
+
+      //params.folderName = params.folderPath + params.nameOfSeries + "/";
+
     }
 
 
