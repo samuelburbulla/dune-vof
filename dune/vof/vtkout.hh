@@ -90,22 +90,6 @@ namespace Dune
 
     }
     
-    template < class C >
-    void writeSumOfMassToFile( const C& c, const double time, int numberOfCells, const std::string &folderName )
-    {
-      std::ofstream massenFile;
-      massenFile.open ( folderName + "massenerhaltung", std::fstream::app );
-      
-      double sum = 0;
-      for ( std::size_t i = 0; i < c.size(); ++i )
-	sum += c[i] / ( numberOfCells * numberOfCells );
-      
-      double referenceMass = M_PI * 0.15 * 0.15;
-      
-      massenFile << time << " " << std::abs( sum - referenceMass ) << std::endl;
-      
-      massenFile.close();
-    }
 
     
        

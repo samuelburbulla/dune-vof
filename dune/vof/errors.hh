@@ -22,14 +22,15 @@ namespace Dune
       
       for (LeafIterator leaf = gridView.template begin<0>(); leaf != gridView.template end<0>(); ++leaf)
       {
-	const Entity &entity = *leaf;
-	const Geometry geo = entity.geometry();
-	
-	int i = gridView.indexSet().index( entity );
-    
-	error += (cStart[i] - cEnd[i]) * (cStart[i] - cEnd[i]) * geo.volume();   
+      	const Entity &entity = *leaf;
+      	const Geometry geo = entity.geometry();
+      	
+      	int i = gridView.indexSet().index( entity );
+          
+      	error += (cStart[i] - cEnd[i]) * (cStart[i] - cEnd[i]) * geo.volume();   
       }
-      return error;
+
+      return std::sqrt( error );
     }
 
 
@@ -47,13 +48,14 @@ namespace Dune
       
       for (LeafIterator leaf = gridView.template begin<0>(); leaf != gridView.template end<0>(); ++leaf)
       {
-	const Entity &entity = *leaf;
-	const Geometry geo = entity.geometry();
-	
-	int i = gridView.indexSet().index( entity );
-    
-	error += fabs(cStart[i] - cEnd[i]) * geo.volume();   
+      	const Entity &entity = *leaf;
+      	const Geometry geo = entity.geometry();
+      	
+      	int i = gridView.indexSet().index( entity );
+          
+      	error += std::abs(cStart[i] - cEnd[i]) * geo.volume();   
       }
+
       return error;
     }
 

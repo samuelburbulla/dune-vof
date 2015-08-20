@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <dune/grid/common/mcmgmapper.hh>
+#include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <cmath>
 #include <functional>
@@ -34,7 +35,7 @@ public:
   	};
 
   	// concetration eps for mixed cells
-  	double eps = 1e-3;
+  	double eps = 1e-4;
 
   	// number of cells for the cartesian grid in one direction
   	int numberOfCells = 32;
@@ -54,7 +55,7 @@ public:
 
 
 template < class Grid >
-void algorithm ( const Grid& grid, const Parameters &params )
+std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &params )
 {
 	typedef Dune::FieldVector<double,2> fvector;
 
@@ -87,11 +88,25 @@ void algorithm ( const Grid& grid, const Parameters &params )
 	  
 	Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, params.numberOfCells, cellIsMixed, cellIsActive, params.eps );
 	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps ); 
-	Dune::VoF::vtkout( grid, concentration, "concentration", params.folderName, params.numberOfCells, reconstruction, 0, cellIsMixed, cellIsActive, t );
 	  
 	int saveNumber = 1;  
 	double saveStep = 0.01;
-	  
+
+
+	// VTK Writer
+	std::stringstream path;
+	path << "results/vof-" << std::to_string( params.numberOfCells );
+	Dune::VTKSequenceWriter<typename Grid::LeafGridView> vtkwriter ( gridView, "vof", path.str(), "~/dune" );
+
+	vtkwriter.addCellData ( concentration, "celldata" );
+	vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
+	vtkwriter.addCellData ( cellIsActive, "cellactive" );
+
+	vtkwriter.write( 0 );
+  
+
+
+
 	while ( t < params.tEnd )
 	{
 		++k;   
@@ -107,7 +122,8 @@ void algorithm ( const Grid& grid, const Parameters &params )
 
 		if ( t >= saveStep )
 		{
-		  Dune::VoF::vtkout( grid, concentration, "concentration", params.folderName, params.numberOfCells, reconstruction, saveNumber, cellIsMixed, cellIsActive, t );
+		  vtkwriter.write( t );
+
 		  saveStep += params.saveInterval;
 		  ++saveNumber;
 		}
@@ -127,6 +143,8 @@ void algorithm ( const Grid& grid, const Parameters &params )
 
 	double L1 = Dune::VoF::l1error( grid, concentration, concentrationEnd );    
 	double L2 = Dune::VoF::l2error( grid, concentration, concentrationEnd );   
+
+	return std::tuple<double, double> ( L1, L2 );
 }
 
 
@@ -151,21 +169,48 @@ int main(int argc, char** argv)
   		Parameters params;
 
 		Dune::VoF::handleInput ( argc, argv, params );
+		 
+
+		std::tuple<double, double> lastErrorTuple;
+
+		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
+
+		for ( std::size_t i = 0; i < 3; ++i )
+		{
+
+			// build Grid
+			fvector upper( 1.0 );
+			Dune::array<int,dim> noc;
+			std::fill( noc.begin(), noc.end(), params.numberOfCells );
+			GridType grid( upper, noc );
+
 		  
-
-
-
-		// build Grid
-		fvector upper( 1.0 );
-		Dune::array<int,dim> noc;
-		std::fill( noc.begin(), noc.end(), params.numberOfCells );
-		GridType grid( upper, noc );
-
-	  
-
+		    			    
+			// start time integration
+			auto errorTuple = algorithm( grid,  params ); 
 		    
-		// start time integration
-		algorithm( grid,  params ); 
+
+
+		    // print errors and eoc
+			if ( i > 0 )
+			{
+				double eocL1 = log( std::get<0> ( errorTuple ) / std::get<0> ( lastErrorTuple ) ) / log ( 2 );
+				double eocL2 = log( std::get<1> ( errorTuple ) / std::get<1> ( lastErrorTuple ) ) / log ( 2 );
+
+				std::cout << "\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
+
+			}
+
+			std::cout << params.numberOfCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
+
+
+
+			lastErrorTuple = errorTuple;
+
+
+			// refine
+			params.numberOfCells *= 2;
+		}
 
 		    
 

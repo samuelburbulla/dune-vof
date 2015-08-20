@@ -173,20 +173,17 @@ namespace Dune
       	}
 
 
-      	double sumVol = 0;
       
       	// Advance volume fractions f in time
       	for ( std::size_t i = 0; i < c.size(); ++i)
       	{
 		  	// discrete velocity divergence correction and advantage
-		  	//update[i] += c[i] * dt * divergence[i] * 0.5;
-		  	c[i] += update[i];// / ( 1 - dt * divergence[i] * 0.5 );
+		  	update[i] += c[i] * dt * divergence[i] * 0.5;
+		  	c[i] += update[i] / ( 1 - dt * divergence[i] * 0.5 );
 		  
-		  
-		  	sumVol += c[i] * 1.0 / ( numberOfCells * numberOfCells );
       	}
       
-      	std::cout << "sum=" << sumVol << " ";  
+      	
 	
 	
       	// Look if any volume fraction undershoots or overshoots
