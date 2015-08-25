@@ -35,8 +35,7 @@ public:
   	};
 
   	// concetration eps for mixed cells
-  	double eps = 1e-4;
-
+  	double eps = 1e-8;
   	// number of cells for the cartesian grid in one direction
   	int numberOfCells = 32;
 
@@ -45,7 +44,7 @@ public:
 	double tEnd = 10.0;
 
 	// params for saving data
-	double saveInterval = 0.01;
+	double saveInterval = 0.1;
 
 	std::string folderPath = "results/";
 	std::string nameOfSeries = "default";
@@ -91,7 +90,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps ); 
 	  
 	int saveNumber = 1;  
-	double saveStep = 0.01;
+	double saveStep = params.saveInterval;
 
 
 	// VTK Writer
@@ -107,6 +106,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
   
 
 
+	std::vector<double> concentrationEnd( n, 0 );
 
 	while ( t < params.tEnd )
 	{
@@ -129,15 +129,11 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 		  ++saveNumber;
 		}
 
-
-		
-
-
+	
 
 		std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl;
 	}
 
-	std::vector<double> concentrationEnd( n, 0 );
 
 	auto ft = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
 	Dune::VoF::initialize( grid, concentrationEnd, ft );
@@ -176,7 +172,7 @@ int main(int argc, char** argv)
 
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
-		for ( std::size_t i = 0; i < 1; ++i )
+		for ( std::size_t i = 0; i < 5; ++i )
 		{
 
 			// build Grid
@@ -195,8 +191,8 @@ int main(int argc, char** argv)
 		    // print errors and eoc
 			if ( i > 0 )
 			{
-				double eocL1 = log( std::get<0> ( errorTuple ) / std::get<0> ( lastErrorTuple ) ) / log ( 2 );
-				double eocL2 = log( std::get<1> ( errorTuple ) / std::get<1> ( lastErrorTuple ) ) / log ( 2 );
+				double eocL1 = log( std::get<0> ( errorTuple ) / std::get<0> ( lastErrorTuple ) ) / log ( 0.5 );
+				double eocL2 = log( std::get<1> ( errorTuple ) / std::get<1> ( lastErrorTuple ) ) / log ( 0.5 );
 
 				std::cout << "\t\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
 

@@ -44,6 +44,7 @@ namespace Dune
 
         int entityIndex = gridView.indexSet().index( entity );
         divergence[ entityIndex ] = 0;
+	
 
         if( cellIsMixed[ entityIndex ] || cellIsActive[ entityIndex ] )
         {
@@ -64,8 +65,7 @@ namespace Dune
             fvector velocity = psi( isGeo.center(), t );
 
             // discrete divergence
-            //divergence[ entityIndex ] += outerNormal * velocity * isGeo.volume();
-
+            //std::cout << "Calc.loop: " << divergence[ entityIndex ] << std::endl;
 
             std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
             
@@ -89,13 +89,17 @@ namespace Dune
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) );
 
-              timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - velocity );
-              timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - velocity );
-
+	      fvector flux = outerNormal;
+	      flux *= ( velocity * outerNormal ); 
+	      	
+              timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - flux );
+              timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - flux );
 
               // outflows
               if( velocity * outerNormal > 0 )
               {
+ 		//divergence[ entityIndex ] -= std::abs( velocity[0] * velocity[1] * 0.5 ) / entityGeo.volume();
+		//divergence[ neighborIndex ] += std::abs( velocity[0] * velocity[1] * 0.5 ) / neighborGeo.volume();
 
                 // build phase polygon of entity
                 Polygon2D< fvector > phasePolygon;
@@ -126,7 +130,10 @@ namespace Dune
               else if( velocity * outerNormal < 0 )
                 if( intersection.neighbor() )
                 {
-                  // build phase polygon of the neighbor
+		  //divergence[ entityIndex ] += std::abs( velocity[0] * velocity[1] * 0.5 ) / entityGeo.volume() ;
+		  //divergence[ neighborIndex ] -= std::abs( velocity[0] * velocity[1] * 0.5 ) / neighborGeo.volume();
+		  
+		  // build phase polygon of the neighbor
                   Polygon2D< fvector > phasePolygon;
 
                   if( cellIsMixed[ neighborIndex ] )
@@ -151,8 +158,8 @@ namespace Dune
             }
             else // intersection was already calculated 
             {
-              update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume();
-            }
+              update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume(); 
+	    }
             
           }
         }
@@ -166,9 +173,11 @@ namespace Dune
         // discrete velocity divergence correction and advantage
         if ( cellIsMixed[ i ] || cellIsActive[ i ] )
         {
-          //update[ i ] += c[ i ] * dt * divergence[ i ] * 0.5;
-          c[ i ] += update[ i ];/// ( 1 - dt * divergence[ i ] * 0.5 );
-        }
+          //update[ i ] -= c[ i ] * divergence[ i ] * 0.5;
+
+	  c[ i ] += update[ i ];
+	  //c[ i ] /= ( 1 - divergence[ i ] * 0.5 );
+	}
       }
 
 

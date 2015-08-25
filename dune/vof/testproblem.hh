@@ -18,7 +18,7 @@ namespace Dune
       DomainVector normal { -0.25, 0 };
 
       center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
-      center.axpy( std::sin( ( 2 * M_PI / 10 ) * t ), normal );
+      center.axpy( - std::sin( ( 2 * M_PI / 10 ) * t ), normal );
 
       double dist = ( x - center ).two_norm();
 

@@ -62,12 +62,22 @@ namespace Dune
       }
 
       // activate cells
-      for( std::size_t entityIndex = 0; entityIndex < cellIsMixed.size(); ++entityIndex )
-        if( cellIsMixed[ entityIndex ] )
-          for( int neighborIndex : domain.cellsInDomain[ entityIndex ] )
-            if( !cellIsMixed[ neighborIndex ] )
-              cellIsActive[ neighborIndex ] = true;
-
+      for( auto&& entity : elements( gridView ) )
+      {
+        int entityIndex = gridView.indexSet().index( entity );
+	
+	if( cellIsMixed[ entityIndex ] )
+          for( auto &is : intersections( gridView,  entity ) )
+	  {
+	    if( is.neighbor() )
+	    {
+	      int neighborIndex = gridView.indexSet().index( is.outside() );
+              //std::cout << neighborIndex << std::endl;
+	      if( !cellIsMixed[ neighborIndex ] )
+                cellIsActive[ neighborIndex ] = true;
+	    }
+	  }
+      }
     }
 
 
