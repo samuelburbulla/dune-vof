@@ -127,7 +127,9 @@ namespace Dune
 
           for( std::size_t i = 0; i < points.size(); i++ )
           {
-            V normal = points[ (i+1)%n ] - points[ i ];
+            V normal = points[ (i+1)%n ];
+	    normal -= points[ i ];
+
             rotate90degreesCounterClockwise( normal );
 
             if( normal * ( vertex - points[ i ] ) < 0 )
@@ -290,8 +292,10 @@ namespace Dune
 
 
 
-      for( auto edge : edges )
+      for( auto&& edge : edges )
       {
+
+	    if ( intersectionPoints.size() == 2 ) break;
 
         const V c0 = geo.global( edge.first );
         const V c1 = geo.global( edge.second );
