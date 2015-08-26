@@ -285,7 +285,7 @@ namespace Dune
       {
         int i = refElement.subEntity( k, dim-1, 0, dim );
         int j = refElement.subEntity( k, dim-1, 1, dim );
-        edges.push_back( std::pair< V, V >( refElement.position( i, dim ), refElement.position( j, dim ) ) );
+        edges.push_back( { refElement.position( i, dim ), refElement.position( j, dim ) } );
       }
 
 
@@ -297,8 +297,8 @@ namespace Dune
 
 	    if ( intersectionPoints.size() == 2 ) break;
 
-        const V c0 = geo.global( edge.first );
-        const V c1 = geo.global( edge.second );
+        const V& c0 = geo.global( edge.first );
+        const V& c1 = geo.global( edge.second );
 
 
         if( isOnRecLine( c0, g, TOL ) )

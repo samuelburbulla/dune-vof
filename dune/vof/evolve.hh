@@ -27,7 +27,7 @@ namespace Dune
 
 
       // Calculate discrete velocity divergence in loop 
-      std::vector< double > divergence( gridView.size( 0 ) );
+      std::vector< double > divergence( gridView.size( 0 ), 0 );
 
 
       std::map< std::pair<int,int>, double > intersectionFluxes;
@@ -43,7 +43,6 @@ namespace Dune
       {
 
         int entityIndex = gridView.indexSet().index( entity );
-        divergence[ entityIndex ] = 0;
 	
 
         if( cellIsMixed[ entityIndex ] || cellIsActive[ entityIndex ] )
@@ -64,6 +63,8 @@ namespace Dune
             fvector outerNormal = intersection.centerUnitOuterNormal();
             fvector velocity = psi( isGeo.center(), t );
 
+            divergence[ entityIndex ] += velocity * intersection.integrationOuterNormal( 0 ) * ( c[ entityIndex ] + c[ neighborIndex ] ) * 0.5 ;
+
 
             std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
             
@@ -72,7 +73,7 @@ namespace Dune
             {
 
               auto neighborGeo = neighbor.geometry();
-           
+
 
 
               //Compute edge volume fluxes
@@ -92,6 +93,7 @@ namespace Dune
 	      	
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - flux );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - flux );
+
 
               // outflows
               if( velocity * outerNormal > 0 )
@@ -152,7 +154,7 @@ namespace Dune
             else // intersection was already calculated 
             {
               update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume(); 
-	    }
+	          }
             
           }
         }
@@ -166,7 +168,9 @@ namespace Dune
         // discrete velocity divergence correction and advantage
         if ( cellIsMixed[ i ] || cellIsActive[ i ] )
         {
+          update[ i ] += divergence[ i ] * c[ i ] * dt * 0.5; 
 	        c[ i ] += update[ i ];
+          c[ i ] /= 1.0 - divergence[ i ] * dt * 0.5; 
 	      }
       }
 
@@ -178,6 +182,8 @@ namespace Dune
       {
         c[ i ] = std::max( 0.0, c[ i ] );
         c[ i ] = std::min( 1.0, c[ i ] );
+
+        //std::cout << divergence[ i ] << std::endl;
       }
 
     }

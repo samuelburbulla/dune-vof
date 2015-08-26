@@ -29,18 +29,11 @@
 
 struct Parameters
 {
- 	// concetration eps for mixed cells
- 	double eps = 1e-4;
-
-<<<<<<< HEAD
   	// concetration eps for mixed cells
   	double eps = 1e-8;
   	// number of cells for the cartesian grid in one direction
   	int numberOfCells = 32;
-=======
- 	// number of cells for the cartesian grid in one direction
- 	int numberOfCells = 32;
->>>>>>> origin/master
+
 
   	// params for timeloop
 	double dtAlpha = 0.1;
@@ -140,10 +133,9 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 
 	auto ft = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
-	Dune::VoF::initialize( grid, concentrationEnd, ft );
 
-	double L1 = Dune::VoF::l1error( grid, concentration, concentrationEnd );
-	double L2 = Dune::VoF::l2error( grid, concentration, concentrationEnd );
+	double L1 = Dune::VoF::l1error( grid, concentration, ft );
+	double L2 = Dune::VoF::l2error( grid, concentration, ft );
 
 	return std::tuple<double, double> ( L1, L2 );
 }
@@ -176,7 +168,7 @@ int main(int argc, char** argv)
 
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
-		for ( std::size_t i = 0; i < 2; ++i )
+		for ( std::size_t i = 0; i < 3; ++i )
 		{
 
 			// build Grid
@@ -195,8 +187,8 @@ int main(int argc, char** argv)
 		    // print errors and eoc
 			if ( i > 0 )
 			{
-				double eocL1 = log( std::get<0> ( errorTuple ) / std::get<0> ( lastErrorTuple ) ) / log ( 0.5 );
-				double eocL2 = log( std::get<1> ( errorTuple ) / std::get<1> ( lastErrorTuple ) ) / log ( 0.5 );
+				const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
+				const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
 
 				std::cout << "\t\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
 
