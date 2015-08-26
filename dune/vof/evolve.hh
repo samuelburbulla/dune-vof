@@ -64,8 +64,6 @@ namespace Dune
             fvector outerNormal = intersection.centerUnitOuterNormal();
             fvector velocity = psi( isGeo.center(), t );
 
-            // discrete divergence
-            //std::cout << "Calc.loop: " << divergence[ entityIndex ] << std::endl;
 
             std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
             
@@ -89,8 +87,8 @@ namespace Dune
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) );
 
-	      fvector flux = outerNormal;
-	      flux *= ( velocity * outerNormal ); 
+	            fvector flux = outerNormal;
+	            flux *= ( velocity * outerNormal ); 
 	      	
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - flux );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - flux );
@@ -98,8 +96,6 @@ namespace Dune
               // outflows
               if( velocity * outerNormal > 0 )
               {
- 		//divergence[ entityIndex ] -= std::abs( velocity[0] * velocity[1] * 0.5 ) / entityGeo.volume();
-		//divergence[ neighborIndex ] += std::abs( velocity[0] * velocity[1] * 0.5 ) / neighborGeo.volume();
 
                 // build phase polygon of entity
                 Polygon2D< fvector > phasePolygon;
@@ -110,8 +106,8 @@ namespace Dune
                   phasePolygon.addVertex( reconstruction[ entityIndex ][ 1 ] );
 
                   Line2D< fvector > reconstLine( reconstruction[ entityIndex ][ 2 ], reconstruction[ entityIndex ][ 0 ] );
-                  for( auto v : getInnerVertices( entityGeo, reconstLine ) )
-                    phasePolygon.addVertex( v );
+                  
+                  polyAddInnerVertices( entityGeo, reconstLine, phasePolygon );
                 }
 
                 else if( c[ entityIndex ] > 1 - eps )
@@ -130,10 +126,8 @@ namespace Dune
               else if( velocity * outerNormal < 0 )
                 if( intersection.neighbor() )
                 {
-		  //divergence[ entityIndex ] += std::abs( velocity[0] * velocity[1] * 0.5 ) / entityGeo.volume() ;
-		  //divergence[ neighborIndex ] -= std::abs( velocity[0] * velocity[1] * 0.5 ) / neighborGeo.volume();
 		  
-		  // build phase polygon of the neighbor
+		              // build phase polygon of the neighbor
                   Polygon2D< fvector > phasePolygon;
 
                   if( cellIsMixed[ neighborIndex ] )
@@ -142,8 +136,7 @@ namespace Dune
                     phasePolygon.addVertex( reconstruction[ neighborIndex ][ 1 ] );
 
                     Line2D< fvector > reconstLine( reconstruction[ neighborIndex ][ 2 ], reconstruction[ neighborIndex ][ 0 ] );
-                    for( auto v : getInnerVertices( neighbor.geometry(), reconstLine ) )
-                      phasePolygon.addVertex( v );
+                    polyAddInnerVertices( neighborGeo, reconstLine, phasePolygon );
                   }
                   else if( c[ neighborIndex ] > 1 - eps )
                     for( int i = 0; i < neighborGeo.corners(); ++i )
@@ -173,11 +166,8 @@ namespace Dune
         // discrete velocity divergence correction and advantage
         if ( cellIsMixed[ i ] || cellIsActive[ i ] )
         {
-          //update[ i ] -= c[ i ] * divergence[ i ] * 0.5;
-
-	  c[ i ] += update[ i ];
-	  //c[ i ] /= ( 1 - divergence[ i ] * 0.5 );
-	}
+	        c[ i ] += update[ i ];
+	      }
       }
 
 

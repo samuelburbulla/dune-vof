@@ -300,10 +300,14 @@ namespace Dune
         const V c0 = geo.global( edge.first );
         const V c1 = geo.global( edge.second );
 
-        // reconstruction line intersects with edge
-        if(
-          ( isInner( c0, g, TOL ) && isOuter( c1, g, TOL ) )
-          || ( isInner( c1, g, TOL ) && isOuter( c0, g, TOL ) )   )
+
+        if( isOnRecLine( c0, g, TOL ) )
+          insertElementIfNotExists( c0, intersectionPoints );
+        
+        else if( isOnRecLine( c1, g, TOL ) )
+          insertElementIfNotExists( c1, intersectionPoints );
+
+        else if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
         {
 
           // build line through edge for intersection
@@ -313,13 +317,7 @@ namespace Dune
           intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );
 
         }
-
-        // reconstruction line intersects with c0
-        else if( isOnRecLine( c0, g, TOL ) )
-          insertElementIfNotExists( c0, intersectionPoints );
-        //reconstruction line intersects with c1
-        else if( isOnRecLine( c1, g, TOL ) )
-          insertElementIfNotExists( c1, intersectionPoints );
+        
 
       }
 
@@ -335,11 +333,6 @@ namespace Dune
       return vertex * g.n + g.p >= TOL;
     }
 
-    template< class V >
-    bool isOuter ( const V &vertex, const Line2D< V > &g, const double TOL )
-    {
-      return vertex * g.n + g.p <= TOL;
-    }
 
     template< class V >
     bool isOnRecLine ( const V &vertex, const Line2D< V > &g, const double TOL )
@@ -349,36 +342,15 @@ namespace Dune
 
 
 
-
     template< class Geo, class V >
-    std::vector< V > getInnerVertices ( const Geo &geo, const Line2D< V > &g, const double TOL = 1e-12 )
+    void polyAddInnerVertices ( const Geo &geo, const Line2D< V > &g, Polygon2D< V >& polygon, const double TOL = 1e-12 )
     {
-      std::vector< V > innerVertices;
-
       for( int i = 0; i < geo.corners(); ++i )
 
         if( isInner( geo.corner( i ), g, TOL ) )
-          innerVertices.push_back( geo.corner( i ) );
-
-      return innerVertices;
+          polygon.addVertex( geo.corner( i ) );
     }
 
-
-
-
-    template< class Geo, class V >
-    std::vector< V > getOuterVertices ( const Geo &geo, const Line2D< V > &g, const double TOL = 1e-12 )
-    {
-      std::vector< V > outerVertices;
-
-      for( int i = 0; i < geo.corners(); ++i )
-
-        if( isOuter( geo.corner( i ), g, TOL ) )
-          outerVertices.push_back( geo.corner( i ) );
-
-
-      return outerVertices;
-    }
 
 
     template< class GV, class E, class Geo, class V >
@@ -392,9 +364,7 @@ namespace Dune
         polygonVertices.addVertex( v );
 
 
-      auto giv = getInnerVertices( geo, g );
-      for( auto &v : giv )
-        polygonVertices.addVertex( v );
+      polyAddInnerVertices( geo, g, polygonVertices );
 
 
       assert( polygonVertices.corners() <= 5 );
