@@ -35,11 +35,11 @@ namespace Dune
 
 
 
-
-    Dune::FieldVector< double, 2 > psi ( const Dune::FieldVector< double, 2 > &x, const double t )
+    template< class DomainVector >
+    DomainVector psi ( const DomainVector &x, const double t = 0.0 )
     {
 
-      Dune::FieldVector< double, 2 > r;
+      DomainVector r;
 
       r[ 0 ] =  x[ 1 ] - 0.5;
       r[ 1 ] =  0.5 - x[ 0 ];

@@ -267,47 +267,26 @@ namespace Dune
 
 
     template< class GV, class E, class Geo, class V >
-    std::vector< V > lineIntersectionPoints ( const GV &gridView, const E &entity, const Geo &geo, const Line2D< V > &g, const double TOL = 1e-12 )
+    std::vector< V > lineCellIntersections ( const GV &gridView, const E &entity, const Geo &geo, const Line2D< V > &g, const double TOL = 1e-12 )
     {
       const int dim = 2;
 
       std::vector< V > intersectionPoints;
 
 
-
-
       const auto &refElement = Dune::ReferenceElements< double, dim >::general( entity.type() );
 
-
-      std::vector < std::pair < V, V>> edges;
 
       for( int k = 0; k < refElement.size( dim-1 ); ++k )
       {
         int i = refElement.subEntity( k, dim-1, 0, dim );
         int j = refElement.subEntity( k, dim-1, 1, dim );
-        edges.push_back( { refElement.position( i, dim ), refElement.position( j, dim ) } );
-      }
+
+        const V& c0 = geo.global( refElement.position( i, dim ) );
+        const V& c1 = geo.global( refElement.position( j, dim ) );
 
 
-
-
-
-      for( auto&& edge : edges )
-      {
-
-	    if ( intersectionPoints.size() == 2 ) break;
-
-        const V& c0 = geo.global( edge.first );
-        const V& c1 = geo.global( edge.second );
-
-
-        if( isOnRecLine( c0, g, TOL ) )
-          insertElementIfNotExists( c0, intersectionPoints );
-        
-        else if( isOnRecLine( c1, g, TOL ) )
-          insertElementIfNotExists( c1, intersectionPoints );
-
-        else if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
+        if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
         {
 
           // build line through edge for intersection
@@ -317,6 +296,11 @@ namespace Dune
           intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );
 
         }
+        else if( isOnRecLine( c0, g, TOL ) )
+          insertElementIfNotExists( c0, intersectionPoints );
+        
+        else if( isOnRecLine( c1, g, TOL ) )
+          insertElementIfNotExists( c1, intersectionPoints );
         
 
       }
@@ -359,7 +343,7 @@ namespace Dune
       Polygon2D< V > polygonVertices;
 
 
-      auto lip = lineIntersectionPoints( gridView, entity, geo, g );
+      auto lip = lineCellIntersections( gridView, entity, geo, g );
       for( auto &v : lip )
         polygonVertices.addVertex( v );
 

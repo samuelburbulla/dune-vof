@@ -231,7 +231,7 @@ namespace Dune
                           [ &gridView, &entity, &geo, &concentration, &g ] ( double p ) -> double
                           { Line2D< V > h( g.n, p ); return getVolumeFraction( gridView, entity, geo, h ) - concentration; } );
 
-      return lineIntersectionPoints( gridView, entity, geo, g );
+      return lineCellIntersections( gridView, entity, geo, g );
     }
 
 

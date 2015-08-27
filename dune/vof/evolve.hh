@@ -13,13 +13,10 @@ namespace Dune
   namespace VoF
   {
 
-    template< class G, class V, class R, class D >
+    template< class G, class V, class R, class D, class fvector >
     void evolve ( const G &grid, V &c, R &reconstruction, D &domain, const int numberOfCells, double t, double dt,
-                  const double eps, std::vector< bool > &cellIsMixed,  std::vector< bool > &cellIsActive )
+                  const double eps, std::vector< bool > &cellIsMixed,  std::vector< bool > &cellIsActive, const std::vector<fvector> &velocityField )
     {
-      const int dimworld = G::dimensionworld;
-      typedef typename G::ctype ct;
-      typedef typename Dune::FieldVector< ct, dimworld > fvector;
       typedef typename G::LeafGridView GridView;
 
 
@@ -61,7 +58,12 @@ namespace Dune
             const auto isGeo = intersection.geometry();
 
             fvector outerNormal = intersection.centerUnitOuterNormal();
-            fvector velocity = psi( isGeo.center(), t );
+
+            fvector velocity = velocityField[ entityIndex ];
+            velocity += velocityField[ neighborIndex ];
+            velocity *= 0.5;
+
+
 
             divergence[ entityIndex ] += velocity * intersection.integrationOuterNormal( 0 ) * ( c[ entityIndex ] + c[ neighborIndex ] ) * 0.5 ;
 
@@ -183,7 +185,8 @@ namespace Dune
         c[ i ] = std::max( 0.0, c[ i ] );
         c[ i ] = std::min( 1.0, c[ i ] );
 
-        //std::cout << divergence[ i ] << std::endl;
+        //if ( divergence[ i ] > 1e-12 )
+          //std::cout << divergence[ i ] << std::endl;
       }
 
     }

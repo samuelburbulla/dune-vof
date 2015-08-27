@@ -30,7 +30,7 @@
 struct Parameters
 {
   	// concetration eps for mixed cells
-  	double eps = 1e-8;
+  	double eps = 1e-6;
   	// number of cells for the cartesian grid in one direction
   	int numberOfCells = 32;
 
@@ -65,11 +65,10 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	std::vector< std::array<fvector,3> > reconstruction( n );
 	std::vector<bool> cellIsMixed ( n );
 	std::vector<bool> cellIsActive ( n );
+	std::vector<fvector> velocityField ( n );
 
 
 	Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
-
-
 
 	// calculate dt
 	double dt = params.dtAlpha * ( 1.0 / params.numberOfCells ) / Dune::VoF::psiMax();
@@ -101,7 +100,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	vtkwriter.write( 0 );
 
-
+	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl; 
 
 	std::vector<double> concentrationEnd( n, 0 );
 
@@ -109,12 +108,15 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	{
 		++k;
 
+		auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, t);
+		Dune::VoF::L1projection( grid, velocityField, psit );
+
 
 		Dune::VoF::clearReconstruction( reconstruction );
 
 		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 		Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
-		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive );
+		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive, velocityField );
 
 		t += dt;
 
@@ -126,7 +128,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 		  ++saveNumber;
 		}
 
-
+		std::cerr << "\r" << "[" << (int)(( t / params.tEnd ) * 100) << "%]";
 		//std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl;
 
 	}
