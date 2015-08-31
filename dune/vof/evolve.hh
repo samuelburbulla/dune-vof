@@ -63,9 +63,13 @@ namespace Dune
             velocity += velocityField[ neighborIndex ];
             velocity *= 0.5;
 
+            fvector ufEn = velocityField[ entityIndex ];
+            ufEn *= c[ entityIndex ];
 
+            fvector ufNe = velocityField[ neighborIndex ];
+            ufNe *= c[ neighborIndex ];
 
-            divergence[ entityIndex ] += velocity * intersection.integrationOuterNormal( 0 ) * ( c[ entityIndex ] + c[ neighborIndex ] ) * 0.5 ;
+            divergence[ entityIndex ] += intersection.integrationOuterNormal( 0 ) * ( ufEn + ufNe ) * 0.5 ;
 
 
             std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
