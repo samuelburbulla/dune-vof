@@ -29,7 +29,7 @@ namespace Dune
         const Dune::GeometryType gt = geo.type();
 
         // get quadrature rule of order p
-        int p = 20;
+        int p = 60;
         const Dune::QuadratureRule< double, dimworld > &rule = Dune::QuadratureRules< double, dimworld >::rule( gt, p );
 
         // ensure that rule has at least the requested order

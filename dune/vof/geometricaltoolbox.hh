@@ -128,7 +128,7 @@ namespace Dune
           for( std::size_t i = 0; i < points.size(); i++ )
           {
             V normal = points[ (i+1)%n ];
-	    normal -= points[ i ];
+	          normal -= points[ i ];
 
             rotate90degreesCounterClockwise( normal );
 
@@ -192,63 +192,25 @@ namespace Dune
 
 
     template< class V >
-    double polygonIntersectionVolume ( const Polygon2D< V > &polygon1, const Polygon2D< V > &polygon2 )
+    void polygonLineIntersection ( const Polygon2D< V > &polygon, const Line2D< V > &g, Polygon2D< V > &intersectionPolygon )
     {
-
-      if( polygon1.corners() <= 2 || polygon2.corners() <= 2 )
-        return 0;
-
-
-      Polygon2D< V > intersectionPolygon;
-      bool lastInside = false, thisInside = false;
-      std::vector < std::pair < V, V>> cuttingLines;
-
-
-// Schleife einmal fuer jedes Polygon
-      Polygon2D< V > p1 = polygon1;
-      Polygon2D< V > p2 = polygon2;
-
-      for( std::size_t p = 0; p <= 1; p++ )
+     
+      for ( std::size_t i = 0; i < polygon.corners(); ++i )
       {
-        lastInside = false;
-        cuttingLines.clear();
-
-// Ecken in anderem Polygon
-        for( std::size_t i = 0; i < p1.corners() + 2; ++i )
+        if( isOnRecLine( polygon[i], g ) )
         {
-          if( p2.pointInBorders( p1[ i ] ) )
-          {
-            intersectionPolygon.addVertex( p1[ i ] );
-
-            thisInside = true;
-          }
-
-          if( lastInside != thisInside && i > 0 )
-            cuttingLines.push_back( std::pair< V, V >( p1[ i-1 ], p1[ i ] ) );
-
-          lastInside = thisInside;
-          thisInside = false;
+          intersectionPolygon.addVertex( polygon[i] );
         }
+        else if( isInner( polygon[i], g ) ^ isInner( polygon[i+1], g ) )
+        {
+          // build line through edge for intersection
+          const Line2D< V > lineThroughEdge( std::pair< V, V >( polygon[ i ], polygon[ i+1 ] ) );
 
-//Schnittpunkte
-        V is;
-        for( std::size_t i = 0; i < p2.corners(); ++i )
-          for( std::size_t j = 0; j < cuttingLines.size(); j++ )
-          {
-            Line2D< V > cut( cuttingLines[ j ] );
+          // add intersection point
+          intersectionPolygon.addVertex( lineIntersection( g, lineThroughEdge ) );
 
-            is = lineIntersection( Line2D< V >( std::pair< V, V >( p2[ i ], p2[ i+1 ] ) ), cut );
-
-            if( (cuttingLines[ j ].first - is) * (cuttingLines[ j ].second - is) < 0
-                && (p2[ i ] - is) * (p2[ i+1 ] - is) < 0 )
-              intersectionPolygon.addVertex( is );
-          }
-
-        p1 = polygon2;
-        p2 = polygon1;
+        }
       }
-
-      return intersectionPolygon.volume();
 
     }
 
@@ -312,14 +274,14 @@ namespace Dune
 
 
     template< class V >
-    bool isInner ( const V &vertex, const Line2D< V > &g, const double TOL )
+    bool isInner ( const V &vertex, const Line2D< V > &g, const double TOL = 1e-12 )
     {
       return vertex * g.n + g.p >= TOL;
     }
 
 
     template< class V >
-    bool isOnRecLine ( const V &vertex, const Line2D< V > &g, const double TOL )
+    bool isOnRecLine ( const V &vertex, const Line2D< V > &g, const double TOL = 1e-12 )
     {
       return std::abs( vertex * g.n + g.p ) < TOL;
     }
@@ -333,6 +295,15 @@ namespace Dune
 
         if( isInner( geo.corner( i ), g, TOL ) )
           polygon.addVertex( geo.corner( i ) );
+    }
+
+    template< class V >
+    void polyAddInnerVertices ( const Polygon2D< V >& sourcePolygon, const Line2D< V > &g, Polygon2D< V >& endPolygon, const double TOL = 1e-12 )
+    {
+      for( std::size_t i = 0; i < sourcePolygon.corners(); ++i )
+
+        if( isInner( sourcePolygon[ i ], g, TOL ) )
+          endPolygon.addVertex( sourcePolygon[ i ] );
     }
 
 

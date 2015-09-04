@@ -6,6 +6,8 @@
 #include <dune/common/exceptions.hh>
 #include <dune/geometry/quadraturerules.hh>
 
+#include <dune/vof/initialize.hh>
+
 namespace Dune
 {
   namespace VoF
@@ -19,6 +21,9 @@ namespace Dune
       typedef typename LeafIterator::Entity Entity;
       typedef typename Entity::Geometry Geometry;
 
+      std::vector<double> concentrationEnd( concentration.size(), 0 );
+      Dune::VoF::initialize( grid, concentrationEnd, ft );
+
       double error = 0;
 
       GridView gridView = grid.leafGridView();
@@ -29,9 +34,11 @@ namespace Dune
 
         int i = gridView.indexSet().index( entity );
 
+        error += geo.volume() * std::abs( concentration[ i ] - concentrationEnd[ i ] );
 
+        /*
         const Dune::GeometryType gt = geo.type();
-        int p = 20;
+        int p = 60;
         const Dune::QuadratureRule< double, 2 > &rule = Dune::QuadratureRules< double, 2 >::rule( gt, p );
 
         // ensure that rule has at least the requested order
@@ -48,7 +55,7 @@ namespace Dune
           result += fval * weight * detjac;
         }
 
-        error += result;
+        error += result;*/
       }
 
       return error;
@@ -63,6 +70,9 @@ namespace Dune
       typedef typename LeafIterator::Entity Entity;
       typedef typename Entity::Geometry Geometry;
 
+      std::vector<double> concentrationEnd( concentration.size(), 0 );
+      Dune::VoF::initialize( grid, concentrationEnd, ft );
+
       double error = 0;
 
       GridView gridView = grid.leafGridView();
@@ -73,8 +83,12 @@ namespace Dune
 
         int i = gridView.indexSet().index( entity );
 
+        double diff = concentration[ i ] - concentrationEnd[ i ];
+        diff *= diff;
+        error += geo.volume() * diff;
+/*
         const Dune::GeometryType gt = geo.type();
-        int p = 20;
+        int p = 60;
         const Dune::QuadratureRule< double, 2 > &rule = Dune::QuadratureRules< double, 2 >::rule( gt, p );
 
         // ensure that rule has at least the requested order
@@ -92,7 +106,7 @@ namespace Dune
           result += fval * weight * detjac;
         }
 
-        error += result;
+        error += result;*/
       }
 
       return std::sqrt( error );

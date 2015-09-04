@@ -73,6 +73,7 @@ namespace Dune
           guessedNormals.getNormal( entityIndex, g );
 
 
+
           double sumCount;
           fvector centroidLineNormal, sumNormals;
 
@@ -180,7 +181,7 @@ namespace Dune
             count++;
 
           } while( (g.n - normalOld).two_norm2() > 1e-8 && count < 30 );            // limit number of loops
-
+          
 
           auto entityIntersections
             = computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
@@ -348,7 +349,7 @@ namespace Dune
         fb = f( b );
       }
 
-      
+      //std::cerr << "Brent steps:" << iter << std::endl;
       return b;
 
     }
