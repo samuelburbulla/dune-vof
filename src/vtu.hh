@@ -84,15 +84,14 @@ class VTUWriter
   typedef typename Polygon::Position Position;
 
 public:
-  VTUWriter ( const PolygonVector &v ) : v_( v ) 
+  VTUWriter ( const PolygonVector &v ) : v_( v )
   {
-    overallSize_ = 0;
-    for( const auto &entry : v_ )
-      overallSize_ += entry.size();
+    resize();
   }
 
   void write ( const std::string &name ) const
   {
+    resize();
     std::ofstream vtu( name );
     vtu << "<?xml version=\"1.0\"?>" << std::endl;
     vtu << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
@@ -117,6 +116,14 @@ public:
   }
 
 private:
+
+  void resize () const
+  {
+    overallSize_ = 0;
+    for( const auto &entry : v_ )
+      overallSize_ += entry.size();
+  }
+
   void writeCoordinates ( std::ostream &vtu ) const
   {
     std::vector< Position > points( overallSize_ );
@@ -180,7 +187,7 @@ private:
   }
 
   const PolygonVector &v_;
-  std::size_t overallSize_;
+  mutable std::size_t overallSize_;
 };
 
 #endif // #ifndef VTU_HH

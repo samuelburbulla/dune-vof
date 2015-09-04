@@ -45,8 +45,8 @@ struct Parameters
 	int numberOfCells = 32;
 
 	// params for timeloop
-	double dtAlpha = 0.1;
-	double tEnd = 2.5;
+	double dtAlpha = 0.5;
+	double tEnd = 10;
 
 	// params for saving data
 	double saveInterval = 0.1;
