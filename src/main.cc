@@ -58,7 +58,7 @@ void filterReconstruction( const std::vector< std::array<fvector,3 > > &rec, std
 {
 	io.clear();
 	for( auto && it: rec)
-		if( it[ 2 ] == fvector( 0.0 ) )
+		if( it[ 2 ] != fvector( 0.0 ) )
 			io.push_back( polygon{ it[ 0 ], it[ 1 ] } );
 }
 
@@ -123,7 +123,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	std::stringstream name;
   name.fill('0');
-  name << "vof-rec-" << std::setw(5) << 0 ;
+  name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
 
 	vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
 
@@ -154,7 +154,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 		  std::stringstream name_;
   		name_.fill('0');
-  		name_ << "vof-rec-" << std::setw(5) << saveNumber ;
+  		name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
   		vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
 
 
