@@ -32,9 +32,8 @@ namespace Dune
     void clearReconstruction ( R &reconstruction )
     {
       typedef typename Dune::FieldVector< double, 2 > fvector;
-      fvector null; null = 0;
       for( std::size_t i = 0; i < reconstruction.size(); ++i )
-        reconstruction[ i ] = std::array< fvector, 3 >( { null, null, null } );
+        reconstruction[ i ] = std::array< fvector, 3 >( { fvector( 0 ), fvector( 0 ), fvector( 0 ) } );
     }
 
 
@@ -349,7 +348,6 @@ namespace Dune
         fb = f( b );
       }
 
-      //std::cerr << "Brent steps:" << iter << std::endl;
       return b;
 
     }
