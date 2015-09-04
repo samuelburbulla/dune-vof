@@ -27,6 +27,8 @@
 #include <dune/vof/reconstruct.hh>
 
 
+typedef Dune::FieldVector<double,2> fvector;
+
 struct Parameters
 {
   	// concetration eps for mixed cells
@@ -37,7 +39,7 @@ struct Parameters
 
   	// params for timeloop
 	double dtAlpha = 0.1;
-	double tEnd = 10.0;
+	double tEnd = 2.5;
 
 	// params for saving data
 	double saveInterval = 0.1;
@@ -45,13 +47,25 @@ struct Parameters
 	std::string folderPath = "results/";
 };
 
+void filterReconstruction( const std::vector< std::array<fvector,3 > > &rec, std::vector< std::vector<fvector> > &io )
+{
+	io.clear();
+	for( auto && it: rec)
+		if( it[ 2 ] == fvector( 0.0 ) )
+		{
+			std::vector< fvector > points;
+			points.push_back( it[ 0 ] );
+			points.push_back( it[ 1 ] );
+			io.push_back( std::move( points ) );
+		}
+}
+
+
 
 template < class Grid >
 std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &params )
 {
-	typedef Dune::FieldVector<double,2> fvector;
-
-	// build domain references for each cell
+		// build domain references for each cell
 	Dune::VoF::DomainOfCells<Grid> domain ( grid );
 
 	auto gridView = grid.leafGridView();
@@ -63,6 +77,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	// allocate and initialize vectors for data representation
 	std::vector<double> concentration ( n );
 	std::vector< std::array<fvector,3> > reconstruction( n );
+	std::vector< std::vector<fvector> > recIO;
 	std::vector<bool> cellIsMixed ( n );
 	std::vector<bool> cellIsActive ( n );
 	std::vector<fvector> velocityField ( n );
@@ -80,9 +95,11 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 
-	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps ); 
-	  
-	int saveNumber = 1;  
+	Dune::VoF::clearReconstruction( reconstruction );
+	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
+	filterReconstruction( reconstruction, recIO );
+
+	int saveNumber = 1;
 	double saveStep = params.saveInterval;
 
 
@@ -100,7 +117,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	vtkwriter.write( 0 );
 
-	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl; 
+	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl;
 
 	std::vector<double> concentrationEnd( n, 0 );
 
@@ -117,6 +134,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 		Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
 		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive, velocityField );
+		filterReconstruction( reconstruction, recIO );
 
 		t += dt;
 
@@ -133,7 +151,6 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	}
 
-
 	auto ft = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
 
 	double L1 = Dune::VoF::l1error( grid, concentration, ft );
@@ -141,9 +158,6 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	return std::tuple<double, double> ( L1, L2 );
 }
-
-
-
 
 int main(int argc, char** argv)
 {
@@ -158,8 +172,6 @@ int main(int argc, char** argv)
   		typedef Dune::YaspGrid<dim> GridType;
 		typedef typename Dune::FieldVector<double,dim> fvector;
 
-
-
 		// set parameters
   		Parameters params;
 
@@ -170,7 +182,7 @@ int main(int argc, char** argv)
 
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
-		for ( std::size_t i = 0; i < 3; ++i )
+		for ( std::size_t i = 0; i < 1; ++i )
 		{
 
 			// build Grid
@@ -179,12 +191,8 @@ int main(int argc, char** argv)
 			std::fill( noc.begin(), noc.end(), params.numberOfCells );
 			GridType grid( upper, noc );
 
-
-
 			// start time integration
 			auto errorTuple = algorithm( grid,  params );
-
-
 
 		    // print errors and eoc
 			if ( i > 0 )
@@ -198,10 +206,7 @@ int main(int argc, char** argv)
 
 			std::cout << params.numberOfCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
 
-
-
 			lastErrorTuple = errorTuple;
-
 
 			// refine
 			params.numberOfCells *= 2;
