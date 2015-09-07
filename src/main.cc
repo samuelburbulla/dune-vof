@@ -4,6 +4,7 @@
 #include <iostream>
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/exceptions.hh> // We use exceptions
+#include <dune/common/path.hh>
 #include <fstream>
 #include <vector>
 #include <dune/grid/common/mcmgmapper.hh>
@@ -27,19 +28,25 @@
 #include <dune/vof/reconstruct.hh>
 
 
-typedef Dune::FieldVector<double,2> fvector;
+#include "polygon.hh"
+#include "vtu.hh"
+
+using fvector =
+ Dune::FieldVector<double,2>;
+using polygon =
+	Polygon< fvector >;
+
 
 struct Parameters
 {
-  	// concetration eps for mixed cells
-  	double eps = 1e-6;
-  	// number of cells for the cartesian grid in one direction
-  	int numberOfCells = 32;
+	// concetration eps for mixed cells
+	double eps = 1e-6;
+	// number of cells for the cartesian grid in one direction
+	int numberOfCells = 32;
 
-
-  	// params for timeloop
-	double dtAlpha = 0.1;
-	double tEnd = 2.5;
+	// params for timeloop
+	double dtAlpha = 0.5;
+	double tEnd = 10;
 
 	// params for saving data
 	double saveInterval = 0.1;
@@ -47,17 +54,12 @@ struct Parameters
 	std::string folderPath = "results/";
 };
 
-void filterReconstruction( const std::vector< std::array<fvector,3 > > &rec, std::vector< std::vector<fvector> > &io )
+void filterReconstruction( const std::vector< std::array<fvector,3 > > &rec, std::vector< polygon > &io )
 {
 	io.clear();
 	for( auto && it: rec)
-		if( it[ 2 ] == fvector( 0.0 ) )
-		{
-			std::vector< fvector > points;
-			points.push_back( it[ 0 ] );
-			points.push_back( it[ 1 ] );
-			io.push_back( std::move( points ) );
-		}
+		if( it[ 2 ] != fvector( 0.0 ) )
+			io.push_back( polygon{ it[ 0 ], it[ 1 ] } );
 }
 
 
@@ -77,7 +79,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	// allocate and initialize vectors for data representation
 	std::vector<double> concentration ( n );
 	std::vector< std::array<fvector,3> > reconstruction( n );
-	std::vector< std::vector<fvector> > recIO;
+	std::vector< polygon > recIO;
 	std::vector<bool> cellIsMixed ( n );
 	std::vector<bool> cellIsActive ( n );
 	std::vector<fvector> velocityField ( n );
@@ -115,7 +117,15 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
 	vtkwriter.addCellData ( cellIsActive, "cellactive" );
 
+	VTUWriter< std::vector< polygon > > vtuwriter( recIO );
+
 	vtkwriter.write( 0 );
+
+	std::stringstream name;
+  name.fill('0');
+  name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
+
+	vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
 
 	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl;
 
@@ -141,6 +151,12 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 		if ( t >= saveStep )
 		{
 		  vtkwriter.write( t );
+
+		  std::stringstream name_;
+  		name_.fill('0');
+  		name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
+  		vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
+
 
 		  saveStep += params.saveInterval;
 		  ++saveNumber;
