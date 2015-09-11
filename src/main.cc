@@ -42,7 +42,7 @@ struct Parameters
 	// concetration eps for mixed cells
 	double eps = 1e-6;
 	// number of cells for the cartesian grid in one direction
-	int numberOfCells = 32;
+	int numberOfCells = 16;
 
 	// params for timeloop
 	double dtAlpha = 0.5;
@@ -129,15 +129,12 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl;
 
-	std::vector<double> concentrationEnd( n, 0 );
+	auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, 0);
+	Dune::VoF::L1projection( grid, velocityField, psit );
 
 	while ( t < params.tEnd )
 	{
 		++k;
-
-		auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, t);
-		Dune::VoF::L1projection( grid, velocityField, psit );
-
 
 		Dune::VoF::clearReconstruction( reconstruction );
 
@@ -199,7 +196,7 @@ int main(int argc, char** argv)
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
 
-		for ( std::size_t i = 0; i < 5; ++i )
+		for ( std::size_t i = 0; i < 3; ++i )
 		{
 
 			// build Grid
