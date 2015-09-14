@@ -42,7 +42,8 @@ struct Parameters
 	// concetration eps for mixed cells
 	double eps = 1e-9;
 	// number of cells for the cartesian grid in one direction
-	int numberOfCells = 8;
+
+        int numberOfCells = 8;
 
 	// params for timeloop
 	double dtAlpha = 0.5;
@@ -132,7 +133,8 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl;
 
-	std::vector<double> concentrationEnd( n, 0 );
+	auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, 0);
+	Dune::VoF::L1projection( grid, velocityField, psit );
 
 
         auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, t);
@@ -143,8 +145,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	{
 		++k;
 
-		
-		Dune::VoF::clearReconstruction( reconstruction );
+	        Dune::VoF::clearReconstruction( reconstruction );
 
 		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 		Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
@@ -215,8 +216,8 @@ int main(int argc, char** argv)
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
 
-		for ( std::size_t i = 0; i < 7; ++i )
-		{
+		for ( std::size_t i = 0; i < 3; ++i )
+          	{
 
 			// build Grid
 			fvector upper( 1.0 );

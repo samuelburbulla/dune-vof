@@ -52,10 +52,9 @@ namespace Dune
       return r;
     }
 
-
-    const double psiMax ()
+    static const double psiMax ()
     {
-      return 2 * M_PI / 10 * sqrt( 2 );
+      return 2 * M_PI / 10 * sqrt( 2.0 );
     }
 
 
