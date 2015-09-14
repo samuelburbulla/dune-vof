@@ -14,15 +14,32 @@ namespace Dune
     double f ( const DomainVector &x, const double t )
     {
       DomainVector center { 0.5, 0.5 };
-      DomainVector offset { 0, 0.25 };
-      DomainVector normal { -0.25, 0 };
+      // DomainVector offset { 0, 0.25 };
+      // DomainVector normal { -0.25, 0 };
+      //
+      // center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
+      // center.axpy( - std::sin( ( 2 * M_PI / 10 ) * t ), normal );
+      // 
+      // double dist = ( x - center ).two_norm();
+      //
+      // return ( dist < 0.15 ) ? 1 : 0;
 
-      center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
-      center.axpy( - std::sin( ( 2 * M_PI / 10 ) * t ), normal );
+      double slotWidth = 0.075;
+      double ret = 0.0;
 
       double dist = ( x - center ).two_norm();
+      if ( dist < 0.4 )
+      	ret = 1.0;
 
-      return ( dist < 0.15 ) ? 1 : 0;
+      dist = ( x - ( center +  DomainVector{ 0.0, slotWidth } ) ).two_norm();
+
+      if ( dist < slotWidth )
+        ret = 0.0;
+
+      if ( x[1] > center[ 1 ] + slotWidth && std::abs( x[ 0 ] - center[ 0 ] ) < slotWidth )
+        ret = 0.0;
+
+      return ret;
 
     }
 

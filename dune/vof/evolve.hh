@@ -15,7 +15,8 @@ namespace Dune
 
     template< class G, class V, class R, class D, class fvector >
     void evolve ( const G &grid, V &c, R &reconstruction, D &domain, const int numberOfCells, double t, double dt,
-                  const double eps, std::vector< bool > &cellIsMixed,  std::vector< bool > &cellIsActive, const std::vector<fvector> &velocityField )
+                  const double eps, std::vector< bool > &cellIsMixed,  std::vector< bool > &cellIsActive, const std::vector<fvector> &velocityField,
+		  std::vector< int > &overundershoots )
     {
       typedef typename G::LeafGridView GridView;
 
@@ -175,12 +176,24 @@ namespace Dune
       // Look if any volume fraction undershoots or overshoots
       for( unsigned int i = 0; i < c.size(); ++i )
       {
-        c[ i ] = std::max( 0.0, c[ i ] );
-        c[ i ] = std::min( 1.0, c[ i ] );
+        //c[ i ] = std::max( 0.0, c[ i ] );
+        //c[ i ] = std::min( 1.0, c[ i ] );
 
-        //if ( divergence[ i ] > 1e-12 )
-          //std::cout << divergence[ i ] << std::endl;
-      }
+        if ( c [ i ] < 0 )
+	{
+	  overundershoots[ i ] = -1;
+	}
+
+	else if ( c[ i ] > 1 )
+	{
+	  overundershoots[ i ] = 1;
+        }
+
+        else 
+	{
+          overundershoots[ i ] = 0;
+	}
+     }
 
     }
 

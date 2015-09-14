@@ -40,7 +40,7 @@ using polygon =
 struct Parameters
 {
 	// concetration eps for mixed cells
-	double eps = 1e-6;
+	double eps = 1e-9;
 	// number of cells for the cartesian grid in one direction
 	int numberOfCells = 16;
 
@@ -83,6 +83,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	std::vector<bool> cellIsMixed ( n );
 	std::vector<bool> cellIsActive ( n );
 	std::vector<fvector> velocityField ( n );
+	std::vector<int> overundershoots ( n );
 
 
 	Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
@@ -116,6 +117,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	vtkwriter.addCellData ( concentration, "celldata" );
 	vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
 	vtkwriter.addCellData ( cellIsActive, "cellactive" );
+	vtkwriter.addCellData ( overundershoots, "overundershoots" );
 
 	VTUWriter< std::vector< polygon > > vtuwriter( recIO );
 
@@ -140,7 +142,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
 		Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
-		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive, velocityField );
+		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive, velocityField, overundershoots );
 		filterReconstruction( reconstruction, recIO );
 
 		t += dt;
@@ -196,7 +198,7 @@ int main(int argc, char** argv)
 		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
 
 
-		for ( std::size_t i = 0; i < 3; ++i )
+		for ( std::size_t i = 0; i < 4; ++i )
 		{
 
 			// build Grid
