@@ -40,9 +40,9 @@ using polygon =
 struct Parameters
 {
 	// concetration eps for mixed cells
-	double eps = 1e-6;
+	double eps = 1e-9;
 	// number of cells for the cartesian grid in one direction
-	int numberOfCells = 32;
+	int numberOfCells = 8;
 
 	// params for timeloop
 	double dtAlpha = 0.5;
@@ -103,7 +103,10 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	int saveNumber = 1;
 	double saveStep = params.saveInterval;
+	double errorsStep = params.tEnd;
+	double errorsInterval = 0;
 
+	double L1 = 0, L2 = 0;
 
 	// VTK Writer
 	std::stringstream path;
@@ -131,14 +134,16 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 
 	std::vector<double> concentrationEnd( n, 0 );
 
+
+        auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, t);
+	Dune::VoF::L1projection( grid, velocityField, psit );
+
+
 	while ( t < params.tEnd )
 	{
 		++k;
 
-		auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, t);
-		Dune::VoF::L1projection( grid, velocityField, psit );
-
-
+		
 		Dune::VoF::clearReconstruction( reconstruction );
 
 		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
@@ -165,13 +170,24 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 		std::cerr << "\r" << "[" << (int)(( t / params.tEnd ) * 100) << "%]";
 		//std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl;
 
-	}
+	
 
+	/*
+	if ( t >= errorsStep )
+	{
+		L1 = Dune::VoF::l1error( grid, concentration, ft );
+		L2 = Dune::VoF::l2error( grid, concentration, ft );
+		std::cout << params.numberOfCells << "\t\t\t" << L1 << " \t\t \t " << L2 << std::endl;
+		errorsStep += errorsInterval;
+	}
+	*/
+	}
+        
 	auto ft = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
 
-	double L1 = Dune::VoF::l1error( grid, concentration, ft );
-	double L2 = Dune::VoF::l2error( grid, concentration, ft );
-
+	L1 = Dune::VoF::l1error( grid, concentration, ft );
+	L2 = Dune::VoF::l2error( grid, concentration, ft );
+	
 	return std::tuple<double, double> ( L1, L2 );
 }
 

@@ -8,23 +8,26 @@ namespace Dune
   namespace VoF
   {
 
-
     //Initial Condition
     template< class DomainVector >
     double f ( const DomainVector &x, const double t )
     {
       DomainVector center { 0.5, 0.5 };
-      DomainVector offset { 0, 0.25 };
-      DomainVector normal { -0.25, 0 };
+      DomainVector offset { 0, 0.0 };
+      DomainVector normal { 0.0, 0 };
 
       center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
       center.axpy( - std::sin( ( 2 * M_PI / 10 ) * t ), normal );
 
       double dist = ( x - center ).two_norm();
 
-      return ( dist < 0.15 ) ? 1 : 0;
+      return (dist < 0.15) ? 1 : 0;	
+      //return ( dist < 0.4 && ( x[0] < 0.45 || x[0] > 0.55 || ( x[0] > 0.45 && x[0] < 0.55 && x[1] < 0.5 ) ) ) ? 1 : 0;
 
     }
+   
+
+
 
     //Initial Condition
     template< class V >
@@ -50,9 +53,9 @@ namespace Dune
     }
 
 
-    double psiMax ()
+    const double psiMax ()
     {
-      return 2 * M_PI / 10;
+      return 2 * M_PI / 10 * sqrt( 2 );
     }
 
 

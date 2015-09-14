@@ -150,7 +150,7 @@ private:
     const std::size_t size = v_.size();
     std::vector< std::int32_t > offsets( size );
     offsets[ 0 ] = v_[ 0 ].size();
-    for( int i = 1; i < size; ++i )
+    for( std::size_t i = 1; i < size; ++i )
       offsets[ i ] = offsets[ i - 1 ] + v_[ i ].size();
     writeDataArray( vtu, "offsets", offsets );
   }
