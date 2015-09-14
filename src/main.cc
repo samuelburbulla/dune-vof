@@ -14,16 +14,14 @@
 #include <functional>
 #include <stdexcept>
 
+#include <dune/common/parametertreeparser.hh>
+
 
 #include <dune/vof/flagCells.hh>
 #include <dune/vof/errors.hh>
-
-#include <dune/vof/params.hh>
 #include <dune/vof/io.hh>
 #include <dune/vof/domain.hh>
 #include <dune/vof/initialize.hh>
-
-
 #include <dune/vof/evolve.hh>
 #include <dune/vof/reconstruct.hh>
 
@@ -34,219 +32,206 @@
 using fvector =
  Dune::FieldVector<double,2>;
 using polygon =
-	Polygon< fvector >;
-
-
-struct Parameters
-{
-	// concetration eps for mixed cells
-	double eps = 1e-9;
-	// number of cells for the cartesian grid in one direction
-	int numberOfCells = 16;
-
-	// params for timeloop
-	double dtAlpha = 0.5;
-	double tEnd = 10;
-
-	// params for saving data
-	double saveInterval = 0.1;
-
-	std::string folderPath = "results/";
-};
+  Polygon< fvector >;
 
 void filterReconstruction( const std::vector< std::array<fvector,3 > > &rec, std::vector< polygon > &io )
 {
-	io.clear();
-	for( auto && it: rec)
-		if( it[ 2 ] != fvector( 0.0 ) )
-			io.push_back( polygon{ it[ 0 ], it[ 1 ] } );
+  io.clear();
+  for( auto && it: rec)
+    if( it[ 2 ] != fvector( 0.0 ) )
+      io.push_back( polygon{ it[ 0 ], it[ 1 ] } );
 }
 
 
 
 template < class Grid >
-std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &params )
+std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTree &parameters )
 {
-		// build domain references for each cell
-	Dune::VoF::DomainOfCells<Grid> domain ( grid );
+    // build domain references for each cell
+  Dune::VoF::DomainOfCells<Grid> domain ( grid );
 
-	auto gridView = grid.leafGridView();
+  auto gridView = grid.leafGridView();
 
-	int n = grid.leafGridView().size(0);
+  int n = grid.leafGridView().size(0); 
 
-
-
-	// allocate and initialize vectors for data representation
-	std::vector<double> concentration ( n );
-	std::vector< std::array<fvector,3> > reconstruction( n );
-	std::vector< polygon > recIO;
-	std::vector<bool> cellIsMixed ( n );
-	std::vector<bool> cellIsActive ( n );
-	std::vector<fvector> velocityField ( n );
-	std::vector<int> overundershoots ( n );
+  // allocate and initialize vectors for data representation
+  std::vector<double> concentration ( n );
+  std::vector< std::array<fvector,3> > reconstruction( n );
+  std::vector< polygon > recIO;
+  std::vector<bool> cellIsMixed ( n );
+  std::vector<bool> cellIsActive ( n );
+  std::vector<fvector> velocityField ( n );
+  std::vector<int> overundershoots ( n );
 
 
-	Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
+  Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
 
-	// calculate dt
-	double dt = params.dtAlpha * ( 1.0 / params.numberOfCells ) / Dune::VoF::psiMax();
-
-
-	double t = 0;
-	int k = 0;
+  // calculate dt
+  int numCells = parameters.get< int >( "grid.numCells" );
+  double dt = parameters.get< double >( "scheme.cflFactor" )  * ( 1.0 / numCells ) / Dune::VoF::psiMax();
+  const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
 
 
-	Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
-
-	Dune::VoF::clearReconstruction( reconstruction );
-	Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
-	filterReconstruction( reconstruction, recIO );
-
-	int saveNumber = 1;
-	double saveStep = params.saveInterval;
+  double t = 0;
+  int k = 0;
 
 
-	// VTK Writer
-	std::stringstream path;
-	path << "./results/vof-" << std::to_string( params.numberOfCells );
+  Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, cellIsMixed, cellIsActive, eps );
 
-	Dune::VoF::createDirectory( path.str() );
+  Dune::VoF::clearReconstruction( reconstruction );
+  Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps );
+  filterReconstruction( reconstruction, recIO );
 
-	Dune::VTKSequenceWriter<typename Grid::LeafGridView> vtkwriter ( gridView, "vof", path.str(), "~/dune" );
+  int saveNumber = 1;
+  const double saveInterval = parameters.get< double >( "io.saveInterval", 1 );
+  double nextSaveTime = saveInterval;
 
-	vtkwriter.addCellData ( concentration, "celldata" );
-	vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
-	vtkwriter.addCellData ( cellIsActive, "cellactive" );
-	vtkwriter.addCellData ( overundershoots, "overundershoots" );
 
-	VTUWriter< std::vector< polygon > > vtuwriter( recIO );
+  // VTK Writer
+  std::stringstream path;
+  path << "./results/vof-" << std::to_string( numCells );
 
-	vtkwriter.write( 0 );
+  Dune::VoF::createDirectory( path.str() );
 
-	std::stringstream name;
+  Dune::VTKSequenceWriter<typename Grid::LeafGridView> vtkwriter ( gridView, "vof", path.str(), "~/dune" );
+
+  vtkwriter.addCellData ( concentration, "celldata" );
+  vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
+  vtkwriter.addCellData ( cellIsActive, "cellactive" );
+  vtkwriter.addCellData ( overundershoots, "overundershoots" );
+
+  VTUWriter< std::vector< polygon > > vtuwriter( recIO );
+
+  vtkwriter.write( 0 );
+
+  std::stringstream name;
   name.fill('0');
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
 
-	vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+  vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
 
-	std::cerr << std::endl << params.numberOfCells << " cells" << std::endl;
+  std::cerr << std::endl << numCells << " cells" << std::endl;
 
-	auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, 0);
-	Dune::VoF::L1projection( grid, velocityField, psit );
+  auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, 0);
+  Dune::VoF::L1projection( grid, velocityField, psit );
 
-	while ( t < params.tEnd )
-	{
-		++k;
+  const double endTime = parameters.get< double >( "scheme.end", 10 );
 
-		Dune::VoF::clearReconstruction( reconstruction );
+  while ( t < endTime )
+  {
+    ++k;
 
-		Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, params.eps );
-		Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, params.eps );
-		Dune::VoF::evolve( grid, concentration, reconstruction, domain, params.numberOfCells, t, dt, params.eps, cellIsMixed, cellIsActive, velocityField, overundershoots );
-		filterReconstruction( reconstruction, recIO );
+    Dune::VoF::clearReconstruction( reconstruction );
 
-		t += dt;
+    Dune::VoF::flagCells( grid.leafGridView(), concentration, reconstruction, domain, cellIsMixed, cellIsActive, eps );
+    Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps );
+    Dune::VoF::evolve( grid, concentration, reconstruction, domain, numCells, t, dt, eps, cellIsMixed, cellIsActive, velocityField, overundershoots );
+    filterReconstruction( reconstruction, recIO );
 
-		if ( t >= saveStep )
-		{
-		  vtkwriter.write( t );
+    t += dt;
 
-		  std::stringstream name_;
-  		name_.fill('0');
-  		name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
-  		vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
+    if ( std::abs( t -  nextSaveTime ) < saveInterval/4.0 )
+    {
+      vtkwriter.write( t );
+
+      std::stringstream name_;
+      name_.fill('0');
+      name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
+      vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
 
 
-		  saveStep += params.saveInterval;
-		  ++saveNumber;
-		}
+      nextSaveTime += saveInterval;
+      ++saveNumber;
+    }
 
-		std::cerr << "\r" << "[" << (int)(( t / params.tEnd ) * 100) << "%]";
-		//std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl;
+    std::cerr << "\r" << "[" << (int)(( t / endTime ) * 100) << "%]";
+    //std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl
+  }
 
-	}
+  auto ft = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
 
-	auto ft = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
+  double L1 = Dune::VoF::l1error( grid, concentration, ft );
+  double L2 = Dune::VoF::l2error( grid, concentration, ft );
 
-	double L1 = Dune::VoF::l1error( grid, concentration, ft );
-	double L2 = Dune::VoF::l2error( grid, concentration, ft );
-
-	return std::tuple<double, double> ( L1, L2 );
+  return std::tuple<double, double> ( L1, L2 );
 }
 
 int main(int argc, char** argv)
 {
 
-  	Dune::MPIHelper::instance( argc, argv );
+    Dune::MPIHelper::instance( argc, argv );
 
-  	try {
-
-
-  		// type declarations
-		const int dim = 2;
-  		typedef Dune::YaspGrid<dim> GridType;
-		typedef typename Dune::FieldVector<double,dim> fvector;
-
-		// set parameters
-  		Parameters params;
-
-		Dune::VoF::handleInput ( argc, argv, params );
+    try {
 
 
-		std::tuple<double, double> lastErrorTuple;
+      // type declarations
+    const int dim = 2;
+      typedef Dune::YaspGrid<dim> GridType;
+    typedef typename Dune::FieldVector<double,dim> fvector;
 
-		std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
+    // set parameters
+    Dune::ParameterTree parameters;
+    Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
+    Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
+
+    parameters.report( std::cerr );
+
+    std::tuple<double, double> lastErrorTuple;
+
+    std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
+
+    int numRuns = parameters.get<int>( "runs", 1 );
+
+    for ( std::size_t i = 0; i < numRuns; ++i )
+    {
+
+      // build Grid
+      fvector upper( 1.0 );
+      int numCells = parameters.get< int >( "grid.numCells" );
+      Dune::array<int,dim> noc;
+      std::fill( noc.begin(), noc.end(), numCells );
+      GridType grid( upper, noc );
+
+      // start time integration
+      auto errorTuple = algorithm( grid, parameters );
+
+        // print errors and eoc
+      if ( i > 0 )
+      {
+        const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
+        const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
+
+        std::cout << "\t\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
+
+      }
+
+      std::cout << numCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
+
+      lastErrorTuple = errorTuple;
+
+      // refine
+      parameters[ "grid.numCells" ] = std::to_string( numCells * 2 );
+
+    }
 
 
-		for ( std::size_t i = 0; i < 4; ++i )
-		{
 
-			// build Grid
-			fvector upper( 1.0 );
-			Dune::array<int,dim> noc;
-			std::fill( noc.begin(), noc.end(), params.numberOfCells );
-			GridType grid( upper, noc );
+    return 0;
+  }
 
-			// start time integration
-			auto errorTuple = algorithm( grid,  params );
-
-		    // print errors and eoc
-			if ( i > 0 )
-			{
-				const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
-				const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
-
-				std::cout << "\t\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
-
-			}
-
-			std::cout << params.numberOfCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
-
-			lastErrorTuple = errorTuple;
-
-			// refine
-			params.numberOfCells *= 2;
-		}
-
-
-
-		return 0;
-
-	}
-
-	catch ( Dune::Exception &e )
-	{
-		std::cerr << "Dune reported error: " << e << std::endl;
-	}
-	catch( int e )
-	{
-		if ( e == 10 )
-			std::cerr << "Error: No intersection in cell with his reconstruction." << std::endl;
-		else
-			throw;
-	}
-	catch (...){
-		std::cerr << "Unknown exception thrown!" << std::endl;
-	}
+  catch ( Dune::Exception &e )
+  {
+    std::cerr << "Dune reported error: " << e << std::endl;
+  }
+  catch( int e )
+  {
+    if ( e == 10 )
+      std::cerr << "Error: No intersection in cell with his reconstruction." << std::endl;
+    else
+      throw;
+  }
+  catch (...){
+    std::cerr << "Unknown exception thrown!" << std::endl;
+  }
 
 }
