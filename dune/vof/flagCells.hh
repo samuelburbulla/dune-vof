@@ -53,7 +53,7 @@ namespace Dune
               auto n = intersection.centerUnitOuterNormal();
               n *= -1.0;
 
-              reconstruction[ entityIndex ] = std::array< fvector, 3 >( { isGeo.corner( 0 ), isGeo.corner( 1 ), n } );
+              reconstruction[ entityIndex ] = std::array< fvector, 3 >( {{ isGeo.corner( 0 ), isGeo.corner( 1 ), n }} );
               continue;
             }
           }

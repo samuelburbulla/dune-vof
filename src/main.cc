@@ -6,6 +6,7 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/path.hh>
 #include <fstream>
+#include <iostream>
 #include <vector>
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
@@ -89,7 +90,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
   // VTK Writer
   std::stringstream path;
-  path << "./results/vof-" << std::to_string( numCells );
+  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( numCells );
 
   Dune::VoF::createDirectory( path.str() );
 
@@ -110,7 +111,6 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
   vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
 
-  std::cerr << std::endl << numCells << " cells" << std::endl;
 
   auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, 0);
   Dune::VoF::L1projection( grid, velocityField, psit );
@@ -144,7 +144,9 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
       ++saveNumber;
     }
 
-    std::cerr << "\r" << "[" << (int)(( t / endTime ) * 100) << "%]";
+    if ( (int)(( t / endTime ) * 100) > (int)(( (t-1) / endTime ) * 100) )
+    	std::cerr << "\r" << numCells << "[" << (int)(( t / endTime ) * 100) << "%]";
+    
     //std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl
   }
 
@@ -176,9 +178,18 @@ int main(int argc, char** argv)
 
     parameters.report( std::cerr );
 
+
     std::tuple<double, double> lastErrorTuple;
 
-    std::cout << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
+    std::stringstream errorsPath;
+    errorsPath << "./" << parameters.get< std::string >( "io.folderPath" ) << "/errors";
+
+    std::fstream errorFile;
+    errorFile.open( errorsPath.str(), std::fstream::out );
+
+    errorFile << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
+
+
 
     int numRuns = parameters.get<int>( "runs", 1 );
 
@@ -205,7 +216,7 @@ int main(int argc, char** argv)
 
       }
 
-      std::cout << numCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
+      errorFile << numCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
 
       lastErrorTuple = errorTuple;
 
