@@ -16,7 +16,7 @@ namespace Dune
     template< class G, class V, class R, class D, class fvector >
     void evolve ( const G &grid, V &c, R &reconstruction, D &domain, const int numberOfCells, double t, double dt,
                   const double eps, std::vector< bool > &cellIsMixed,  std::vector< bool > &cellIsActive, const std::vector<fvector> &velocityField,
-		  std::vector< int > &overundershoots )
+      std::vector< int > &overundershoots )
     {
       typedef typename G::LeafGridView GridView;
 
@@ -41,7 +41,7 @@ namespace Dune
       {
 
         int entityIndex = gridView.indexSet().index( entity );
-	
+  
 
         if( cellIsMixed[ entityIndex ] || cellIsActive[ entityIndex ] )
         {
@@ -86,9 +86,9 @@ namespace Dune
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) );
 
-	            //fvector flux = outerNormal;
-	            //flux *= ( velocity * outerNormal ); 
-	      	
+              //fvector flux = outerNormal;
+              //flux *= ( velocity * outerNormal ); 
+          
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - velocity );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - velocity );
 
@@ -125,8 +125,8 @@ namespace Dune
               else if( velocity * outerNormal < 0 )
                 if( intersection.neighbor() )
                 {
-		  
-		              // build phase polygon of the neighbor
+      
+                  // build phase polygon of the neighbor
                   Polygon2D< fvector > fluxPolygon;
                   double fluxVolume = 0;
 
@@ -150,7 +150,7 @@ namespace Dune
             else // intersection was already calculated 
             {
               update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume(); 
-	          }
+            }
             
           }
         }
@@ -165,34 +165,33 @@ namespace Dune
         if ( cellIsMixed[ i ] || cellIsActive[ i ] )
         {
           //update[ i ] += divergence[ i ] * c[ i ] * dt * 0.5; 
-	        c[ i ] += update[ i ];
+          c[ i ] += update[ i ];
           //c[ i ] /= 1.0 - divergence[ i ] * dt * 0.5; 
-	      }
+        }
       }
 
 
 
 
       // Look if any volume fraction undershoots or overshoots
-      for( unsigned int i = 0; i < c.size(); ++i )
+      for( std::size_t i = 0; i < c.size(); ++i )
       {
-        //c[ i ] = std::max( 0.0, c[ i ] );
-        //c[ i ] = std::min( 1.0, c[ i ] );
 
         if ( c [ i ] < 0 )
-	{
-	  overundershoots[ i ] = -1;
-	}
-
-	else if ( c[ i ] > 1 )
-	{
-	  overundershoots[ i ] = 1;
+        {
+          overundershoots[ i ] = -1;
+        }   
+        else if ( c[ i ] > 1 )
+        {
+          overundershoots[ i ] = 1;
+        }
+        else 
+        {
+          overundershoots[ i ] = 0;
         }
 
-        else 
-	{
-          overundershoots[ i ] = 0;
-	}
+        // c[ i ] = std::max( 0.0, c[ i ] );
+        // c[ i ] = std::min( 1.0, c[ i ] );
      }
 
     }

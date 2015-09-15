@@ -182,7 +182,7 @@ int main(int argc, char** argv)
 
     int numRuns = parameters.get<int>( "runs", 1 );
 
-    for ( std::size_t i = 0; i < numRuns; ++i )
+    for ( int i = 0; i < numRuns; ++i )
     {
 
       // build Grid

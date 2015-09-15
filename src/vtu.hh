@@ -150,7 +150,7 @@ private:
     const std::size_t size = v_.size();
     std::vector< std::int32_t > offsets( size );
     offsets[ 0 ] = v_[ 0 ].size();
-    for( int i = 1; i < size; ++i )
+    for( std::size_t i = 1; i < size; ++i )
       offsets[ i ] = offsets[ i - 1 ] + v_[ i ].size();
     writeDataArray( vtu, "offsets", offsets );
   }
@@ -167,11 +167,11 @@ private:
     vtu << "        <DataArray type=\"" << VTUDataType< Data >::type() << "\" "
         << "NumberOfComponents=\"" << VTUDataType< Data >::components() << "\" "
         << "Name=\"" << name << "\" format=\"ascii\">" << std::endl;
-    int linelength = 0;
+    std::size_t linelength = 0;
     for( const Data &value : data )
     {
       const std::string s = VTUDataType< Data >::toString( value );
-      const int sz = s.size();
+      const std::size_t sz = s.size();
       if( linelength + sz > 79 )
       {
         vtu << std::endl;
