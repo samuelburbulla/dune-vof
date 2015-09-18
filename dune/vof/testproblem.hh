@@ -24,19 +24,24 @@ namespace Dune
       //
       // return ( dist < 0.15 ) ? 1 : 0;
 
+      DomainVector xPrime = center;
+      DomainVector tmp = x - center;
+      xPrime.axpy( std::cos( ( 2.0 * M_PI / 10.0 ) * t ), tmp );
+      tmp = { -tmp[ 1 ], tmp[ 0 ] };
+      xPrime.axpy( std::sin( ( 2.0 * M_PI / 10.0 ) * t ), tmp  );
+
       double slotWidth = 0.075;
       double ret = 0.0;
 
-      double dist = ( x - center ).two_norm();
+      double dist = ( xPrime - center ).two_norm();
       if ( dist < 0.4 )
       	ret = 1.0;
 
-      dist = ( x - ( center +  DomainVector{ 0.0, slotWidth } ) ).two_norm();
-
+      dist = ( xPrime - ( center +  DomainVector{ 0.0, slotWidth } ) ).two_norm();
       if ( dist < slotWidth )
         ret = 0.0;
 
-      if ( x[1] > center[ 1 ] + slotWidth && std::abs( x[ 0 ] - center[ 0 ] ) < slotWidth )
+      if ( xPrime[1] > center[ 1 ] + slotWidth && std::abs( xPrime[ 0 ] - center[ 0 ] ) < slotWidth )
         ret = 0.0;
 
       return ret;
