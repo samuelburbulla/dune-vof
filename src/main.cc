@@ -62,7 +62,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
   std::vector<bool> cellIsMixed ( n );
   std::vector<bool> cellIsActive ( n );
   std::vector<fvector> velocityField ( n );
-  std::vector<int> overundershoots ( n );
+  std::vector<double> overundershoots ( n );
 
 
   Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
@@ -130,7 +130,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
     t += dt;
 
-    if ( std::abs( t -  nextSaveTime ) < saveInterval/4.0 )
+    if ( std::abs( t - nextSaveTime ) < saveInterval/4.0 )
     {
       vtkwriter.write( t );
 
@@ -145,7 +145,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
     }
 
     if ( (int)(( t / endTime ) * 100) > (int)(( (t-1) / endTime ) * 100) )
-    	std::cerr << "\r" << numCells << "[" << (int)(( t / endTime ) * 100) << "%]";
+    	std::cerr << "\r" << numCells << " [" << (int)(( t / endTime ) * 100) << "%]";
     
     //std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl
   }
@@ -176,8 +176,9 @@ int main(int argc, char** argv)
     Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
     Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
+    std::cerr << std::endl << "### Parameters ###" << std::endl;
     parameters.report( std::cerr );
-
+    std::cerr << "#################" << std::endl << std::endl;
 
     std::tuple<double, double> lastErrorTuple;
 
@@ -187,7 +188,7 @@ int main(int argc, char** argv)
     std::fstream errorFile;
     errorFile.open( errorsPath.str(), std::fstream::out );
 
-    errorFile << "Cells \t\t L1 \t eoc \t\t L2 \t eoc" << std::endl << std::endl;
+    errorFile << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
 
 
 
@@ -212,20 +213,20 @@ int main(int argc, char** argv)
         const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
         const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
 
-        std::cout << "\t\t\t\t\t " << eocL1 << " \t\t \t " << eocL2 << std::endl;
+        errorFile << "             " << eocL1 << "        " << eocL2 << std::endl;
 
       }
 
-      errorFile << numCells << "\t\t\t" << std::get<0> ( errorTuple ) << " \t\t \t " << std::get<1> ( errorTuple ) << std::endl;
+      errorFile << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
 
       lastErrorTuple = errorTuple;
 
       // refine
       parameters[ "grid.numCells" ] = std::to_string( numCells * 2 );
-
+      std::cerr << std::endl;
     }
 
-
+    errorFile.close();
 
     return 0;
   }

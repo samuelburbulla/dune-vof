@@ -1,5 +1,5 @@
-#ifndef __DUNE_GRID_REC_VOL_TRACKEVOLVE_HH__
-#define __DUNE_GRID_REC_VOL_TRACKEVOLVE_HH__
+#ifndef __DUNE_GRID_REC_VOL_TRACK_GEOMETRICALTOOLBOX_HH__
+#define __DUNE_GRID_REC_VOL_TRACK_GEOMETRICALTOOLBOX_HH__
 
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>

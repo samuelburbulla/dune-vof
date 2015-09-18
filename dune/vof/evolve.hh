@@ -16,7 +16,7 @@ namespace Dune
     template< class G, class V, class R, class D, class fvector >
     void evolve ( const G &grid, V &c, R &reconstruction, D &domain, const int numberOfCells, double t, double dt,
                   const double eps, std::vector< bool > &cellIsMixed,  std::vector< bool > &cellIsActive, const std::vector<fvector> &velocityField,
-      std::vector< int > &overundershoots )
+      std::vector< double > &overundershoots )
     {
       typedef typename G::LeafGridView GridView;
 
@@ -85,9 +85,6 @@ namespace Dune
 
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) );
-
-              //fvector flux = outerNormal;
-              //flux *= ( velocity * outerNormal ); 
           
               timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - velocity );
               timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - velocity );
@@ -179,11 +176,11 @@ namespace Dune
 
         if ( c [ i ] < 0 )
         {
-          overundershoots[ i ] = -1;
+          overundershoots[ i ] = c[ i];
         }   
         else if ( c[ i ] > 1 )
         {
-          overundershoots[ i ] = 1;
+          overundershoots[ i ] = c[ i ] - 1;
         }
         else 
         {
