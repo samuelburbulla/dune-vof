@@ -137,9 +137,6 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Parameters &param
 	Dune::VoF::L1projection( grid, velocityField, psit );
 
 
-        auto psit = std::bind( Dune::VoF::psi<fvector>, std::placeholders::_1, t);
-	Dune::VoF::L1projection( grid, velocityField, psit );
-
 
 	while ( t < params.tEnd )
 	{
