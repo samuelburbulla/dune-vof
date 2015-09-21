@@ -8,7 +8,7 @@ set(vof_HEADERS
   initialize.hh
   reconstruct.hh
   testproblem.hh
-  params.hh
   io.hh
-  secondyoungsnormalguessing.hh)
+  secondyoungsnormalguessing.hh
+  brent.hh)
 install(FILES ${vof_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof)

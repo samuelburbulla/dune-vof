@@ -167,11 +167,11 @@ private:
     vtu << "        <DataArray type=\"" << VTUDataType< Data >::type() << "\" "
         << "NumberOfComponents=\"" << VTUDataType< Data >::components() << "\" "
         << "Name=\"" << name << "\" format=\"ascii\">" << std::endl;
-    int linelength = 0;
+    std::size_t linelength = 0;
     for( const Data &value : data )
     {
       const std::string s = VTUDataType< Data >::toString( value );
-      const int sz = s.size();
+      const std::size_t sz = s.size();
       if( linelength + sz > 79 )
       {
         vtu << std::endl;
