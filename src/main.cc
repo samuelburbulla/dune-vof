@@ -53,19 +53,19 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
   auto gridView = grid.leafGridView();
 
-  int n = grid.leafGridView().size(0); 
+  int n = grid.leafGridView().size(0);
 
   // allocate and initialize vectors for data representation
   std::vector<double> concentration ( n );
   std::vector< std::array<fvector,3> > reconstruction( n );
   std::vector< polygon > recIO;
-  std::vector<bool> cellIsMixed ( n );
-  std::vector<bool> cellIsActive ( n );
-  std::vector<fvector> velocityField ( n );
-  std::vector<double> overundershoots ( n );
-
+  std::vector<bool> cellIsMixed( n );
+  std::vector<bool> cellIsActive( n );
+  std::vector<fvector> velocityField( n );
+  std::vector<double> overundershoots( n );
 
   Dune::VoF::initialize( grid, concentration, Dune::VoF::f0<fvector> );
+  std::vector<double> projSol( concentration );
 
   // calculate dt
   int numCells = parameters.get< int >( "grid.numCells" );
@@ -99,7 +99,8 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
   vtkwriter.addCellData ( concentration, "celldata" );
   vtkwriter.addCellData ( cellIsMixed, "cellmixed" );
   vtkwriter.addCellData ( cellIsActive, "cellactive" );
-  vtkwriter.addCellData ( overundershoots, "overundershoots" );
+  //vtkwriter.addCellData ( overundershoots, "overundershoots" );
+  vtkwriter.addCellData( projSol, "proj. Solution");
 
   VTUWriter< std::vector< polygon > > vtuwriter( recIO );
 
@@ -132,6 +133,9 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
     if ( std::abs( t - nextSaveTime ) < saveInterval/4.0 )
     {
+      auto ft_ = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
+      Dune::VoF::initialize( grid, projSol, ft_ );
+
       vtkwriter.write( t );
 
       std::stringstream name_;
@@ -146,7 +150,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
     if ( (int)(( t / endTime ) * 100) > (int)(( (t-1) / endTime ) * 100) )
     	std::cerr << "\r" << numCells << " [" << (int)(( t / endTime ) * 100) << "%]";
-    
+
     //std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl
   }
 
@@ -182,13 +186,13 @@ int main(int argc, char** argv)
 
     std::tuple<double, double> lastErrorTuple;
 
-    std::stringstream errorsPath;
-    errorsPath << "./" << parameters.get< std::string >( "io.folderPath" ) << "/errors";
+    // std::stringstream errorsPath;
+    // errorsPath << "./" << parameters.get< std::string >( "io.folderPath" ) << "/errors";
 
-    std::fstream errorFile;
-    errorFile.open( errorsPath.str(), std::fstream::out );
+    // std::fstream errorFile;
+    // errorFile.open( errorsPath.str(), std::fstream::out );
 
-    errorFile << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
+    std::cout << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
 
 
 
@@ -213,11 +217,11 @@ int main(int argc, char** argv)
         const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
         const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
 
-        errorFile << "             " << eocL1 << "        " << eocL2 << std::endl;
+        std::cout << "             " << eocL1 << "        " << eocL2 << std::endl;
 
       }
 
-      errorFile << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
+      std::cout << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
 
       lastErrorTuple = errorTuple;
 
@@ -226,7 +230,7 @@ int main(int argc, char** argv)
       std::cerr << std::endl;
     }
 
-    errorFile.close();
+    //errorFile.close();
 
     return 0;
   }
