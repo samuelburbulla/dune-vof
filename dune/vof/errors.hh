@@ -7,6 +7,7 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include <dune/vof/initialize.hh>
+#include <dune/vof/geometricaltoolbox.hh>
 
 namespace Dune
 {
@@ -110,6 +111,60 @@ namespace Dune
       }
 
       return std::sqrt( error );
+    }
+
+
+
+    template< class G, class R >
+    double recError ( const G &grid, const R &rec )
+    {
+      typedef typename G::LeafGridView GridView;
+      typedef typename Dune::FieldVector<double,2> V;
+
+      V center { 0.47, 0.54 };
+
+      double error = 0;
+
+      GridView gridView = grid.leafGridView();
+
+      for( auto&& entity : elements( gridView ) )
+      {
+        int i = gridView.indexSet().index( entity );
+        double result = 0;
+
+        if ( rec[i][2].two_norm() > 0.01 )
+        {
+          V discreteNormal = rec[i][2];
+          discreteNormal /= discreteNormal.two_norm();
+          
+          
+          V exactNormalc = rec[i][0];
+          exactNormalc += rec[i][1]; 
+          exactNormalc *= 0.5;
+          exactNormalc -= center;
+          exactNormalc /= exactNormalc.two_norm();
+
+          V exactNormal0 = rec[i][0];
+          exactNormal0 -= center;
+          exactNormal0 /= exactNormal0.two_norm();
+
+          V exactNormal1 = rec[i][1];
+          exactNormal1 -= center;
+          exactNormal1 /= exactNormal1.two_norm();
+          
+
+
+          result += 0.5 * (discreteNormal - exactNormalc).one_norm();
+          result += 0.25 * (discreteNormal - exactNormal0).one_norm();
+          result += 0.25 * (discreteNormal - exactNormal1).one_norm(); 
+
+          result *= (rec[i][0] - rec[i][1]).two_norm();
+
+          error += result;
+        }
+      }
+
+      return error;
     }
 
 

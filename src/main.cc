@@ -25,6 +25,7 @@
 #include <dune/vof/initialize.hh>
 #include <dune/vof/evolve.hh>
 #include <dune/vof/reconstruct.hh>
+#include <dune/vof/cputime.hh>
 
 
 #include "polygon.hh"
@@ -32,31 +33,8 @@
 
 using fvector =
  Dune::FieldVector<double,2>;
-using polygon =
-<<<<<<< HEAD
-	Polygon< fvector >;
+using polygon = Polygon< fvector >;
 
-
-struct Parameters
-{
-	// concetration eps for mixed cells
-	double eps = 1e-9;
-	// number of cells for the cartesian grid in one direction
-
-        int numberOfCells = 8;
-
-	// params for timeloop
-	double dtAlpha = 0.5;
-	double tEnd = 10;
-
-	// params for saving data
-	double saveInterval = 0.1;
-
-	std::string folderPath = "results/";
-};
-=======
-  Polygon< fvector >;
->>>>>>> 635320a333e44bf502e8f6bb0aea1f186f1eb045
 
 void filterReconstruction( const std::vector< std::array<fvector,3 > > &rec, std::vector< polygon > &io )
 {
@@ -103,21 +81,30 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
   Dune::VoF::flagCells( gridView, concentration, reconstruction, domain, cellIsMixed, cellIsActive, eps );
 
   Dune::VoF::clearReconstruction( reconstruction );
+
+
+
+
+  //double cpuStartTime, cpuEndTime;
+  //cpuStartTime = getCPUTime( );
+
   Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps );
+
+  //cpuEndTime = getCPUTime( );
+  
+  //double recError = Dune::VoF::recError( grid, reconstruction );
+
+  //std::cerr << " " << numCells << " & " << recError << " & " << (cpuEndTime - cpuStartTime);
+
+
+
+
   filterReconstruction( reconstruction, recIO );
 
   int saveNumber = 1;
   const double saveInterval = parameters.get< double >( "io.saveInterval", 1 );
   double nextSaveTime = saveInterval;
 
-
-
-	int saveNumber = 1;
-	double saveStep = params.saveInterval;
-	double errorsStep = params.tEnd;
-	double errorsInterval = 0;
-
-	double L1 = 0, L2 = 0;
 
   // VTK Writer
   std::stringstream path;
@@ -258,7 +245,6 @@ int main(int argc, char** argv)
 
       // refine
       parameters[ "grid.numCells" ] = std::to_string( numCells * 2 );
-      std::cerr << std::endl;
     }
 
     errorFile.close();

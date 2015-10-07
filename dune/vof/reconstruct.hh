@@ -74,8 +74,10 @@ namespace Dune
           double sumCount;
           fvector centroidLineNormal, sumNormals;
 
+
           do
           {
+
             sumCount = 0;
             sumNormals = 0;
 
