@@ -24,7 +24,7 @@ namespace Dune
       GridView gridView = grid.leafGridView();
 
 
-      // Calculate discrete velocity divergence in loop 
+      // Calculate discrete velocity divergence in loop
       //std::vector< double > divergence( gridView.size( 0 ), 0 );
 
 
@@ -41,7 +41,7 @@ namespace Dune
       {
 
         int entityIndex = gridView.indexSet().index( entity );
-  
+
 
         if( cellIsMixed[ entityIndex ] || cellIsActive[ entityIndex ] )
         {
@@ -74,20 +74,20 @@ namespace Dune
 
               //divergence[ entityIndex ] += intersection.integrationOuterNormal( 0 ) * ( ufEn + ufNe ) * 0.5;
 
-
               std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
-              
+
               // do not calculate fluxes twice
               if ( intersectionFluxes.find( fluxIndex ) == intersectionFluxes.end() )
               {
                 // build time integration polygon
                 velocity *= dt;
 
+
                 Polygon2D< fvector > timeIntegrationPolygon;
 
                 timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
                 timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) );
-            
+
                 timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - velocity );
                 timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - velocity );
 
@@ -103,9 +103,8 @@ namespace Dune
                   if( cellIsMixed[ entityIndex ] )
                   {
                     Line2D< fvector > reconstLine( reconstruction[ entityIndex ][ 2 ], reconstruction[ entityIndex ][ 0 ] );
-                    
-                    polygonLineIntersection( timeIntegrationPolygon, reconstLine, fluxPolygon );
 
+                    polygonLineIntersection( timeIntegrationPolygon, reconstLine, fluxPolygon );
                     polyAddInnerVertices( timeIntegrationPolygon, reconstLine, fluxPolygon );
 
                     fluxVolume = fluxPolygon.volume();
@@ -122,7 +121,7 @@ namespace Dune
 
                 //inflow
                 else if( velocity * outerNormal < 0 )
-                {     
+                {
                   // build phase polygon of the neighbor
                   Polygon2D< fvector > fluxPolygon;
                   double fluxVolume = 0;
@@ -130,7 +129,7 @@ namespace Dune
                   if( cellIsMixed[ neighborIndex ] )
                   {
                     Line2D< fvector > reconstLine( reconstruction[ neighborIndex ][ 2 ], reconstruction[ neighborIndex ][ 0 ] );
-                  
+
                     polygonLineIntersection( timeIntegrationPolygon, reconstLine, fluxPolygon );
                     polyAddInnerVertices( timeIntegrationPolygon, reconstLine, fluxPolygon );
 
@@ -143,10 +142,10 @@ namespace Dune
 
                   intersectionFluxes.insert( std::pair<std::pair<int,int>,double>( fluxIndex , fluxVolume ) );
                 }
-              } 
-              else // intersection was already calculated 
+              }
+              else // intersection was already calculated
               {
-                update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume(); 
+                update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume();
               }
             } // end of intersection is neighbor
           }
@@ -161,9 +160,9 @@ namespace Dune
         // discrete velocity divergence correction and advantage
         if ( cellIsMixed[ i ] || cellIsActive[ i ] )
         {
-          //update[ i ] += divergence[ i ] * c[ i ] * dt * 0.5; 
+          //update[ i ] += divergence[ i ] * c[ i ] * dt * 0.5;
           c[ i ] += update[ i ];
-          //c[ i ] /= 1.0 - divergence[ i ] * dt * 0.5; 
+          //c[ i ] /= 1.0 - divergence[ i ] * dt * 0.5;
         }
       }
 
@@ -177,12 +176,12 @@ namespace Dune
         if ( c [ i ] < 0 )
         {
           overundershoots[ i ] = c[ i];
-        }   
+        }
         else if ( c[ i ] > 1 )
         {
           overundershoots[ i ] = c[ i ] - 1;
         }
-        else 
+        else
         {
           overundershoots[ i ] = 0;
         }
