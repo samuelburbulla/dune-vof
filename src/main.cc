@@ -10,7 +10,8 @@
 #include <vector>
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
-#include <dune/grid/yaspgrid.hh>
+//#include <dune/grid/yaspgrid.hh>
+
 #include <cmath>
 #include <functional>
 #include <stdexcept>
@@ -91,7 +92,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
   Dune::VoF::reconstruct( grid, concentration, reconstruction, cellIsMixed, domain, eps );
 
   //cpuEndTime = getCPUTime( );
-  
+
   //double recError = Dune::VoF::recError( grid, reconstruction );
 
   //std::cerr << " " << numCells << " & " << recError << " & " << (cpuEndTime - cpuStartTime);
@@ -194,7 +195,8 @@ int main(int argc, char** argv)
 
       // type declarations
     const int dim = 2;
-      typedef Dune::YaspGrid<dim> GridType;
+    // typedef Dune::YaspGrid<dim> GridType;
+    using GridType = Dune::GridSelector::GridType;
     typedef typename Dune::FieldVector<double,dim> fvector;
 
     // set parameters
@@ -216,17 +218,29 @@ int main(int argc, char** argv)
 
     errorFile << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
 
+
+    std::stringstream gridFile;
+    gridFile << "test8.dgf";
+
+     //  create grid
+    Dune::GridPtr< GridType > gridPtr( gridFile.str() );
+    gridPtr->loadBalance();
+    GridType& grid = *gridPtr;
+
+    const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
+
+
     int numRuns = parameters.get<int>( "runs", 1 );
 
     for ( int i = 0; i < numRuns; ++i )
     {
 
       // build Grid
-      fvector upper( 1.0 );
+      //fvector upper( 1.0 );
       int numCells = parameters.get< int >( "grid.numCells" );
-      Dune::array<int,dim> noc;
-      std::fill( noc.begin(), noc.end(), numCells );
-      GridType grid( upper, noc );
+      //Dune::array<int,dim> noc;
+      //std::fill( noc.begin(), noc.end(), numCells );
+      //GridType grid( upper, noc );
 
       // start time integration
       auto errorTuple = algorithm( grid, parameters );
@@ -248,6 +262,8 @@ int main(int argc, char** argv)
       // refine
       parameters[ "grid.numCells" ] = std::to_string( numCells * 2 );
       std::cout << std::endl;
+    
+      grid.globalRefine( refineStepsForHalf );
     }
 
     errorFile.close();

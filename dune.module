@@ -8,3 +8,4 @@ Version: 2015.09
 Maintainer: sambu@posteo.de
 #depending on
 Depends: dune-grid (>= 3.0) dune-geometry (>= 3.0) dune-common (>= 3.0)
+Suggests: dune-alugrid
