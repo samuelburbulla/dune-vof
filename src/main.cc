@@ -208,15 +208,13 @@ int main(int argc, char** argv)
 
     std::tuple<double, double> lastErrorTuple;
 
-    // std::stringstream errorsPath;
-    // errorsPath << "./" << parameters.get< std::string >( "io.folderPath" ) << "/errors";
+    std::stringstream errorsPath;
+    errorsPath << "./" << parameters.get< std::string >( "io.folderPath" ) << "/errors";
 
-    // std::fstream errorFile;
-    // errorFile.open( errorsPath.str(), std::fstream::out );
+     std::fstream errorFile;
+     errorFile.open( errorsPath.str(), std::fstream::out );
 
-    std::cout << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
-
-
+    errorFile << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
 
     int numRuns = parameters.get<int>( "runs", 1 );
 
@@ -239,19 +237,20 @@ int main(int argc, char** argv)
         const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
         const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
 
-        std::cout << "             " << eocL1 << "        " << eocL2 << std::endl;
+        errorFile << "             " << eocL1 << "        " << eocL2 << std::endl;
 
       }
 
-      std::cout << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
+      errorFile << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
 
       lastErrorTuple = errorTuple;
 
       // refine
       parameters[ "grid.numCells" ] = std::to_string( numCells * 2 );
+      std::cout << std::endl;
     }
 
-    //errorFile.close();
+    errorFile.close();
 
     return 0;
   }
