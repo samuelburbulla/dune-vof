@@ -77,8 +77,8 @@ namespace Dune
               std::pair<int,int> fluxIndex ( std::min( entityIndex, neighborIndex ), std::max( entityIndex, neighborIndex ) );
 
               // do not calculate fluxes twice
-              if ( intersectionFluxes.find( fluxIndex ) == intersectionFluxes.end() )
-              {
+              //if ( intersectionFluxes.find( fluxIndex ) == intersectionFluxes.end() )
+              //{
                 // build time integration polygon
                 velocity *= dt;
 
@@ -142,11 +142,11 @@ namespace Dune
 
                   intersectionFluxes.insert( std::pair<std::pair<int,int>,double>( fluxIndex , fluxVolume ) );
                 }
-              }
-              else // intersection was already calculated
-              {
-                update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume();
-              }
+              //}
+              //else // intersection was already calculated
+              //{
+                //update[ entityIndex ] -= intersectionFluxes.find( fluxIndex )->second / entityGeo.volume();
+              //}
             } // end of intersection is neighbor
           }
         }
@@ -175,7 +175,7 @@ namespace Dune
 
         if ( c [ i ] < 0 )
         {
-          overundershoots[ i ] = c[ i];
+          overundershoots[ i ] = c[ i ];
         }
         else if ( c[ i ] > 1 )
         {

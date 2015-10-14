@@ -33,53 +33,50 @@ namespace Dune
 
         int entityIndex = gridView.indexSet().index( entity );
 
-        if( c[ entityIndex ] >= eps && c[ entityIndex ] <= 1 - eps )
 
+        if( c[ entityIndex ] >= eps && c[ entityIndex ] <= 1 - eps )
           cellIsMixed[ entityIndex ] = true;
 
         else if( c[ entityIndex ] > 1 - eps )
-
           for( auto&& intersection : intersections( gridView, entity ) )
           {
-
-            const Entity &neighbor = intersection.outside();
-            int neighborIndex = gridView.indexSet().index( neighbor );
-
-            if( c[ neighborIndex ] < eps )
+            if ( intersection.neighbor() )
             {
-              cellIsMixed[ entityIndex ] = true;
+              const Entity &neighbor = intersection.outside();
+              int neighborIndex = gridView.indexSet().index( neighbor );
 
-              const IntersectionGeometry isGeo = intersection.geometry();
-              auto n = intersection.centerUnitOuterNormal();
-              n *= -1.0;
+              if( c[ neighborIndex ] < eps )
+              {
+                cellIsMixed[ entityIndex ] = true;
 
-              reconstruction[ entityIndex ] = std::array< fvector, 3 >( {{ isGeo.corner( 0 ), isGeo.corner( 1 ), n }} );
-              continue;
+                const IntersectionGeometry isGeo = intersection.geometry();
+                auto n = intersection.centerUnitOuterNormal();
+                n *= -1.0;
+
+                reconstruction[ entityIndex ] = std::array< fvector, 3 >( {{ isGeo.corner( 0 ), isGeo.corner( 1 ), n }} );
+              }
             }
           }
-
-
       }
 
       // activate cells
       for( auto&& entity : elements( gridView ) )
       {
         int entityIndex = gridView.indexSet().index( entity );
-	
-	if( cellIsMixed[ entityIndex ] )
-          for( auto &is : intersections( gridView,  entity ) )
-	  {
-	    if( is.neighbor() )
-	    {
-	      int neighborIndex = gridView.indexSet().index( is.outside() );
-              //std::cout << neighborIndex << std::endl;
-	      if( !cellIsMixed[ neighborIndex ] )
-                cellIsActive[ neighborIndex ] = true;
-	    }
-	  }
+
+        if( cellIsMixed[ entityIndex ] )
+          for( auto&& is : intersections( gridView,  entity ) )
+          {
+            if( is.neighbor() )
+            {
+              int neighborIndex = gridView.indexSet().index( is.outside() );
+
+              if( !cellIsMixed[ neighborIndex ] )
+                  cellIsActive[ neighborIndex ] = true;
+            }
+          }
       }
     }
-
 
   } // end of namespace VoF
 } // end of namespace Dune

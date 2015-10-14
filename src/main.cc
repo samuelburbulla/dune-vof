@@ -15,6 +15,7 @@
 #include <cmath>
 #include <functional>
 #include <stdexcept>
+#include <math.h>
 
 #include <dune/common/parametertreeparser.hh>
 
@@ -152,7 +153,7 @@ std::tuple<double, double> algorithm ( const Grid& grid, const Dune::ParameterTr
 
     t += dt;
 
-    if ( std::abs( t - nextSaveTime ) < saveInterval/4.0 )
+    if ( std::abs( t - nextSaveTime ) <= saveInterval / 2.0 )
     {
       auto ft_ = std::bind( Dune::VoF::f<fvector>, std::placeholders::_1, t);
       Dune::VoF::initialize( grid, projSol, ft_ );
@@ -192,12 +193,7 @@ int main(int argc, char** argv)
 
     try {
 
-
-      // type declarations
-    const int dim = 2;
-    // typedef Dune::YaspGrid<dim> GridType;
     using GridType = Dune::GridSelector::GridType;
-    typedef typename Dune::FieldVector<double,dim> fvector;
 
     // set parameters
     Dune::ParameterTree parameters;
@@ -208,26 +204,34 @@ int main(int argc, char** argv)
     parameters.report( std::cerr );
     std::cerr << "#################" << std::endl << std::endl;
 
+
+
     std::tuple<double, double> lastErrorTuple;
 
+
+    // open errors file
     std::stringstream errorsPath;
     errorsPath << "./" << parameters.get< std::string >( "io.folderPath" ) << "/errors";
-
-     std::fstream errorFile;
-     errorFile.open( errorsPath.str(), std::fstream::out );
+    std::fstream errorFile;
+    errorFile.open( errorsPath.str(), std::fstream::out );
 
     errorFile << "Cells   L1    eoc     L2     eoc    " << std::endl << std::endl;
 
 
+    //  create grid
     std::stringstream gridFile;
-    gridFile << "test8.dgf";
+    gridFile << "cube2.dgf";
 
-     //  create grid
     Dune::GridPtr< GridType > gridPtr( gridFile.str() );
     gridPtr->loadBalance();
     GridType& grid = *gridPtr;
 
+    int numCells = parameters.get< int >( "grid.numCells" );
     const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
+
+    grid.globalRefine( refineStepsForHalf * log( numCells ) / log( 2 ) );
+
+
 
 
     int numRuns = parameters.get<int>( "runs", 1 );
@@ -235,12 +239,7 @@ int main(int argc, char** argv)
     for ( int i = 0; i < numRuns; ++i )
     {
 
-      // build Grid
-      //fvector upper( 1.0 );
       int numCells = parameters.get< int >( "grid.numCells" );
-      //Dune::array<int,dim> noc;
-      //std::fill( noc.begin(), noc.end(), numCells );
-      //GridType grid( upper, noc );
 
       // start time integration
       auto errorTuple = algorithm( grid, parameters );
@@ -252,7 +251,6 @@ int main(int argc, char** argv)
         const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
 
         errorFile << "             " << eocL1 << "        " << eocL2 << std::endl;
-
       }
 
       errorFile << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
