@@ -12,6 +12,7 @@
 #include "geometricaltoolbox.hh"
 #include "secondyoungsnormalguessing.hh"
 #include "brent.hh"
+#include "hypersurface.hh"
 
 namespace Dune
 {
@@ -26,54 +27,44 @@ namespace Dune
 
 
 
-    template< class R >
-    void clearReconstruction ( R &reconstruction )
+
+    template< class GridView, class ColorFunction, class ReconstructionSet, class Flags, class Domain >
+    void reconstruct ( const GridView &gridView, const ColorFunction &colorFunction, 
+                       ReconstructionSet  &reconstructionSet, 
+                       const Domain &domain, const Flags &flags )
     {
-      typedef typename Dune::FieldVector< double, 2 > fvector;
-      for( std::size_t i = 0; i < reconstruction.size(); ++i )
-        reconstruction[ i ] = std::array< fvector, 3 >( {{ fvector( 0 ), fvector( 0 ), fvector( 0 ) }} );
-    }
+
+      const int dimworld = GridView::dimensionworld;
+      typedef typename GridView::ctype ctype;
+      typedef typename Dune::FieldVector< ctype, dimworld > fvector;
+      typedef typename Dune::VoF::HyperSurface< fvector > ReconstructionType; 
 
 
+      reconstructionSet.clear();
 
-    template< class Grid, class C, class R, class F, class D >
-    void reconstruct ( const Grid &grid, C &concentration, R &reconstruction, F &cellIsMixed, const D &domain, const double eps )
-    {
-      const int dimworld = Grid::dimensionworld;
-      typedef typename Dune::FieldVector< double, dimworld > fvector;
-      typedef typename Grid::LeafGridView GridView;
-      typedef typename GridView::template Codim< 0 >::Iterator LeafIterator;
-      typedef typename LeafIterator::Entity Entity;
-
-
-      Dune::VoF::SecondYoungsNormalGuessing< Grid, fvector > guessedNormals( grid, concentration, cellIsMixed, domain, eps );
+      ReconstructionSet guessedNormals ( gridView );
+      Dune::VoF::SecondYoungsNormalGuessing ( gridView, colorFunction, flags, domain, guessedNormals );
 
 
       int count = 0;
 
-      const GridView gridView = grid.leafGridView();
 
       fvector normalOld;
-      Line2D< fvector > g;
+      ReconstructionType g;
 
       for( auto&& entity : elements( gridView ) )
       {
         count = 0;
 
-        int entityIndex = gridView.indexSet().index( entity );
-
-        if( cellIsMixed[ entityIndex ] && concentration[ entityIndex ] <= 1 - eps )
+        if( flags.isMixed( entity ) )
         {
           auto geoEntity = entity.geometry();
 
-
-          guessedNormals.getNormal( entityIndex, g );
-
+          g.normal() = guessedNormals[ entity ].normal();
 
 
           double sumCount;
           fvector centroidLineNormal, sumNormals;
-
 
           do
           {
@@ -81,19 +72,14 @@ namespace Dune
             sumCount = 0;
             sumNormals = 0;
 
-
-            auto entityIntersections = computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
+            
+            std::vector< fvector > entityIntersections;
+            computeInterfaceLinePosition( gridView, entity, geoEntity, colorFunction[ entity ], g, entityIntersections );
 
 
             fvector centroid1;
-            // reconstruction doesn't intersect
-            if( entityIntersections.size() == 0 )
-            {
-              cellIsMixed[ entityIndex ] = false;
-              break;
-            }
-            // get middle of intersections
-            else
+            
+            if( entityIntersections.size() >= 2 )
             {
               int c = 0;
               for( std::size_t i = 0; i < entityIntersections.size(); ++i )
@@ -103,37 +89,35 @@ namespace Dune
               }
               centroid1 *= 1.0 / c;
             }
+            else continue;
 
 
+            for( auto&& neighbor : domain[ entity ] )
 
-            for( int neighborIndex : domain.cellsInDomain[ entityIndex ] )
-
-              if( cellIsMixed[ neighborIndex ] && concentration[ neighborIndex ] <= 1 - eps )
+              if( flags.isMixed( neighbor ) )
               {
 
-                const Entity &neighbor = grid.entity( domain.seeds[ neighborIndex ] );
-
-                Line2D< fvector > h;
+                ReconstructionType h;
 
                 // nimm diese Zelle nur, wenn die geratene Normal schon in eine aehnliche Richtung zeigt
-                guessedNormals.getNormal( neighborIndex, h );
+                h.normal() = guessedNormals[ neighbor ].normal();
 
-                if( g.n * h.n < 0 )
+                if( g.normal() * h.normal() < 0 )
                   continue;
-
 
 
                 auto geoNeighbor = neighbor.geometry();
 
-                h.n = g.n;
+                h.normal() = g.normal();
 
-                auto neighborIntersections = computeInterfaceLinePosition( gridView, neighbor, geoNeighbor, concentration[ neighborIndex ], h );
+
+                std::vector< fvector > neighborIntersections;
+                computeInterfaceLinePosition( gridView, neighbor, geoNeighbor, colorFunction[ neighbor ], h, neighborIntersections );
 
                 fvector centroid2;
                 // reconstruction doesn't intersect
                 if( neighborIntersections.size() == 0 )
                 {
-                  cellIsMixed[ neighborIndex ] = false;
                   continue;
                 }
                 // get middle of intersections
@@ -157,7 +141,7 @@ namespace Dune
 
 
                 // errechnete Normale muss in eine aehnliche Richtung wie geschaetze Normale auf jeder Zelle zeigen
-                if( centroidLineNormal * g.n < 0 )
+                if( centroidLineNormal * g.normal() < 0 )
                   centroidLineNormal *= -1.0;
 
 
@@ -167,26 +151,29 @@ namespace Dune
 
 
 
-            normalOld = g.n;
+            normalOld = g.normal();
 
             if( sumCount > 0 )
             {
-              g.n = sumNormals;
-              g.n *= 1.0 / sumCount;
+              g.normal() = sumNormals;
+              g.normal() *= 1.0 / sumCount;
             }
 
-            assert( g.n.two_norm() > 1e-14 );
+            assert( g.normal().two_norm() > 1e-14 );
 
             count++;
 
-          } while( (g.n - normalOld).two_norm2() > 1e-8 && count < 30 );            // limit number of loops
+          } while( (g.normal() - normalOld).two_norm2() > 1e-8 && count < 30 );            // limit number of loops
           
 
-          auto entityIntersections
-            = computeInterfaceLinePosition( gridView, entity, geoEntity, concentration[ entityIndex ], g );
+          std::vector< fvector > entityIntersections;
+          computeInterfaceLinePosition( gridView, entity, geoEntity, colorFunction[ entity ], g, entityIntersections );
 
           if( entityIntersections.size() != 0 )
-            reconstruction[ entityIndex ] = std::array< fvector, 3 >( {{ entityIntersections[ 0 ], entityIntersections[ 1 ], g.n }} );
+          {
+            reconstructionSet[ entity ] = g;
+            reconstructionSet.intersections( entity ) = entityIntersections;
+          }
 
         }
       }
@@ -196,8 +183,9 @@ namespace Dune
 
 
 
-    template< class GV, class E, class Geo, class V >
-    std::vector< V > computeInterfaceLinePosition ( const GV &gridView, const E &entity, const Geo &geo, double concentration, Line2D< V > &g )
+    template< class GridView, class Entity, class Geometry, class ReconstructionType, class PointList>
+    void computeInterfaceLinePosition ( const GridView &gridView, const Entity &entity, const Geometry &geo, 
+      const double concentration, ReconstructionType &g, PointList &intersections )
     {
       double pMin = 0, pMax = 0, volume;
       //use bigger range than [0,1] initially
@@ -207,31 +195,31 @@ namespace Dune
       // Initial guess for p
       for( int i = 0; i < geo.corners(); ++i )
       {
-        g.p = geo.corner( i ) * g.n;
-        g.p = -g.p;
+        g.p() = geo.corner( i ) * g.normal();
+        g.p() *= -1.0;
 
         volume = getVolumeFraction( gridView, entity, geo, g );
 
 
         if( volume <= volMax && volume >= concentration )
         {
-          pMax = g.p;
+          pMax = g.p();
           volMax = volume;
         }
 
         if( volume >= volMin && volume <= concentration )
         {
-          pMin = g.p;
+          pMin = g.p();
           volMin = volume;
         }
       }
 
 
-      g.p = Dune::VoF::brentsMethod( pMin, pMax,
+      g.p() = Dune::VoF::brentsMethod( pMin, pMax,
                           [ &gridView, &entity, &geo, &concentration, &g ] ( double p ) -> double
-                          { Line2D< V > h( g.n, p ); return getVolumeFraction( gridView, entity, geo, h ) - concentration; } );
+                          { ReconstructionType h( g.normal(), p ); return getVolumeFraction( gridView, entity, geo, h ) - concentration; } );
 
-      return lineCellIntersections( gridView, entity, geo, g );
+      intersections = lineCellIntersections( gridView, entity, geo, g );
     }
 
 

@@ -17,68 +17,25 @@ namespace Dune
       v[ 0 ] = -v[ 0 ];
     }
 
-// Gerade der Form 0 = n*x + p
-    template< class V >
-    class Line2D
+
+    template< template <class> class HyperSurface, class fvector >
+    const fvector lineIntersection ( const HyperSurface< fvector > &g, const HyperSurface< fvector > &l )  // make dim-universial
     {
 
-    public:
-
-      Line2D< V >()
-      {
-        n = 0;
-        p = 0;
-      }
-
-      Line2D< V >( const V &normal, const V &point )
-      {
-        n = normal;
-        p = n * point;
-        p = -p;
-      }
-
-      Line2D< V >( const Line2D< V >&l )
-      {
-        n( l.n );
-        p( l.p );
-      }
-
-      Line2D< V >( const V &n2, const double p2 )
-      {
-        n = n2;
-        p = p2;
-      }
-
-      Line2D< V >( const std::pair< V, V > &pair )
-      {
-        n = pair.first;
-        n -= pair.second;
-        rotate90degreesCounterClockwise( n );
-        p = n * pair.first;
-        p = -p;
-      }
-
-      V n;
-      double p;
-
-    };
-
-    template< class V >
-    const V lineIntersection ( const Line2D< V > &g, const Line2D< V > &l  )
-    {
+      assert ( fvector::dimension == 2 );
 
       Dune::FieldMatrix< double, 2, 2 > A;
-      A[ 0 ][ 0 ] = g.n[ 0 ];
-      A[ 0 ][ 1 ] = g.n[ 1 ];
-      A[ 1 ][ 0 ] = l.n[ 0 ];
-      A[ 1 ][ 1 ] = l.n[ 1 ];
+      A[ 0 ][ 0 ] = g.normal()[ 0 ];
+      A[ 0 ][ 1 ] = g.normal()[ 1 ];
+      A[ 1 ][ 0 ] = l.normal()[ 0 ];
+      A[ 1 ][ 1 ] = l.normal()[ 1 ];
 
-      Dune::FieldVector< double,2  > b;
-      b[ 0 ] = -g.p;
-      b[ 1 ] = -l.p;
+      fvector b;
+      b[ 0 ] = -g.p();
+      b[ 1 ] = -l.p();
 
 
-      Dune::FieldVector< double, 2 > x;
+      fvector x;
 
       A.solve( x, b );
 
@@ -191,8 +148,8 @@ namespace Dune
     };
 
 
-    template< class V >
-    void polygonLineIntersection ( const Polygon2D< V > &polygon, const Line2D< V > &g, Polygon2D< V > &intersectionPolygon )
+    template< class V, template <class> class HyperSurface >
+    void polygonLineIntersection ( const Polygon2D< V > &polygon, const HyperSurface< V > &g, Polygon2D< V > &intersectionPolygon )
     {
      
       for ( std::size_t i = 0; i < polygon.corners(); ++i )
@@ -204,7 +161,9 @@ namespace Dune
         else if( isInner( polygon[i], g ) ^ isInner( polygon[i+1], g ) )
         {
           // build line through edge for intersection
-          const Line2D< V > lineThroughEdge( std::pair< V, V >( polygon[ i ], polygon[ i+1 ] ) );
+          V normal = polygon[ i ] - polygon[ i+1 ];
+          Dune::VoF::rotate90degreesCounterClockwise<V>( normal );
+          const HyperSurface< V > lineThroughEdge( normal, polygon[ i ] );
 
           // add intersection point
           intersectionPolygon.addVertex( lineIntersection( g, lineThroughEdge ) );
@@ -228,8 +187,8 @@ namespace Dune
     }
 
 
-    template< class GV, class E, class Geo, class V >
-    std::vector< V > lineCellIntersections ( const GV &gridView, const E &entity, const Geo &geo, const Line2D< V > &g, const double TOL = 1e-12 )
+    template< class GV, class E, class Geo, template <class> class HyperSurface, class V >
+    std::vector< V > lineCellIntersections ( const GV &gridView, const E &entity, const Geo &geo, const HyperSurface<V> &g, const double TOL = 1e-12 )
     {
       const int dim = 2;
 
@@ -252,7 +211,9 @@ namespace Dune
         {
 
           // build line through edge for intersection
-          const Line2D< V > lineThroughEdge( std::pair< V, V >( c0, c1 ) );
+          V normal = c0 - c1;
+          Dune::VoF::rotate90degreesCounterClockwise<V>( normal );
+          const HyperSurface< V > lineThroughEdge( normal, c0 );
 
           // add intersection point
           intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );
@@ -273,23 +234,23 @@ namespace Dune
 
 
 
-    template< class V >
-    bool isInner ( const V &vertex, const Line2D< V > &g, const double TOL = 1e-12 )
+    template < template <class> class HyperSurface, class V >
+    bool isInner ( const V &vertex, const HyperSurface<V> &g, const double TOL = 1e-12 )
     {
-      return vertex * g.n + g.p >= TOL;
+      return vertex * g.normal() + g.p() >= TOL;
     }
 
 
-    template< class V >
-    bool isOnRecLine ( const V &vertex, const Line2D< V > &g, const double TOL = 1e-12 )
+    template < template <class> class HyperSurface, class V >
+    bool isOnRecLine ( const V &vertex, const HyperSurface<V> &g, const double TOL = 1e-12 )
     {
-      return std::abs( vertex * g.n + g.p ) < TOL;
+      return std::abs( vertex * g.normal() + g.p() ) < TOL;
     }
 
 
 
-    template< class Geo, class V >
-    void polyAddInnerVertices ( const Geo &geo, const Line2D< V > &g, Polygon2D< V >& polygon, const double TOL = 1e-12 )
+    template< class Geo, class V, class HyperSurface >
+    void polyAddInnerVertices ( const Geo &geo, const HyperSurface &g, Polygon2D< V >& polygon, const double TOL = 1e-12 )
     {
       for( int i = 0; i < geo.corners(); ++i )
 
@@ -297,8 +258,8 @@ namespace Dune
           polygon.addVertex( geo.corner( i ) );
     }
 
-    template< class V >
-    void polyAddInnerVertices ( const Polygon2D< V >& sourcePolygon, const Line2D< V > &g, Polygon2D< V >& endPolygon, const double TOL = 1e-12 )
+    template< class V, class HyperSurface >
+    void polyAddInnerVertices ( const Polygon2D< V >& sourcePolygon, const HyperSurface &g, Polygon2D< V >& endPolygon, const double TOL = 1e-12 )
     {
       for( std::size_t i = 0; i < sourcePolygon.corners(); ++i )
 
@@ -308,8 +269,8 @@ namespace Dune
 
 
 
-    template< class GV, class E, class Geo, class V >
-    double getVolumeFraction ( const GV &gridView, const E &entity, const Geo &geo, const Line2D< V > &g )
+    template< class GV, class E, class Geo, template <class> class HyperSurface, class V >
+    double getVolumeFraction ( const GV &gridView, const E &entity, const Geo &geo, const HyperSurface<V> &g )
     {
       Polygon2D< V > polygonVertices;
 
