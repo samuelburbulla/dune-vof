@@ -6,7 +6,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/geometry/quadraturerules.hh>
 
-#include "initialize.hh"
+#include "L1projection.hh"
 #include "geometricaltoolbox.hh"
 
 namespace Dune

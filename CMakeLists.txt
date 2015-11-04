@@ -19,7 +19,7 @@ include(DuneMacros)
 dune_project()
 dune_enable_all_packages()
 add_subdirectory("src")
-add_subdirectory("dune")
+add_subdirectory("example")
 add_subdirectory("cmake/modules")
 
 # finalize the dune project, e.g. generating config.h etc.

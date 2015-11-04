@@ -1,7 +1,6 @@
-# ifndef __DUNE__REC_VOL_TRACK_INITIALIZE_HH__
-# define __DUNE__REC_VOL_TRACK_INITIALIZE_HH__
+# ifndef __DUNE__REC_VOL_TRACK_L1PROJECTION_HH__
+# define __DUNE__REC_VOL_TRACK_L1PROJECTION_HH__
 
-#include "testproblem.hh"
 #include <dune/common/exceptions.hh>
 #include <dune/geometry/quadraturerules.hh>
 

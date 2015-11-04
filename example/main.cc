@@ -2,39 +2,39 @@
 # include "config.h"
 #endif
 #include <iostream>
-#include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
-#include <dune/common/exceptions.hh> // We use exceptions
+#include <cmath>
+#include <functional>
+#include <stdexcept>
+#include <math.h>
+
+#include <dune/common/parallel/mpihelper.hh>
+#include <dune/common/exceptions.hh> 
 #include <dune/common/path.hh>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
-//#include <dune/grid/yaspgrid.hh>
-
-#include <cmath>
-#include <functional>
-#include <stdexcept>
-#include <math.h>
-
 #include <dune/common/parametertreeparser.hh>
 
 
-#include "flags.hh"
 #include "colorFunction.hh"
-#include "errors.hh"
-#include "io.hh"
 #include "domain.hh"
-#include "initialize.hh"
-#include "evolve.hh"
-#include "reconstruct.hh"
-#include "reconstructionSet.hh"
-#include "geometricaltoolbox.hh"
-#include "cputime.hh"
+#include "testproblem.hh"
+
+#include "src/flags.hh"
+#include "src/errors.hh"
+#include "src/io.hh"
+#include "src/L1projection.hh"
+#include "src/evolve.hh"
+#include "src/reconstruct.hh"
+#include "src/reconstructionSet.hh"
+#include "src/geometricaltoolbox.hh"
+#include "src/cputime.hh"
+#include "src/polygon.hh"
+#include "src/vtu.hh"
 
 
-#include "polygon.hh"
-#include "vtu.hh"
 
 using fvector =
  Dune::FieldVector<double,2>;

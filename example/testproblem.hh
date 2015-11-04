@@ -26,7 +26,8 @@ namespace Dune
       double dist = ( x - center ).two_norm();
 
       return (dist < 0.15) ? 1 : 0;	
-/*
+      
+/* slotted circle
       DomainVector xPrime = center;
       DomainVector tmp = x - center;
       xPrime.axpy( std::cos( ( 2.0 * M_PI / 10.0 ) * t ), tmp );
