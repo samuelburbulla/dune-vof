@@ -24,12 +24,17 @@ namespace Dune
          : _gridView ( gridView ), _domain ( domain ), _mapper ( gridView ), _mixed ( _mapper.size(), false ), _active ( _mapper.size(), false )
          {}
 
-        bool isMixed ( const Entity& entity ) const
+        const bool isMixed ( const Entity& entity ) const
         {
           return _mixed[ _mapper.index( entity ) ];
         }
 
-        bool isActive ( const Entity& entity ) const
+        const bool isFullAndMixed ( const Entity& entity ) const
+        {
+          return _fullandmixed[ _mapper.index( entity ) ];
+        }
+
+        const bool isActive ( const Entity& entity ) const
         {
           return _active[ _mapper.index( entity ) ];
         }
@@ -39,9 +44,11 @@ namespace Dune
           return _mapper.size();
         }
 
-        int operator[] ( int i )
+        const int operator[] ( const int i ) const
         {
-          return _mixed[ i ] ? 2 : (_active[ i ] ? 1 : 0);
+          if ( _mixed[ i ] ) return 2;
+          if ( _active[ i ] ) return 1; 
+          return 0;
         }
 
 
@@ -53,51 +60,41 @@ namespace Dune
           // mixed cells
           for( auto&& entity : elements( _gridView ) )
           {
-            _active[  _mapper.index( entity ) ] = false;  
+            _active[ _mapper.index( entity ) ] = false;  
+            _fullandmixed[ _mapper.index( entity ) ] = false;  
 
-            if( colorFunction[ entity ] >= eps && colorFunction[ entity ] <= 1 - eps )
-            {
-              _mixed[ _mapper.index( entity ) ] = true;
-            }
-            else
-            {
-              _mixed[ _mapper.index( entity ) ] = false;
-            }
-          }
-                  /*
-        else if( colorFunction[ entity ] > 1 - eps )
-          for( auto&& intersection : intersections( gridView, entity ) )
-          {
-            if ( intersection.neighbor() )
-            {
-              const Entity &neighbor = intersection.outside();
-              
-              if( colorFunction[ neighbor ] < eps )
+            _mixed[ _mapper.index( entity ) ] = ( colorFunction[ entity ] >= eps && colorFunction[ entity ] <= 1 - eps );
+          
+
+            if( colorFunction[ entity ] > 1 - eps )
+              for( auto&& intersection : intersections( _gridView, entity ) )
               {
-                flags.addMixedCell[ entity ];
-
-                // the reconstruction is the edge
-                const IntersectionGeometry isGeo = intersection.geometry();
-                auto n = intersection.centerUnitOuterNormal();
-                n *= -1.0;
-
-                reconstruction[ entity ] = std::array< fvector, 3 >( {{ isGeo.corner( 0 ), isGeo.corner( 1 ), n }} );
+                if ( intersection.neighbor() )
+                {
+                  const Entity &neighbor = intersection.outside();
+              
+                  if ( colorFunction[ neighbor ] < eps )
+                    _fullandmixed[ _mapper.index( entity ) ] = true;
+                  
+                }
               }
-            }
           }
-          */
+          
 
 
           // active cells
           for( auto&& entity : elements( _gridView ))
           {
-            for( auto&& is : intersections( _gridView,  entity ) )
+            if ( _mixed[ _mapper.index( entity ) ] )
             {
-              if( is.neighbor() )
+              for( auto&& is : intersections( _gridView,  entity ) )
               {
-                auto neighbor = is.outside();
-                if( !_mixed[ _mapper.index( neighbor ) ] )
-                  _active[  _mapper.index( neighbor ) ] = true;
+                if( is.neighbor() )
+                {
+                  auto neighbor = is.outside();
+                  if( !_mixed[ _mapper.index( neighbor ) ] )
+                    _active[  _mapper.index( neighbor ) ] = true;
+                }
               }
             }
           }
@@ -111,6 +108,7 @@ namespace Dune
         Domain _domain;
         Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout > _mapper;
         std::vector< bool > _mixed;
+        std::vector< bool > _fullandmixed;
         std::vector< bool > _active;
 
     };

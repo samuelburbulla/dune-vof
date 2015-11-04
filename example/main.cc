@@ -36,20 +36,6 @@
 
 
 
-using fvector =
- Dune::FieldVector<double,2>;
-using polygon = Polygon< fvector >;
-
-template < class ReconstructionSet >
-void filterReconstruction( const ReconstructionSet &rec, std::vector< polygon > &io )
-{
-  io.clear();
-  //for( auto&& it : rec._reconstructionSet )
-    //if( it.n != fvector( 0.0 ) )
-      //io.push_back( polygon{ it[ 0 ], it[ 1 ] } );
-}
-
-
 
 template < class GridView >
 std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
@@ -57,6 +43,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   const int dimworld = GridView::dimensionworld;
   typedef typename GridView::ctype ctype;
   typedef typename Dune::FieldVector< ctype, dimworld > fvector;
+  typedf typename Polygon< fvector > Polygon;
 
   // build domain references for each cell
   Dune::VoF::DomainOfPointNeighbors< GridView > domain ( gridView ); 
@@ -78,16 +65,15 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
   Dune::VTKSequenceWriter< GridView > vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
-  //vtkwriter.addCellData ( flags, "flags" );
+  vtkwriter.addCellData ( flags, "flags" );
 
-/*
-  std::vector< polygon > recIO;
-  VTUWriter< std::vector< polygon > > vtuwriter( recIO );
+
+  std::vector< Polygon > recIO;
+  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
   std::stringstream name;
   name.fill('0');
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
-  vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
-*/
+
 
   int saveNumber = 1;
   const double saveInterval = parameters.get< double >( "io.saveInterval", 1 );
@@ -106,11 +92,11 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   Dune::VoF::L1projection( colorFunction, Dune::VoF::f0<fvector> );
 
   flags.reflag( colorFunction, eps );
-  Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, domain, flags );
-  //filterReconstruction( reconstruction, recIO );
+  Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, domain, flags, eps );
+  Dune::VoF::filterReconstruction( reconstructionSet, recIO );
 
   vtkwriter.write( 0 );
-
+  vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
 
 
   double t = 0;
@@ -124,8 +110,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
     flags.reflag( colorFunction, eps );
 
-    Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, domain, flags );
-    //filterReconstruction( reconstruction, recIO );
+    Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, domain, flags, eps );
 
     Dune::VoF::evolve( gridView, colorFunction, reconstructionSet, domain, t, dt, flags, psit, eps, update );
     colorFunction.axpy( 1.0, update );
@@ -137,12 +122,12 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
       vtkwriter.write( t );
 
-      /*
+      Dune::VoF::filterReconstruction( reconstructionSet, recIO );
       std::stringstream name_;
       name_.fill('0');
       name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
       vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
-      */
+
 
       nextSaveTime += saveInterval;
       ++saveNumber;

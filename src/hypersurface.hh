@@ -60,25 +60,6 @@ namespace Dune
         ctype _p;
     };
 
-/*
-    template < int dim >
-    const fvector intersection (Dune::VoF::HyperSurface< dim > h, HyperSurface g ) {}
-
-    template<>
-    const fvector intersection ( Dune::VoF::Hypersurface< 2 >,  ... )
-
-
-
-    template< class A, class B >
-    struct C;
-
-    template< class B >
-    sruct C< double, B >
-    {
-
-    };
-*/
-
 
   } // end of namespace VoF
 } // end of namespace Dune

@@ -10,6 +10,7 @@ namespace Dune
 
     // Storage for a set of reconstruction hypersurfaces in a grid.
 
+
     template< class GridView >
     class ReconstructionSet
     {
@@ -20,6 +21,8 @@ namespace Dune
         typedef typename GridView::ctype ctype;
         typedef typename Dune::FieldVector< ctype, dimworld > fvector;
         typedef typename GridView::template Codim< 0 >::Entity Entity;
+        typedef typename std::vector< HyperSurface< fvector > >::iterator iterator;
+        typedef typename std::vector< HyperSurface< fvector > >::const_iterator const_iterator;
 
 
 
@@ -34,13 +37,6 @@ namespace Dune
           return _reconstructionSet[ _mapper.index( entity ) ];
         }
 
-        const std::vector< fvector >& intersections ( const Entity &entity ) const 
-        {
-          assert ( _mapper.index( entity ) < _reconstructionIntersections.size() );
-          return _reconstructionIntersections[ _mapper.index( entity ) ];
-        }
-
-
         Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) 
         {
           assert ( _mapper.index( entity ) < _reconstructionSet.size() );
@@ -49,10 +45,32 @@ namespace Dune
         }
 
 
+
+        iterator begin () { return _reconstructionSet.begin(); }
+        const_iterator begin () const { return _reconstructionSet.begin(); }
+
+        iterator end () { return _reconstructionSet.end(); }
+        const_iterator end () const { return _reconstructionSet.end(); }  
+
+
+
+
+
+        const std::vector< fvector >& intersections ( const Entity &entity ) const 
+        {
+          assert ( _mapper.index( entity ) < _reconstructionIntersections.size() );
+          return _reconstructionIntersections[ _mapper.index( entity ) ];
+        }
+
         std::vector< fvector >& intersections ( const Entity &entity )
         {
           assert ( _mapper.index( entity ) < _reconstructionIntersections.size() );
           return _reconstructionIntersections[ _mapper.index( entity ) ];
+        }
+
+        const std::vector< std::vector< fvector > >& intersections ( ) const 
+        {
+          return _reconstructionIntersections;
         }
 
 

@@ -15,6 +15,7 @@ public:
   Polygon () {}
 
   Polygon ( std::initializer_list< PointType > const &l ) : data_( l.begin(), l.end() ) {}
+  Polygon ( std::vector< PointType > const &l ) : data_( l.begin(), l.end() ) {}
 
   Position &operator[] ( std::size_t i ) { return data_[ i ]; }
   const Position &operator[] ( std::size_t i ) const { return data_[ i ]; }

@@ -12,6 +12,7 @@ set(
   flags.hh
   io.hh
   secondyoungsnormalguessing.hh
+  swartzmethod.hh
   brent.hh
   cputime.hh
 )
