@@ -12,7 +12,6 @@
 #include "geometricaltoolbox.hh"
 #include "secondyoungsnormalguessing.hh"
 #include "swartzmethod.hh"
-#include "brent.hh"
 #include "hypersurface.hh"
 
 namespace Dune
@@ -57,7 +56,8 @@ namespace Dune
           Dune::VoF::SwartzMethod ( gridView, entity, guessedNormals, colorFunction, flags, domain, improvedRec );
            
           reconstructionSet[ entity ] = improvedRec;
-          Dune::VoF::computeInterfaceLinePosition( gridView, neighbor, geoNeighbor, colorFunction[ neighbor ], h, reconstructionSet.intersections( entity ) ); 
+          Dune::VoF::computeInterfaceLinePosition( gridView, entity, entity.geometry(), colorFunction[ entity ], improvedRec, 
+            reconstructionSet.intersections( entity ) ); 
         }
 
         // reconstructions, which are given by edges of elements
@@ -67,11 +67,11 @@ namespace Dune
           {
             if ( intersection.neighbor() )
             {
-              const Entity &neighbor = intersection.outside();
+              auto neighbor = intersection.outside();
               
               if ( colorFunction[ neighbor ] < eps )               
               {
-                const IntersectionGeometry isGeo = intersection.geometry();
+                auto isGeo = intersection.geometry();
                 auto n = intersection.centerUnitOuterNormal();
                 n *= -1.0;
 

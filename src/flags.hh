@@ -21,7 +21,8 @@ namespace Dune
         //typedef typename Dune::MCMGElementLayout< 2 > MapperLayout;
 
         Flags ( const GridView &gridView, const Domain &domain ) 
-         : _gridView ( gridView ), _domain ( domain ), _mapper ( gridView ), _mixed ( _mapper.size(), false ), _active ( _mapper.size(), false )
+         : _gridView ( gridView ), _domain ( domain ), _mapper ( gridView ), _mixed ( _mapper.size(), false ), 
+           _fullandmixed ( _mapper.size(), false ), _active ( _mapper.size(), false )
          {}
 
         const bool isMixed ( const Entity& entity ) const
@@ -46,6 +47,7 @@ namespace Dune
 
         const int operator[] ( const int i ) const
         {
+          if ( _fullandmixed[ i ] ) return 3;
           if ( _mixed[ i ] ) return 2;
           if ( _active[ i ] ) return 1; 
           return 0;

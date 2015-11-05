@@ -25,21 +25,25 @@ namespace Dune
 
         double& operator[] ( const Entity& entity )
         {
+          assert ( _mapper.index( entity ) < _color.size() );
           return _color[ _mapper.index( entity ) ];
         }
 
         const double& operator[] ( const Entity& entity ) const
         {
+          assert ( _mapper.index( entity ) < _color.size() );
           return _color[ _mapper.index( entity ) ];
         }
 
-        double& operator[] ( const int i )
+        double& operator[] ( const std::size_t i )
         {
+          assert ( i < _color.size() );
           return _color[ i ];
         }
 
-        const double& operator[] ( const int i ) const
+        const double& operator[] ( const std::size_t i ) const
         {
+          assert ( i < _color.size() );
           return _color[ i ];
         }
 
@@ -48,7 +52,7 @@ namespace Dune
           return _color.size();
         }
 
-        const GridView gridView() const
+        const GridView& gridView() const
         {
           return _gridView;
         }

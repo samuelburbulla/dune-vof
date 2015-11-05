@@ -43,7 +43,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   const int dimworld = GridView::dimensionworld;
   typedef typename GridView::ctype ctype;
   typedef typename Dune::FieldVector< ctype, dimworld > fvector;
-  typedf typename Polygon< fvector > Polygon;
+  using Polygon = Polygon< fvector > ;
 
   // build domain references for each cell
   Dune::VoF::DomainOfPointNeighbors< GridView > domain ( gridView ); 
@@ -146,8 +146,6 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   double L2 = Dune::VoF::l2error( gridView, colorFunction, ft );
 
   return std::tuple<double, double> ( L1, L2 );
-
-  return std::tuple<double, double> ( 0 , 0 );
 }
 
 int main(int argc, char** argv)

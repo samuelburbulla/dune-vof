@@ -4,16 +4,24 @@
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
 
+#include "brent.hh"
+#include "geometricaltoolbox.hh"
+
 
 namespace Dune
 {
   namespace VoF
   {
 
-    template< class GridView, class Entity, class ReconstructionSet, class ColorFunction, class Flags, class Domain, class fvector, class ReconstructionType > 
-    void SwartzMethod ( const GridView &gridView, const Entity &entity, const ReconstructionSet &guessedNormals, const ColorFunction &colorFunction, const Flags &flags, 
-      const Domain &domain, ReconstructionType &g )
+    template< class GridView, class Entity, class ReconstructionSet, class ColorFunction, class Flags, class Domain, class ReconstructionType > 
+    void SwartzMethod ( const GridView &gridView, const Entity &entity, const ReconstructionSet &guessedNormals, const ColorFunction &colorFunction, 
+      const Flags &flags, const Domain &domain, ReconstructionType &g )
     {
+      const int dimworld = GridView::dimensionworld;
+      typedef typename GridView::ctype ctype;
+      typedef typename Dune::FieldVector< ctype, dimworld > fvector;
+
+      
       fvector normalOld, centroidLineNormal, sumNormals, centroid1, centroid2;
       double sumCount; 
       int count = 0;
