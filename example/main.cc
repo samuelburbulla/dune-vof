@@ -35,6 +35,20 @@
 #include "vtu.hh"
 
 
+template < class ReconstructionSet, template<class> class Polygon, class fvector >
+void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vector< Polygon< fvector > > &io )
+{
+  io.clear();
+
+  for ( auto&& is : reconstructionSet.intersections() )
+  {
+    if( is.size() != 0 )
+      io.push_back( Polygon< fvector >( is ) );
+  }
+
+  // io should not be empty
+  if ( io.size() == 0 )  io.push_back( Polygon< fvector > { fvector (0) } );
+}
 
 
 template < class GridView >
