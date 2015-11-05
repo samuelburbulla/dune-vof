@@ -54,6 +54,9 @@ void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vect
 template < class GridView >
 std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
+  using fvector = Dune::FieldVector< typename GridView::ctype, GridView::dimensionworld >;
+  using polygon = Polygon< fvector >;
+
   // build domain references for each cell
   Dune::VoF::VertexNeighborsStencil< GridView > stencil( gridView );
 
@@ -73,8 +76,8 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   vtkwriter.addCellData ( colorFunction, "celldata" );
   vtkwriter.addCellData ( flags, "flags" );
 
-  std::vector< Polygon > recIO;
-  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
+  std::vector< polygon > recIO;
+  VTUWriter< std::vector< polygon > > vtuwriter( recIO );
   std::stringstream name;
   name.fill('0');
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
@@ -93,7 +96,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   average( colorFunction, [ ] ( const auto &x ) { return f( x, 0.0 ); } );
 
   flags.reflag( colorFunction, eps );
-  Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, domain, flags, eps );
+  Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, stencil, flags, eps );
   filterReconstruction( reconstructionSet, recIO );
 
   vtkwriter.write( 0 );
@@ -110,7 +113,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
     flags.reflag( colorFunction, eps );
 
-    Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, domain, flags, eps );
+    Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, stencil, flags, eps );
     Dune::VoF::evolve( gridView, colorFunction, reconstructionSet, t, dt, flags, psit, eps, update );
     colorFunction.axpy( 1.0, update );
 

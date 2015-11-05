@@ -4,8 +4,8 @@
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
 
-#include "brent.hh"
-#include "geometricaltoolbox.hh"
+#include "brents.hh"
+#include "geometricutility.hh"
 
 
 namespace Dune

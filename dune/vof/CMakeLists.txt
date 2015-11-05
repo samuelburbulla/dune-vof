@@ -5,6 +5,7 @@ set( vof_HEADERS
   flags.hh
   geometricutility.hh
   hypersurface.hh
+  modifiedswartz.hh
   reconstruct.hh
   reconstructionSet.hh
   secondyoungsnormalguessing.hh
