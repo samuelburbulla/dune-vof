@@ -1,0 +1,14 @@
+set( vofdir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof )
+set( vof_HEADERS
+  brents.hh
+  evolution.hh
+  flags.hh
+  geometricutility.hh
+  hypersurface.hh
+  reconstruct.hh
+  reconstructionSet.hh
+  secondyoungsnormalguessing.hh
+  vertexneighborsstencil.hh
+)
+
+install(FILES ${vof_HEADERS} DESTINATION ${vofdir})

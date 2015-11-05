@@ -1,9 +1,11 @@
-#ifndef __DUNE_GRID_REC_VOL_TRACK_GEOMETRICALTOOLBOX_HH__
-#define __DUNE_GRID_REC_VOL_TRACK_GEOMETRICALTOOLBOX_HH__
+#ifndef DUNE_VOF_GEOMETRICUTILITY_HH
+#define DUNE_VOF_GEOMETRICUTILITY_HH
 
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
+#include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
+
 
 namespace Dune
 {
@@ -24,17 +26,8 @@ namespace Dune
 
       assert ( fvector::dimension == 2 );
 
-      Dune::FieldMatrix< double, 2, 2 > A;
-      A[ 0 ][ 0 ] = g.normal()[ 0 ];
-      A[ 0 ][ 1 ] = g.normal()[ 1 ];
-      A[ 1 ][ 0 ] = l.normal()[ 0 ];
-      A[ 1 ][ 1 ] = l.normal()[ 1 ];
-
-      fvector b;
-      b[ 0 ] = -g.p();
-      b[ 1 ] = -l.p();
-
-
+      Dune::FieldMatrix< double, 2, 2 > A( { g.normal(), l.normal() }  );
+      fvector b( { -g.p(), -l.p() } );
       fvector x;
 
       A.solve( x, b );
@@ -151,7 +144,7 @@ namespace Dune
     template< class V, template <class> class HyperSurface >
     void polygonLineIntersection ( const Polygon2D< V > &polygon, const HyperSurface< V > &g, Polygon2D< V > &intersectionPolygon )
     {
-     
+
       for ( std::size_t i = 0; i < polygon.corners(); ++i )
       {
         if( isOnRecLine( polygon[i], g ) )
@@ -221,10 +214,10 @@ namespace Dune
         }
         else if( isOnRecLine( c0, g, TOL ) )
           insertElementIfNotExists( c0, intersectionPoints );
-        
+
         else if( isOnRecLine( c1, g, TOL ) )
           insertElementIfNotExists( c1, intersectionPoints );
-        
+
 
       }
 
@@ -290,10 +283,8 @@ namespace Dune
     }
 
 
-  } // end of namespace VoF
-} // end of namespace Dune
+  } // namespace VoF
 
-#endif
+} // namespace Dune
 
-
-
+#endif // #ifndef DUNE_VOF_GEOMETRICUTILITY_HH

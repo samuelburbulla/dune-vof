@@ -1,14 +1,18 @@
 #ifndef DUNE_VOF_RECONSTRUCTIONSET_HH
 #define DUNE_VOF_RECONSTRUCTIONSET_HH
 
+//-dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
+
 
 namespace Dune
 {
   namespace VoF
   {
 
-    // Storage for a set of reconstruction hypersurfaces in a grid.
+
+    // ReconstructionSet
+    // -----------------
 
 
     template< class GridView >
@@ -24,39 +28,25 @@ namespace Dune
         typedef typename std::vector< HyperSurface< fvector > >::iterator iterator;
         typedef typename std::vector< HyperSurface< fvector > >::const_iterator const_iterator;
 
-
-
         ReconstructionSet ( const GridView &gridView )
          : _mapper ( gridView ), _reconstructionSet ( _mapper.size() ), _reconstructionIntersections ( _mapper.size() )
          {}
 
-
-        const Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) const  
+        const Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) const
         {
           assert ( _mapper.index( entity ) < _reconstructionSet.size() );
           return _reconstructionSet[ _mapper.index( entity ) ];
         }
 
-        Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) 
-        {
-          assert ( _mapper.index( entity ) < _reconstructionSet.size() );
-
-          return _reconstructionSet[ _mapper.index( entity ) ];
-        }
-
-
+        Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) { return _reconstructionSet[ _mapper.index( entity ) ]; }
 
         iterator begin () { return _reconstructionSet.begin(); }
         const_iterator begin () const { return _reconstructionSet.begin(); }
 
         iterator end () { return _reconstructionSet.end(); }
-        const_iterator end () const { return _reconstructionSet.end(); }  
+        const_iterator end () const { return _reconstructionSet.end(); }
 
-
-
-
-
-        const std::vector< fvector >& intersections ( const Entity &entity ) const 
+        const std::vector< fvector >& intersections ( const Entity &entity ) const
         {
           assert ( _mapper.index( entity ) < _reconstructionIntersections.size() );
           return _reconstructionIntersections[ _mapper.index( entity ) ];
@@ -68,7 +58,7 @@ namespace Dune
           return _reconstructionIntersections[ _mapper.index( entity ) ];
         }
 
-        const std::vector< std::vector< fvector > >& intersections ( ) const 
+        const std::vector< std::vector< fvector > >& intersections ( ) const
         {
           return _reconstructionIntersections;
         }
@@ -97,12 +87,12 @@ namespace Dune
         Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout > _mapper;
         std::vector< Dune::VoF::HyperSurface< fvector > > _reconstructionSet; // should be private with range-based iterator
         std::vector< std::vector< fvector > > _reconstructionIntersections; // should be private with range-based iterator
-        
     };
 
 
 
-  } // end of namespace VoF
-} // end of namespace Dune
+  } // namespace VoF
 
-#endif
+} // namespace Dune
+
+#endif // #ifndef DUNE_VOF_RECONSTRUCTIONSET_HH

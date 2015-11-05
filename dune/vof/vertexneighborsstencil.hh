@@ -1,7 +1,9 @@
-#ifndef DUNE_GRID_REC_VOL_TRACK_DOMAIN_HH
-#define DUNE_GRID_REC_VOL_TRACK_DOMAIN_HH
+#ifndef DUNE_VOF_VERTEXNEIGHBORSSTENCIL_HH
+#define DUNE_VOF_VERTEXNEIGHBORSSTENCIL_HH
 
+//- dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
+
 
 namespace Dune
 {
@@ -9,8 +11,11 @@ namespace Dune
   {
 
 
+    // VertexNeighborsStencil
+    // ----------------------
+
     template< class GridView >
-    class DomainOfPointNeighbors
+    struct VertexNeighborsStencil
     {
 
     public:
@@ -20,9 +25,9 @@ namespace Dune
       typedef typename Entity::EntitySeed EntitySeed;
 
 
-      explicit DomainOfPointNeighbors ( const GridView &gridView )  
+      explicit VertexNeighborsStencil ( const GridView &gridView )
         : _gridView ( gridView ), _mapper ( gridView ), _cellsInDomain ( _mapper.size() ), _seeds ( _mapper.size() )
-      {       
+      {
 
         getCellsInDomain();
 
@@ -67,7 +72,7 @@ namespace Dune
         for( auto&& entity : elements( _gridView ) )
         {
           int entityID = _mapper.index( entity );
-         
+
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
             int vertexIndex = _gridView.indexSet().subIndex( entity, k, dimworld );  //mapper?
@@ -95,7 +100,8 @@ namespace Dune
 
     };
 
-  }
-}
+  } // namespace VoF
 
-#endif
+} // namespace Dune
+
+#endif // #ifndef DUNE_VOF_VERTEXNEIGHBORSSTENCIL_HH

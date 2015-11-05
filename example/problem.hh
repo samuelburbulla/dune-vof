@@ -1,32 +1,23 @@
-#ifndef __DUNE_GRID_REC_VOL_TRACK_TESTPROBLEM_HH__
-#define __DUNE_GRID_REC_VOL_TRACK_TESTPROBLEM_HH__
+#ifndef PROBLEM_HH
+#define PROBLEM_HH
 
 #include <cmath>
-
-namespace Dune
-{
-  namespace VoF
-  {
 
     //Initial Condition
     template< class DomainVector >
     double f ( const DomainVector &x, const double t )
     {
-
-
       DomainVector center { 0.5, 0.5 };
-
       DomainVector offset { 0, 0.25 };
       DomainVector normal { -0.25, 0 };
-      
-      
+
       center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
       center.axpy( - std::sin( ( 2 * M_PI / 10 ) * t ), normal );
-       
+
       double dist = ( x - center ).two_norm();
 
-      return (dist < 0.15) ? 1 : 0;	
-      
+      return (dist < 0.15) ? 1 : 0;
+
 /* slotted circle
       DomainVector xPrime = center;
       DomainVector tmp = x - center;
@@ -52,18 +43,6 @@ namespace Dune
 */
 
     }
-   
-
-
-
-    //Initial Condition
-    template< class V >
-    double f0 ( const V &x )
-    {
-      return f( x, 0.0 );
-    }
-
-
 
     template< class DomainVector >
     DomainVector psi ( const DomainVector &x, const double t = 0.0 )
@@ -79,20 +58,6 @@ namespace Dune
       return r;
     }
 
-    static const double psiMax ()
-    {
-      return 2 * M_PI / 10 * sqrt( 2.0 );
-    }
+    static const double psiMax () { return 2 * M_PI / 10 * sqrt( 2.0 ); }
 
-
-  } // end of namespace Vof
-} // end of namespace Dune
-
-#endif
-
-
-
-
-
-
-
+#endif //#ifndef PROBLEM_HH

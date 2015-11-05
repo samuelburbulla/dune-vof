@@ -1,11 +1,11 @@
-#ifndef __DUNE_GRID_REC_VOL_TRACK_EVOLVE_HH__
-#define __DUNE_GRID_REC_VOL_TRACK_EVOLVE_HH__
+#ifndef DUNE_VOF_EVOLUTION_HH
+#define DUNE_VOF_EVOLUTION_HH
 
+//- dune-common includes
 #include <dune/common/fvector.hh>
 
-
-#include "geometricaltoolbox.hh"
-#include "reconstruct.hh"
+//- local includes
+#include "geometricutility.hh"
 
 
 namespace Dune
@@ -13,8 +13,9 @@ namespace Dune
   namespace VoF
   {
 
-    template< class GridView, class ColorFunction, class ReconstructionSet, class Domain, class Flags, class VelocityField >
-    void evolve ( const GridView &gridView, const ColorFunction &colorFunction, ReconstructionSet &reconstructionSet, const Domain &domain, 
+
+    template< class GridView, class ColorFunction, class ReconstructionSet, class Flags, class VelocityField >
+    void evolve ( const GridView &gridView, const ColorFunction &colorFunction, ReconstructionSet &reconstructionSet,
                   const double t, const double dt, const Flags &flags, const VelocityField &velocityField, const double eps, ColorFunction &update )
     {
 
@@ -23,16 +24,16 @@ namespace Dune
       typedef typename Dune::FieldVector< ctype, dimworld > fvector;
 
       update.clear();
-      
 
-      for( auto &&entity : elements( gridView ) )
+
+      for( const auto &entity : elements( gridView ) )
       {
         if( flags.isMixed( entity ) || flags.isActive( entity ) )
         {
 
           auto entityGeo = entity.geometry();
 
-          for( auto &&intersection : intersections( gridView, entity ) )
+          for( const auto &intersection : intersections( gridView, entity ) )
           {
             if( intersection.neighbor() )
             {
@@ -40,19 +41,11 @@ namespace Dune
               const auto &neighbor = intersection.outside();
               const auto isGeo = intersection.geometry();
 
-
               fvector outerNormal = intersection.centerUnitOuterNormal();
-
-
               fvector velocity = velocityField( isGeo.center() );
-              fvector uf = velocity;
-              uf *= ( colorFunction[ entity ] + colorFunction[ neighbor ] ) * 0.5;
 
-
-             
                 // build time integration polygon
                 velocity *= dt;
-
 
                 Polygon2D< fvector > timeIntegrationPolygon;
 
@@ -110,40 +103,11 @@ namespace Dune
           }
         }
       }
-
-      /*
-      // Advance volume fractions f in time
-      for( std::size_t i = 0; i < c.size(); ++i )
-      {
-        // discrete velocity divergence correction and advantage
-        if ( cellIsMixed[ i ] || cellIsActive[ i ] )
-        {
-          //update[ i ] += divergence[ i ] * c[ i ] * dt * 0.5;
-          c[ i ] += update[ i ];
-          //c[ i ] /= 1.0 - divergence[ i ] * dt * 0.5;
-        }
-      }
-      */
-
-
-        // c[ i ] = std::max( 0.0, c[ i ] );
-        // c[ i ] = std::min( 1.0, c[ i ] );
-     
-
     }
 
 
-  } // end of namespace VoF
-} // end of namespace Dune
+  } // namespace VoF
 
-#endif
+} // namespace Dune
 
-
-
-
-
-
-
-
-
-
+#endif // #ifndef DUNE_VOF_EVOLUTION_HH

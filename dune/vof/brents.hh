@@ -1,11 +1,20 @@
+#ifndef DUNE_VOF_BRENTS_HH
+#define DUNE_VOF_BRENTS_HH
+
+//- C++ includes
+#include <cassert>
+#include <cstdio>
+
 
 namespace Dune
 {
   namespace VoF
   {
-    //Quelle: Wikipedia (Brent-Verfahren)
+
+
+    //Quelle: Wikipedia (Brent's-Verfahren)
     template< class F >
-    double brentsMethod ( double a, double b, F f )
+    double brentsMethod ( double a, double b, const F &f )
     {
       const double TOL = 1e-14;
 
@@ -119,9 +128,8 @@ namespace Dune
 
     }
 
+   } // namespace VoF
 
+} // namespace Dune
 
-   } // end of namespace VoF
-} // end of namespace Dune
-
-
+#endif // #ifndef DUNE_VOF_BRENTS_HH
