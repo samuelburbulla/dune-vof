@@ -47,11 +47,10 @@ namespace Dune
         if( flags.isMixed( entity ) )
         {
           ReconstructionType improvedRec;
-          Dune::VoF::SwartzMethod ( gridView, entity, guessedNormals, colorFunction, flags, domain, improvedRec );
+          SwartzMethod ( entity, guessedNormals, colorFunction, flags, domain, improvedRec );
 
           reconstructionSet[ entity ] = improvedRec;
-          Dune::VoF::computeInterfaceLinePosition( gridView, entity, entity.geometry(), colorFunction[ entity ], improvedRec,
-            reconstructionSet.intersections( entity ) );
+          computeInterfaceLinePosition( entity.geometry(), colorFunction[ entity ], improvedRec, reconstructionSet.intersections( entity ) );
         }
 
         // reconstructions, which are given by edges of elements

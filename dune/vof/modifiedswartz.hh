@@ -13,17 +13,14 @@ namespace Dune
   namespace VoF
   {
 
-    template< class GridView, class Entity, class ReconstructionSet, class ColorFunction, class Flags, class Domain, class ReconstructionType > 
-    void SwartzMethod ( const GridView &gridView, const Entity &entity, const ReconstructionSet &guessedNormals, const ColorFunction &colorFunction, 
+    template< class Entity, class ReconstructionSet, class ColorFunction, class Flags, class Domain, class ReconstructionType >
+    void SwartzMethod ( const Entity &entity, const ReconstructionSet &guessedNormals, const ColorFunction &colorFunction,
       const Flags &flags, const Domain &domain, ReconstructionType &g )
     {
-      const int dimworld = GridView::dimensionworld;
-      typedef typename GridView::ctype ctype;
-      typedef typename Dune::FieldVector< ctype, dimworld > fvector;
+      using fvector = typename Entity::Geometry::GlobalCoordinate;
 
-      
       fvector normalOld, centroidLineNormal, sumNormals, centroid1, centroid2;
-      double sumCount; 
+      double sumCount;
       int count = 0;
 
       ReconstructionType h;
@@ -39,11 +36,11 @@ namespace Dune
         sumCount = 0;
         sumNormals = 0;
 
-        
-        computeInterfaceLinePosition( gridView, entity, geoEntity, colorFunction[ entity ], g, entityIntersections );
+
+        computeInterfaceLinePosition( geoEntity, colorFunction[ entity ], g, entityIntersections );
 
         centroid1 = 0;
-          
+
         int c = 0;
         for( std::size_t i = 0; i < entityIntersections.size(); ++i )
         {
@@ -53,12 +50,12 @@ namespace Dune
 
         if ( c == 0) continue;
         centroid1 *= 1.0 / c;
-        
-        
+
+
         for( auto&& neighbor : domain[ entity ] )
 
           if( flags.isMixed( neighbor ) )
-          {         
+          {
 
               // nimm diese Zelle nur, wenn die geratene Normal schon in eine aehnliche Richtung zeigt
               h.normal() = guessedNormals[ neighbor ].normal();
@@ -72,10 +69,10 @@ namespace Dune
               h.normal() = g.normal();
 
 
-              computeInterfaceLinePosition( gridView, neighbor, geoNeighbor, colorFunction[ neighbor ], h, neighborIntersections );
+              computeInterfaceLinePosition( geoNeighbor, colorFunction[ neighbor ], h, neighborIntersections );
 
               fvector centroid2;
-              
+
               int c = 0;
               for( std::size_t i = 0; i < neighborIntersections.size(); ++i )
               {
@@ -84,7 +81,7 @@ namespace Dune
               }
               if ( c == 0 ) continue;
               centroid2 *= 1.0 / c;
-              
+
 
               centroidLineNormal = centroid2;
               centroidLineNormal -= centroid1;
@@ -105,24 +102,20 @@ namespace Dune
           normalOld = g.normal();
 
           if( sumCount == 0 ) continue;
-          
+
           g.normal() = sumNormals;
           g.normal() *= 1.0 / sumCount;
-          
+
           assert( g.normal().two_norm() > 1e-14 );
 
           count++;
 
       } while( (g.normal() - normalOld).two_norm2() > 1e-8 && count < 30 );            // limit number of loops
-        
+
     }
 
-
-
-
-    template< class GridView, class Entity, class Geometry, class ReconstructionType, class PointList>
-    void computeInterfaceLinePosition ( const GridView &gridView, const Entity &entity, const Geometry &geo, 
-      const double concentration, ReconstructionType &g, PointList &intersections )
+    template< class Geometry, class ReconstructionType, class PointList>
+    void computeInterfaceLinePosition ( const Geometry &geo, double concentration, ReconstructionType &g, PointList &intersections )
     {
       intersections.clear();
 
@@ -137,7 +130,7 @@ namespace Dune
         g.p() = geo.corner( i ) * g.normal();
         g.p() *= -1.0;
 
-        volume = getVolumeFraction( gridView, entity, geo, g );
+        volume = getVolumeFraction( geo, g );
 
 
         if( volume <= volMax && volume >= concentration )
@@ -153,18 +146,17 @@ namespace Dune
         }
       }
 
+      g.p() = brentsMethod( [ &geo, &concentration, &g ] ( double p ) -> double {
+                              ReconstructionType h( g.normal(), p );
+                              return ( getVolumeFraction( geo, h ) - concentration );
+                            }, pMin, pMax, 1e-12 );
 
-      g.p() = Dune::VoF::brentsMethod( pMin, pMax,
-                          [ &gridView, &entity, &geo, &concentration, &g ] ( double p ) -> double
-                          { ReconstructionType h( g.normal(), p ); return getVolumeFraction( gridView, entity, geo, h ) - concentration; } );
-
-      intersections = lineCellIntersections( gridView, entity, geo, g );
+      intersections = lineCellIntersections( geo, g );
     }
 
 
-  }       // end of namespace VoF
-} // end of namespace Dune
+  } // namespace VoF
 
-
+} // namespace Dune
 
 #endif

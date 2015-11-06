@@ -180,15 +180,15 @@ namespace Dune
     }
 
 
-    template< class GV, class E, class Geo, template <class> class HyperSurface, class V >
-    std::vector< V > lineCellIntersections ( const GV &gridView, const E &entity, const Geo &geo, const HyperSurface<V> &g, const double TOL = 1e-12 )
+    template< class Geo, template <class> class HyperSurface, class V >
+    std::vector< V > lineCellIntersections ( const Geo &geo, const HyperSurface<V> &g, const double TOL = 1e-12 )
     {
       const int dim = 2;
 
       std::vector< V > intersectionPoints;
 
 
-      const auto &refElement = Dune::ReferenceElements< double, dim >::general( entity.type() );
+      const auto &refElement = Dune::ReferenceElements< double, dim >::general( geo.type() );
 
 
       for( int k = 0; k < refElement.size( dim-1 ); ++k )
@@ -262,13 +262,13 @@ namespace Dune
 
 
 
-    template< class GV, class E, class Geo, template <class> class HyperSurface, class V >
-    double getVolumeFraction ( const GV &gridView, const E &entity, const Geo &geo, const HyperSurface<V> &g )
+    template< class Geo, template <class> class HyperSurface, class V >
+    double getVolumeFraction ( const Geo &geo, const HyperSurface<V> &g )
     {
       Polygon2D< V > polygonVertices;
 
 
-      auto lip = lineCellIntersections( gridView, entity, geo, g );
+      auto lip = lineCellIntersections( geo, g );
       for( auto &v : lip )
         polygonVertices.addVertex( v );
 
