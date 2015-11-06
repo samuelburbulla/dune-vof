@@ -30,7 +30,7 @@ public:
 
   const double size () const { return color_.size(); }
 
-  const GridView gridView () const { return gridView_; }
+  const GridView &gridView () const { return gridView_; }
 
   void axpy ( const double a, ColorFunction &x )
   {
@@ -43,7 +43,7 @@ public:
   void clear () { std::fill( color_.begin(), color_.end(), 0.0 ); }
 
 private:
-  const GridView &gridView_;
+  GridView gridView_;
   Mapper mapper_;
   std::vector< double > color_;
 };

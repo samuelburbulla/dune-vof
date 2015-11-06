@@ -14,90 +14,81 @@ namespace Dune
     // VertexNeighborsStencil
     // ----------------------
 
-    template< class GridView >
+    template< class GV >
     struct VertexNeighborsStencil
     {
+      using GridView = GV;
+      using Entity = typename GridView::template Codim< 0 >::Entity;
+      using EntitySeed = typename Entity::EntitySeed;
+
+      static constexpr int dim = GridView::dimensionworld;
+
+    private:
+      using Mapper =
+        Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout >;
 
     public:
-
-      const int dimworld = GridView::dimensionworld;
-      typedef typename GridView::template Codim< 0 >::Entity Entity;
-      typedef typename Entity::EntitySeed EntitySeed;
-
-
       explicit VertexNeighborsStencil ( const GridView &gridView )
-        : _gridView ( gridView ), _mapper ( gridView ), _cellsInDomain ( _mapper.size() ), _seeds ( _mapper.size() )
+        : gridView_( gridView ), mapper_( gridView_ ), cellsInDomain_( mapper_.size() ), seeds_( mapper_.size() )
       {
-
         getCellsInDomain();
-
       }
 
       const std::vector< Entity > operator[] ( const Entity &entity ) const    // range-based!
       {
         std::vector< Entity > stencil;
 
-        for ( auto&& index : _cellsInDomain[ _mapper.index( entity ) ] )
-        {
-          stencil.push_back( _gridView.grid().entity( _seeds[ index ] ) );
-        }
+        for ( const auto& index : cellsInDomain_[ mapper().index( entity ) ] )
+          stencil.push_back( gridView().grid().entity( seeds_[ index ] ) );
 
         return stencil;
       }
 
-
-
-
-
     private:
+      const GridView &gridView () const { return gridView_; }
+      const Mapper &mapper () const { return mapper_; }
 
       void getCellsInDomain()
       {
+        std::vector < std::vector < int > > cellsNextToThisVertex( gridView().size( dim ) );
 
-        std::vector < std::vector < int > > cellsNextToThisVertex( _gridView.size( dimworld ) );
-
-        for( auto&& entity : elements( _gridView ) )
+        for( const auto &entity : elements( gridView() ) )
         {
-          int entityID = _mapper.index( entity );
-          _seeds[ entityID ] = entity.seed();
+          int entityID = mapper().index( entity );
+          seeds_[ entityID ] = entity.seed();
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            int vertexID = _gridView.indexSet().subIndex( entity, k, dimworld );  //mapper?
+            int vertexID = gridView().indexSet().subIndex( entity, k, dim );  //mapper?
             cellsNextToThisVertex[ vertexID ].push_back( entityID );
           }
         }
-
-
-        for( auto&& entity : elements( _gridView ) )
+        for( const auto &entity : elements( gridView() ) )
         {
-          int entityID = _mapper.index( entity );
+          int entityID = mapper().index( entity );
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            int vertexIndex = _gridView.indexSet().subIndex( entity, k, dimworld );  //mapper?
+            int vertexIndex = gridView().indexSet().subIndex( entity, k, dim );  //mapper?
 
             for( auto index : cellsNextToThisVertex[ vertexIndex ] )
               if( index != entityID )
-                _cellsInDomain[ entityID ].push_back( index );
+                cellsInDomain_[ entityID ].push_back( index );
           }
 
 
           // erase duplicate elements
-          std::sort( _cellsInDomain[ entityID ].begin(), _cellsInDomain[ entityID ].end());
-          auto last = std::unique( _cellsInDomain[ entityID ].begin(), _cellsInDomain[ entityID ].end() );
-          _cellsInDomain[ entityID ].erase( last, _cellsInDomain[ entityID ].end());
+          std::sort( cellsInDomain_[ entityID ].begin(), cellsInDomain_[ entityID ].end() );
+          auto last = std::unique( cellsInDomain_[ entityID ].begin(), cellsInDomain_[ entityID ].end() );
+          cellsInDomain_[ entityID ].erase( last, cellsInDomain_[ entityID ].end() );
         }
-
       }
 
-      GridView _gridView;
-      Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout > _mapper;
+      GridView gridView_;
+      Mapper mapper_;
 
-      std::vector < std::vector < int > > _cellsInDomain;
-      std::vector < EntitySeed > _seeds;
-
-
+      std::vector< std::vector< int > > cellsInDomain_;
+      std::vector< EntitySeed > seeds_;
     };
 
   } // namespace VoF
