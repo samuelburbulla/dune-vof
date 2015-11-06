@@ -1,8 +1,11 @@
 #ifndef ERRORS_HH
 #define ERRORS_HH
 
-//- dune-geometry includes
-#include <dune/geometry/quadraturerules.hh>
+//- C includes
+#include <cmath>
+
+//- C++ includes
+#include <numeric>
 
 //- local includes
 #include "average.hh"
@@ -14,15 +17,11 @@ double l1error ( const DF &u, const F &f )
   DF solution( u.gridView() );
   average( solution, f );
 
-  double error = 0;
-  for( const auto& entity : Dune::elements( u.gridView() ) )
-  {
-    const auto geo = entity.geometry();
-
-    error += geo.volume() * std::abs( u[ entity ] - solution[ entity ] );
-  }
-
-  return error;
+  auto elements = Dune::elements( u.gridView() );
+  return std::accumulate( elements.begin(), elements.end(), 0.0,
+                          [ &u, &solution ] ( auto error, const auto& entity ) {
+                            return error + entity.geometry().volume() * std::abs( u[ entity ] - solution [ entity ] );
+                        } );
 }
 
 template< class DF, class F >
@@ -31,18 +30,12 @@ double l2error ( const DF &u, const F &ft )
   DF solution( u.gridView() );
   average( solution, ft );
 
-  double error = 0;
-
-  for( const auto& entity : Dune::elements( u.gridView() ) )
-  {
-    const auto geo = entity.geometry();
-
-    double diff = u[ entity ] - solution[ entity ];
-    diff *= diff;
-    error += geo.volume() * diff;
-  }
-
-  return std::sqrt( error );
+  auto elements = Dune::elements( u.gridView() );
+  return std::sqrt( std::accumulate( elements.begin(), elements.end(), 0.0,
+                                     [ &u, &solution ] ( auto error, const auto &entity ) {
+                                      auto val = u[ entity ] - solution[ entity ];
+                                      return error + entity.geometry().volume() * val * val;
+                                     }) );
 }
 
 #endif // #ifndef ERRORS_HH__
