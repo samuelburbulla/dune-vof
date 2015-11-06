@@ -2,14 +2,18 @@
 # define AVERAGE_HH
 
 #include <dune/common/exceptions.hh>
+
 #include <dune/geometry/quadraturerules.hh>
+
+// average
+// -------
 
 template< class DF, class F >
 void average ( DF &u, const F &f )
 {
   typedef typename DF::GridView::ctype ctype;
 
-  for( auto&& entity : elements ( u.gridView() ) )
+  for( const auto& entity : elements ( u.gridView() ) )
   {
     const auto geo = entity.geometry();
 
@@ -23,13 +27,8 @@ void average ( DF &u, const F &f )
 
     // compute approximate integral
     ctype result = 0;
-
-    for ( auto i = rule.begin(); i != rule.end(); ++i )
-    {
-      ctype val = f( geo.global( i->position() ) );
-      ctype weight = i->weight() * geo.integrationElement( i->position() );
-      result += val * weight;
-    }
+    for ( const auto qp : rule )
+      result += f( geo.global( qp.position() ) ) * qp.weight() * geo.integrationElement( qp.position() );
 
     u[ entity ] = result / geo.volume();
   }
