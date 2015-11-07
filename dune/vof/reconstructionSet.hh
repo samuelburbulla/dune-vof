@@ -4,6 +4,7 @@
 //-dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
 
+#include "hyperplane.hh"
 
 namespace Dune
 {
@@ -25,20 +26,20 @@ namespace Dune
         typedef typename GridView::ctype ctype;
         typedef typename Dune::FieldVector< ctype, dimworld > fvector;
         typedef typename GridView::template Codim< 0 >::Entity Entity;
-        typedef typename std::vector< HyperSurface< fvector > >::iterator iterator;
-        typedef typename std::vector< HyperSurface< fvector > >::const_iterator const_iterator;
+        typedef typename std::vector< Hyperplane< fvector > >::iterator iterator;
+        typedef typename std::vector< Hyperplane< fvector > >::const_iterator const_iterator;
 
         ReconstructionSet ( const GridView &gridView )
          : _mapper ( gridView ), _reconstructionSet ( _mapper.size() ), _reconstructionIntersections ( _mapper.size() )
          {}
 
-        const Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) const
+        const Dune::VoF::Hyperplane< fvector >& operator[] ( const Entity &entity ) const
         {
           assert ( _mapper.index( entity ) < _reconstructionSet.size() );
           return _reconstructionSet[ _mapper.index( entity ) ];
         }
 
-        Dune::VoF::HyperSurface< fvector >& operator[] ( const Entity &entity ) { return _reconstructionSet[ _mapper.index( entity ) ]; }
+        Dune::VoF::Hyperplane< fvector >& operator[] ( const Entity &entity ) { return _reconstructionSet[ _mapper.index( entity ) ]; }
 
         iterator begin () { return _reconstructionSet.begin(); }
         const_iterator begin () const { return _reconstructionSet.begin(); }
@@ -74,7 +75,7 @@ namespace Dune
 
         const void clear()
         {
-          Dune::VoF::HyperSurface< fvector > h;
+          Dune::VoF::Hyperplane< fvector > h;
           std::fill( _reconstructionSet.begin(), _reconstructionSet.end(), h );
 
           std::vector< fvector > v;
@@ -85,7 +86,7 @@ namespace Dune
       private:
 
         Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout > _mapper;
-        std::vector< Dune::VoF::HyperSurface< fvector > > _reconstructionSet; // should be private with range-based iterator
+        std::vector< Dune::VoF::Hyperplane< fvector > > _reconstructionSet; // should be private with range-based iterator
         std::vector< std::vector< fvector > > _reconstructionIntersections; // should be private with range-based iterator
     };
 

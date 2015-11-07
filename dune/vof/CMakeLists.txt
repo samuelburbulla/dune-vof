@@ -4,7 +4,7 @@ set( vof_HEADERS
   evolution.hh
   flags.hh
   geometricutility.hh
-  hypersurface.hh
+  hyperplane.hh
   modifiedswartz.hh
   reconstruct.hh
   reconstructionSet.hh

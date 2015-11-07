@@ -27,7 +27,7 @@ namespace Dune
       assert ( fvector::dimension == 2 );
 
       Dune::FieldMatrix< double, 2, 2 > A( { g.normal(), l.normal() }  );
-      fvector b( { -g.p(), -l.p() } );
+      fvector b( { -g.distance(), -l.distance() } );
       fvector x;
 
       A.solve( x, b );
@@ -230,14 +230,14 @@ namespace Dune
     template < template <class> class HyperSurface, class V >
     bool isInner ( const V &vertex, const HyperSurface<V> &g, const double TOL = 1e-12 )
     {
-      return vertex * g.normal() + g.p() >= TOL;
+      return vertex * g.normal() + g.distance() >= TOL;
     }
 
 
     template < template <class> class HyperSurface, class V >
     bool isOnRecLine ( const V &vertex, const HyperSurface<V> &g, const double TOL = 1e-12 )
     {
-      return std::abs( vertex * g.normal() + g.p() ) < TOL;
+      return std::abs( vertex * g.normal() + g.distance() ) < TOL;
     }
 
 

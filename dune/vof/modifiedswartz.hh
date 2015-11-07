@@ -6,6 +6,7 @@
 
 #include "brents.hh"
 #include "geometricutility.hh"
+#include "hyperplane.hh"
 
 
 namespace Dune
@@ -127,26 +128,26 @@ namespace Dune
       // Initial guess for p
       for( int i = 0; i < geo.corners(); ++i )
       {
-        g.p() = geo.corner( i ) * g.normal();
-        g.p() *= -1.0;
+        g.distance() = geo.corner( i ) * g.normal();
+        g.distance() *= -1.0;
 
         volume = getVolumeFraction( geo, g );
 
 
         if( volume <= volMax && volume >= concentration )
         {
-          pMax = g.p();
+          pMax = g.distance();
           volMax = volume;
         }
 
         if( volume >= volMin && volume <= concentration )
         {
-          pMin = g.p();
+          pMin = g.distance();
           volMin = volume;
         }
       }
 
-      g.p() = brentsMethod( [ &geo, &concentration, &g ] ( double p ) -> double {
+      g.distance() = brentsMethod( [ &geo, &concentration, &g ] ( double p ) -> double {
                               ReconstructionType h( g.normal(), p );
                               return ( getVolumeFraction( geo, h ) - concentration );
                             }, pMin, pMax, 1e-12 );

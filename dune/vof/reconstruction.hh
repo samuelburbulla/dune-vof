@@ -12,7 +12,7 @@
 //- local includes
 #include "brents.hh"
 #include "geometricutility.hh"
-#include "hypersurface.hh"
+#include "hyperplane.hh"
 #include "secondyoungsnormalguessing.hh"
 #include "modifiedswartz.hh"
 
@@ -31,7 +31,7 @@ namespace Dune
       const int dimworld = GridView::dimensionworld;
       typedef typename GridView::ctype ctype;
       typedef typename Dune::FieldVector< ctype, dimworld > fvector;
-      typedef typename Dune::VoF::HyperSurface< fvector > ReconstructionType;
+      typedef typename Dune::VoF::Hyperplane< fvector > ReconstructionType;
 
 
       reconstructionSet.clear();
@@ -71,7 +71,7 @@ namespace Dune
                 auto p = isGeo.corner(0) * n;
                 p *= -1.0;
 
-                reconstructionSet[ entity ] = HyperSurface< fvector > ( n, p );
+                reconstructionSet[ entity ] = Hyperplane< fvector > ( n, p );
                 reconstructionSet.intersections( entity ) = std::vector< fvector > ( { isGeo.corner(0), isGeo.corner(1) } );
               }
             }
@@ -86,4 +86,3 @@ namespace Dune
 
 
 #endif // #ifndef DUNE_VOF_RECONSTRUCTION_HH
-
