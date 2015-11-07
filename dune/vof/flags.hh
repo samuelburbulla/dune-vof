@@ -83,7 +83,7 @@ namespace Dune
     private:
       GridView _gridView;
       Domain _domain;
-      Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout > _mapper;
+      MultipleCodimMultipleGeomTypeMapper< GridView, MCMGElementLayout > _mapper;
       std::vector< bool > _mixed;
       std::vector< bool > _fullandmixed;
       std::vector< bool > _active;

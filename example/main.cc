@@ -16,7 +16,6 @@
 
 //- dune-grid includes
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
-#include <dune/grid/common/mcmgmapper.hh>
 
 //- dune-vof includes
 #include <dune/vof/evolution.hh>
@@ -34,37 +33,49 @@
 #include "problem.hh"
 #include "vtu.hh"
 
+// filterReconstruction
+// --------------------
 
-template < class ReconstructionSet, template<class> class Polygon, class fvector >
-void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vector< Polygon< fvector > > &io )
+template < class ReconstructionSet, class Polygon >
+void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
 {
-  io.clear();
+  using Coordinate = typename Polygon::Position;
 
+  io.clear();
   for ( auto&& is : reconstructionSet.intersectionsSet() )
   {
     if( is.size() != 0 )
-      io.push_back( Polygon< fvector >( is ) );
+      io.push_back( Polygon( is ) );
   }
 
   // io should not be empty
-  if ( io.size() == 0 )  io.push_back( Polygon< fvector > { fvector (0) } );
+  if ( io.size() == 0 )  io.push_back( Polygon{ Coordinate ( 0.0 ), Coordinate( 0.0 ) } );
 }
 
+// algorithm
+// ---------
 
 template < class GridView >
 std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
-  using fvector = Dune::FieldVector< typename GridView::ctype, GridView::dimensionworld >;
-  using polygon = Polygon< fvector >;
+  using ColorFunction = ColorFunction< GridView >;
+  using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
+  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
+  using Flags = Dune::VoF::Flags< GridView, Stencils >;
+
+  using DataWriter = Dune::VTKSequenceWriter< GridView >;
+
+  using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
   // build domain references for each cell
-  Dune::VoF::VertexNeighborsStencil< GridView > stencil( gridView );
+  Stencils stencils( gridView );
 
   // allocate and initialize objects for data representation
-  ColorFunction< GridView > colorFunction( gridView );
-  ColorFunction< GridView > update( gridView );
-  Dune::VoF::ReconstructionSet< GridView > reconstructionSet ( gridView );
-  Dune::VoF::Flags< GridView, Dune::VoF::VertexNeighborsStencil< GridView > > flags ( gridView, stencil );
+  ColorFunction colorFunction( gridView );
+  ColorFunction update( gridView );
+  ReconstructionSet reconstructionSet( gridView );
+  Flags flags ( gridView, stencils );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
 
   // VTK Writer
   int numCells = parameters.get< int >( "grid.numCells" );
@@ -72,12 +83,12 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( numCells );
   createDirectory( path.str() );
 
-  Dune::VTKSequenceWriter< GridView > vtkwriter ( gridView, "vof", path.str(), "~/dune" );
+  DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
   vtkwriter.addCellData ( flags, "flags" );
 
-  std::vector< polygon > recIO;
-  VTUWriter< std::vector< polygon > > vtuwriter( recIO );
+  std::vector< Polygon > recIO;
+  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
   std::stringstream name;
   name.fill('0');
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
@@ -96,7 +107,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   average( colorFunction, [ ] ( const auto &x ) { return f( x, 0.0 ); } );
 
   flags.reflag( colorFunction, eps );
-  Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, stencil, flags, eps );
+  reconstruction(  colorFunction, reconstructionSet, flags );
   filterReconstruction( reconstructionSet, recIO );
 
   vtkwriter.write( 0 );
@@ -113,7 +124,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
     flags.reflag( colorFunction, eps );
 
-    Dune::VoF::reconstruct( gridView, colorFunction, reconstructionSet, stencil, flags, eps );
+    reconstruction( colorFunction, reconstructionSet, flags );
     Dune::VoF::evolve( gridView, colorFunction, reconstructionSet, t, dt, flags, psit, eps, update );
     colorFunction.axpy( 1.0, update );
 

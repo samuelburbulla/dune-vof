@@ -1,3 +1,5 @@
+add_subdirectory( reconstruction )
+
 set( vofdir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof )
 set( vof_HEADERS
   brents.hh
@@ -5,10 +7,8 @@ set( vof_HEADERS
   flags.hh
   geometricutility.hh
   hyperplane.hh
-  modifiedswartz.hh
-  reconstruct.hh
+  reconstruction.hh
   reconstructionSet.hh
-  secondyoungsnormalguessing.hh
   vertexneighborsstencil.hh
 )
 

@@ -20,6 +20,7 @@ namespace Dune
       using GridView = GV;
       using Entity = typename GridView::template Codim< 0 >::Entity;
       using EntitySeed = typename Entity::EntitySeed;
+      using Stencil = std::vector< Entity >;
 
       static constexpr int dim = GridView::dimensionworld;
 
@@ -34,9 +35,9 @@ namespace Dune
         getCellsInDomain();
       }
 
-      const std::vector< Entity > operator[] ( const Entity &entity ) const    // range-based!
+      Stencil operator[] ( const Entity &entity ) const    // range-based!
       {
-        std::vector< Entity > stencil;
+        Stencil stencil;
 
         for ( const auto& index : cellsInDomain_[ mapper().index( entity ) ] )
           stencil.push_back( gridView().grid().entity( seeds_[ index ] ) );

@@ -29,8 +29,8 @@ namespace Dune
       using Reconstruction = Hyperplane< Coordinate >;
       using Intersections = std::vector< Coordinate >;
 
-      using iterator = std::vector< Reconstruction >::iterator;
-      using const_iterator = std::vector< Reconstruction >::const_iterator;
+      using iterator = typename std::vector< Reconstruction >::iterator;
+      using const_iterator = typename std::vector< Reconstruction >::const_iterator;
 
       explicit ReconstructionSet ( const GridView &gridView )
        : mapper_( gridView ), reconstructionSet_( mapper().size() ), intersectionsSet_( mapper().size() )
@@ -42,11 +42,11 @@ namespace Dune
       iterator begin () { return reconstructionSet_.begin(); }
       const_iterator begin () const { return reconstructionSet_.begin(); }
 
-      iterator end () { return _reconstructionSet.end(); }
-      const_iterator end () const { return _reconstructionSet.end(); }
+      iterator end () { return reconstructionSet_.end(); }
+      const_iterator end () const { return reconstructionSet_.end(); }
 
-      const Intersections& intersections ( const Entity &entity ) const { return intersections_[ mapper().index( entity ) ]; }
-      Intersections& intersections ( const Entity &entity ) { return intersections_[ mapper().index( entity ) ]; }
+      const Intersections& intersections ( const Entity &entity ) const { return intersectionsSet_[ mapper().index( entity ) ]; }
+      Intersections& intersections ( const Entity &entity ) { return intersectionsSet_[ mapper().index( entity ) ]; }
 
       const std::vector< Intersections >& intersectionsSet () const { return intersectionsSet_; }
 
