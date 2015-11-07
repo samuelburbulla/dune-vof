@@ -40,7 +40,7 @@ void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vect
 {
   io.clear();
 
-  for ( auto&& is : reconstructionSet.intersections() )
+  for ( auto&& is : reconstructionSet.intersectionsSet() )
   {
     if( is.size() != 0 )
       io.push_back( Polygon< fvector >( is ) );
