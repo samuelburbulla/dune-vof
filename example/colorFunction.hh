@@ -13,6 +13,7 @@ struct ColorFunction
 {
   typedef GV GridView;
   typedef typename GridView::template Codim< 0 >::Entity Entity;
+  typedef double ctype;
 
 private:
   typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout > Mapper;
@@ -22,17 +23,17 @@ public:
    : gridView_( gridView ), mapper_( gridView ), color_( mapper_.size(), 0.0 )
    {}
 
-  double& operator[] ( const Entity& entity ) { return color_[ mapper_.index( entity ) ]; }
-  const double& operator[] ( const Entity& entity ) const { return color_[ mapper_.index( entity ) ]; }
+  ctype& operator[] ( const Entity& entity ) { return color_[ mapper_.index( entity ) ]; }
+  const ctype& operator[] ( const Entity& entity ) const { return color_[ mapper_.index( entity ) ]; }
 
-  double& operator[] ( const int i ) { return color_[ i ]; }
-  const double& operator[] ( const int i ) const {return color_[ i ]; }
+  ctype& operator[] ( const int i ) { return color_[ i ]; }
+  const ctype& operator[] ( const int i ) const {return color_[ i ]; }
 
-  const double size () const { return color_.size(); }
+  std::size_t size () const { return color_.size(); }
 
   const GridView &gridView () const { return gridView_; }
 
-  void axpy ( const double a, ColorFunction &x )
+  void axpy ( const ctype a, ColorFunction &x )
   {
     assert( x.size() == color_.size() );
 
@@ -45,7 +46,7 @@ public:
 private:
   GridView gridView_;
   Mapper mapper_;
-  std::vector< double > color_;
+  std::vector< ctype > color_;
 };
 
 #endif // #ifndef COLORFUNCTION_HH

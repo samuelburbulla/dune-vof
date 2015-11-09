@@ -84,7 +84,7 @@ namespace Dune
         return sum / 2.0;
       }
 
-      const bool pointInBorders ( const V &vertex ) const
+      bool pointInBorders ( const V &vertex ) const
       {
         int n = points.size();
 
@@ -99,8 +99,9 @@ namespace Dune
         return inside;
       }
 
+      void clear () { points.clear(); }
+
       std::vector< V > points;
-      double vol = 0;
 
     private:
       const int SkalarProdTest ( const V &vertex, const V &p1, const V &p2, const double TOL = 1e-12 ) const

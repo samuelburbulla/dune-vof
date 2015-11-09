@@ -67,6 +67,16 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
   using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
+  // calculate dt
+  int numCells = parameters.get< int >( "grid.numCells" );
+  double dt = parameters.get< double >( "scheme.cflFactor" )  * ( 1.0 / numCells ) / psiMax();
+  const double endTime = parameters.get< double >( "scheme.end", 10 );
+  const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
+
+  int saveNumber = 1;
+  const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
+  double nextSaveTime = saveInterval;
+
   // build domain references for each cell
   Stencils stencils( gridView );
 
@@ -76,9 +86,9 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView, stencils );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
+  auto evolution = Dune::VoF::evolution(  reconstructionSet, colorFunction, eps );
 
   // VTK Writer
-  int numCells = parameters.get< int >( "grid.numCells" );
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( numCells );
   createDirectory( path.str() );
@@ -92,16 +102,6 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   std::stringstream name;
   name.fill('0');
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
-
-
-  // calculate dt
-  double dt = parameters.get< double >( "scheme.cflFactor" )  * ( 1.0 / numCells ) / psiMax();
-  const double endTime = parameters.get< double >( "scheme.end", 10 );
-  const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
-
-  int saveNumber = 1;
-  const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
-  double nextSaveTime = saveInterval;
 
   // Initial reconstruction
   average( colorFunction, [ ] ( const auto &x ) { return f( x, 0.0 ); } );
@@ -125,7 +125,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
     flags.reflag( colorFunction, eps );
 
     reconstruction( colorFunction, reconstructionSet, flags );
-    Dune::VoF::evolve( gridView, colorFunction, reconstructionSet, t, dt, flags, psit, eps, update );
+    evolution( colorFunction, reconstructionSet, psit, dt, update, flags );
     colorFunction.axpy( 1.0, update );
 
     t += dt;

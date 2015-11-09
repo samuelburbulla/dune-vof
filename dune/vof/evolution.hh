@@ -12,89 +12,121 @@ namespace Dune
   namespace VoF
   {
 
-    template< class GridView, class ColorFunction, class ReconstructionSet, class Flags, class VelocityField >
-    void evolve ( const GridView &gridView, const ColorFunction &colorFunction, ReconstructionSet &reconstructionSet,
-                  const double t, const double dt, const Flags &flags, const VelocityField &velocityField, const double eps, ColorFunction &update )
+    // Evolution
+    // ---------
+
+    template< class RS, class DF >
+    struct Evolution
     {
-      const int dimworld = GridView::dimensionworld;
-      typedef typename GridView::ctype ctype;
-      typedef FieldVector< ctype, dimworld > fvector;
+      using ReconstructionSet = RS;
+      using ColorFunction = DF;
 
-      update.clear();
+      using GridView = typename ColorFunction::GridView;
 
-      for( const auto &entity : elements( gridView ) )
+    private:
+      using Reconstruction = typename ReconstructionSet::Reconstruction;
+      using Entity = typename ReconstructionSet::Entity;
+
+      using Coordinate = typename Entity::Geometry::GlobalCoordinate;
+      using Polygon = Polygon2D< Coordinate >;
+
+      using ctype = typename ColorFunction::ctype;
+    public:
+      explicit Evolution ( double eps )
+       : eps_( eps )
+      {}
+
+      template< class Velocity, class Flags >
+      void operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, const double dt,
+                        ColorFunction &update, const Flags &flags ) const
       {
-        if( flags.isMixed( entity ) || flags.isActive( entity ) || flags.isFullAndMixed( entity ) )
+        update.clear();
+
+        for( const auto &entity : elements( color.gridView() ) )
         {
-          auto entityGeo = entity.geometry();
+          if( !flags.isMixed( entity ) && !flags.isActive( entity ) && !flags.isFullAndMixed( entity ) )
+            continue;
 
-          for( const auto &intersection : intersections( gridView, entity ) )
-          {
-            if( intersection.neighbor() )
-            {
-              const auto &neighbor = intersection.outside();
-              const auto isGeo = intersection.geometry();
-
-              fvector outerNormal = intersection.centerUnitOuterNormal();
-              fvector velocity = velocityField( isGeo.center() );
-
-              // build time integration polygon
-              velocity *= dt;
-
-              Polygon2D< fvector > timeIntegrationPolygon;
-
-              timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) );
-              timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) );
-
-              timeIntegrationPolygon.addVertex( isGeo.corner( 0 ) - velocity );
-              timeIntegrationPolygon.addVertex( isGeo.corner( 1 ) - velocity );
-
-              // outflows
-              if( velocity * outerNormal > 0 )
-              {
-                // build flux polygon with present material in cell
-                Polygon2D< fvector > fluxPolygon;
-                double fluxVolume = 0;
-
-                if( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
-                {
-                  polygonLineIntersection( timeIntegrationPolygon, reconstructionSet[ entity ], fluxPolygon );
-                  polyAddInnerVertices( timeIntegrationPolygon, reconstructionSet[ entity ], fluxPolygon );
-
-                  fluxVolume = fluxPolygon.volume();
-                }
-                else if( colorFunction[ entity ] >= 1 - eps )
-                  fluxVolume = timeIntegrationPolygon.volume();
-
-                update[ entity ] -= fluxVolume / entityGeo.volume();
-              }
-
-              //inflow
-              else if( velocity * outerNormal < 0 )
-              {
-                // build phase polygon of the neighbor
-                Polygon2D< fvector > fluxPolygon;
-                double fluxVolume = 0;
-
-                if( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
-                {
-                  polygonLineIntersection( timeIntegrationPolygon, reconstructionSet[ neighbor ], fluxPolygon );
-                  polyAddInnerVertices( timeIntegrationPolygon, reconstructionSet[ neighbor ], fluxPolygon );
-
-                  fluxVolume = fluxPolygon.volume();
-                }
-                else if( colorFunction[ neighbor ] > 1 - eps )
-                  fluxVolume = timeIntegrationPolygon.volume();
-
-                update[ entity ] += fluxVolume / entityGeo.volume();
-
-              }
-            } // end of intersection is neighbor
-          }
+          applyLocal( entity, flags, dt, color, reconstructions, velocity, update);
         }
       }
-    }
 
+    private:
+      template< class Velocity, class Flags >
+      void applyLocal ( const Entity &entity, const Flags &flags, const double dt, const ColorFunction &color, const ReconstructionSet &reconstructions,
+                        const Velocity& velocity, ColorFunction &update ) const
+      {
+        const auto geoEn = entity.geometry();
+
+        for ( const auto &intersection : intersections( color.gridView(), entity ) )
+        {
+          if ( !intersection.neighbor() )
+            continue;
+
+          const auto geoIs = intersection.geometry();
+
+          const Coordinate outerNormal = intersection.centerUnitOuterNormal();
+          Coordinate v = velocity( geoIs.center() );
+          v *= dt;
+
+          const auto &neighbor = intersection.outside();
+
+          upwind_.clear();
+          flux_.clear();
+
+          ctype flux = 0.0;
+          if ( v * outerNormal > 0 ) // outflow
+          {
+            // insert in cw/ccw order
+            upwind_.addVertex( geoIs.corner( 0 ) );
+            upwind_.addVertex( geoIs.corner( 1 ) );
+            upwind_.addVertex( geoIs.corner( 1 ) - v );
+            upwind_.addVertex( geoIs.corner( 0 ) - v );
+
+            if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
+              flux = truncVolume( entity, reconstructions );
+            else if ( color[ entity ] >= (1 -eps_) )
+              flux = upwind_.volume();
+          }
+          else if ( v * outerNormal < 0 ) // inflow
+          {
+            // insert in cw/ccw order
+            upwind_.addVertex( geoIs.corner( 0 ) );
+            upwind_.addVertex( geoIs.corner( 0 ) - v );
+            upwind_.addVertex( geoIs.corner( 1 ) - v );
+            upwind_.addVertex( geoIs.corner( 1 ) );
+
+            if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
+              flux = -truncVolume( neighbor, reconstructions );
+            else if ( color[ neighbor ] >= (1 -eps_) )
+              flux = -upwind_.volume();
+          }
+
+          update[ entity ] -= flux / geoEn.volume();
+        }
+      }
+
+      ctype truncVolume ( const Entity &entity, const ReconstructionSet &reconstructions ) const
+      {
+        polygonLineIntersection( upwind_, reconstructions[ entity ], flux_ );
+        polyAddInnerVertices( upwind_, reconstructions[ entity ], flux_ );
+
+        return flux_.volume();
+      }
+
+      double eps_;
+      mutable Polygon flux_, upwind_;
+    };
+
+
+    // evolution
+    // --------
+
+    template< class ReconstructionSet, class ColorFunction >
+    auto evolution ( const ReconstructionSet&, const ColorFunction&, double eps ) -> decltype( Evolution< ReconstructionSet, ColorFunction >( eps ) )
+    {
+      return Evolution< ReconstructionSet, ColorFunction >( eps );
+    }
 
   } // namespace VoF
 
