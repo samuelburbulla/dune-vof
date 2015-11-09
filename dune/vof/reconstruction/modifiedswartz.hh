@@ -113,13 +113,12 @@ namespace Dune
             std::swap( newNormal, normal );
             computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
           }
-          // should i be able to break otherwise
-          // else
-          //   break;
+          else
+            break;
 
           ++iterations;
         }
-        while ( (normal - newNormal).two_norm2() > 1e-12 && iterations < maxIterations_ );
+        while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
       }
 
       void normalize ( Coordinate &normal ) const
