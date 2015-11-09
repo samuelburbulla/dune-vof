@@ -5,11 +5,9 @@
 #include <cstddef>
 
 #include <algorithm>
-#include <array>
 #include <limits>
 #include <type_traits>
 #include <utility>
-
 
 namespace Dune
 {
@@ -29,7 +27,6 @@ namespace Dune
       using Z = decltype( a.second * b.second );
 
       assert( a.second * b.second < Z( 0.0 ) );
-
 
       const X half = X( 1 ) / X( 2 );
 

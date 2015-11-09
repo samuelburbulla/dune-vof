@@ -1,7 +1,6 @@
 #ifndef DUNE_VOF_HYPERPLANE_HH
 #define DUNE_VOF_HYPERPLANE_HH
 
-
 namespace Dune
 {
   namespace VoF
@@ -33,7 +32,7 @@ namespace Dune
       {}
 
       Hyperplane ( const Coordinate& normal, const Coordinate& point )
-       : normal_( normal ), dist_( -1*( normal * point ) )
+       : normal_( normal ), dist_( -1.0*( normal * point ) )
       {}
 
       const Coordinate& normal() const { return normal_; }
@@ -46,7 +45,6 @@ namespace Dune
       Coordinate normal_;
       ctype dist_;
     };
-
 
   } // end of namespace VoF
 

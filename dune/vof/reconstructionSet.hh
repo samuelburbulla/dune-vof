@@ -1,6 +1,8 @@
 #ifndef DUNE_VOF_RECONSTRUCTIONSET_HH
 #define DUNE_VOF_RECONSTRUCTIONSET_HH
 
+#include <vector>
+
 //- dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
 

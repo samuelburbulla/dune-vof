@@ -4,12 +4,10 @@
 //- dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
 
-
 namespace Dune
 {
   namespace VoF
   {
-
 
     // VertexNeighborsStencil
     // ----------------------
@@ -30,15 +28,14 @@ namespace Dune
 
     public:
       explicit VertexNeighborsStencil ( const GridView &gridView )
-        : gridView_( gridView ), mapper_( gridView_ ), cellsInDomain_( mapper_.size() ), seeds_( mapper_.size() )
+       : gridView_( gridView ), mapper_( gridView_ ), cellsInDomain_( mapper_.size() ), seeds_( mapper_.size() )
       {
         getCellsInDomain();
       }
 
-      Stencil operator[] ( const Entity &entity ) const    // range-based!
+      Stencil operator[] ( const Entity &entity ) const
       {
         Stencil stencil;
-
         for ( const auto& index : cellsInDomain_[ mapper().index( entity ) ] )
           stencil.push_back( gridView().grid().entity( seeds_[ index ] ) );
 
@@ -64,6 +61,7 @@ namespace Dune
             cellsNextToThisVertex[ vertexID ].push_back( entityID );
           }
         }
+
         for( const auto &entity : elements( gridView() ) )
         {
           int entityID = mapper().index( entity );

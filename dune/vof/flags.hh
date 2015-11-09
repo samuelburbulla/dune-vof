@@ -4,7 +4,6 @@
 //- dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
 
-
 namespace Dune
 {
   namespace VoF
