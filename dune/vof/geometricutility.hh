@@ -1,6 +1,9 @@
 #ifndef DUNE_VOF_GEOMETRICUTILITY_HH
 #define DUNE_VOF_GEOMETRICUTILITY_HH
 
+#include <cassert>
+
+#include <limits>
 #include <vector>
 
 #include <dune/common/fmatrix.hh>
@@ -222,40 +225,51 @@ namespace Dune
     }
 
 
-    template< class Geometry, class ReconstructionType, class PointList>
-    void computeInterfaceLinePosition ( const Geometry &geo, double concentration, ReconstructionType &g, PointList &intersections )
+    template< class Geometry, class Color, class Reconstruction, class PointList>
+    void computeInterfaceLinePosition ( const Geometry &geo, const Color &concentration, Reconstruction &g, PointList &intersections )
     {
-      intersections.clear();
+      using vtype = decltype( geo.volume() );
+      using limits = std::numeric_limits< vtype >;
+      using ctype = typename Reconstruction::ctype;
 
-      double pMin = 0, pMax = 0, volume;
-      //use bigger range than [0,1] initially
-      double volMin = -1;
-      double volMax = 2;
+      ctype pMin = 0, pMax = 0;
+      vtype volume,
+            volMin = limits::lowest(), // lower bound
+            volMax = limits::max(); // upper bound
 
-      // Initial guess for p
+      // upper/lower bound for
       for( int i = 0; i < geo.corners(); ++i )
       {
-        g.distance() =  -1.0 * ( geo.corner( i ) * g.normal() );
+        Reconstruction h( g.normal(), geo.corner( i ) );
 
-        volume = getVolumeFraction( geo, g );
+        volume = getVolumeFraction( geo, h );
 
         if( ( volume <= volMax ) && ( volume >= concentration ) )
         {
-          pMax = g.distance();
+          pMax = h.distance();
           volMax = volume;
         }
         if( ( volume >= volMin ) && ( volume <= concentration ) )
         {
-          pMin = g.distance();
+          pMin = h.distance();
           volMin = volume;
         }
       }
+      assert( volMin <= volMax );
 
-      g.distance() = brentsMethod( [ &geo, &concentration, &g ] ( double p ) -> double {
-                              ReconstructionType h( g.normal(), p );
-                              return ( getVolumeFraction( geo, h ) - concentration );
-                            }, pMin, pMax, 1e-12 );
+      if ( volMax == limits::max() )
+        g.distance() = pMin;
+      else if ( volMin == limits::lowest() )
+        g.distance() = pMax;
+      else if ( volMin == volMax )
+        g.distance() = pMin;
+      else
+        g.distance() = brentsMethod( [ &geo, &concentration, &g ] ( ctype p ) -> ctype {
+                                        Reconstruction h( g.normal(), p );
+                                        return ( getVolumeFraction( geo, h ) - concentration );
+                                     }, pMin, pMax, 1e-12 );
 
+      intersections.clear();
       intersections = lineCellIntersections( geo, g );
     }
 
