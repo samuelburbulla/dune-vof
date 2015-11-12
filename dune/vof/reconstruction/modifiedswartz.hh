@@ -70,6 +70,7 @@ namespace Dune
         Coordinate newNormal;
 
         const auto geoEn = entity.geometry();
+        const auto &stencilEn = stencil( entity );
         do
         {
           assert( intersectionsEn_.size() != 0 );
@@ -78,7 +79,7 @@ namespace Dune
 
           std::size_t count = 0;
 
-          for( const auto &neighbor : stencil( entity ) )
+          for( const auto &neighbor : stencilEn )
           {
             if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
               continue;
@@ -98,12 +99,12 @@ namespace Dune
             centerNb *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsNb_.size() ) );
 
             Coordinate centerNormal = rotate90degreesCounterClockwise( centerNb - centerEn );
-            assert( centerNormal.two_norm2() > 0.0 );
+            assert( centerNormal.two_norm2() > 0.0 ); // this assertion is fishy !
 
             if ( ( centerNormal * normal ) < 0.0 )
               centerNormal *= -1.0;
 
-            newNormal.axpy( 1.0 / centerNormal.two_norm() , centerNormal ); // check that the weight is defined right
+            newNormal.axpy( 1.0 / centerNormal.two_norm() , centerNormal );
             ++count;
           }
 
