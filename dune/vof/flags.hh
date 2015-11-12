@@ -1,6 +1,8 @@
 #ifndef DUNE_VOF_FLAGS_HH
 #define DUNE_VOF_FLAGS_HH
 
+#include <utility>
+
 //- dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -11,81 +13,96 @@ namespace Dune
 
     // Flag the entities of a gridView as mixed or active
 
-    template< class GridView, class Domain >
+    template< class GV >
     struct Flags
     {
-      const int dimworld = GridView::dimensionworld;
-      typedef typename GridView::template Codim< 0 >::Entity Entity;
-      //typedef typename Dune::MCMGElementLayout< 2 > MapperLayout;
+      using GridView = GV;
+      using Entity = typename GridView::template Codim< 0 >::Entity;
 
-      Flags ( const GridView &gridView, const Domain &domain )
-       : _gridView ( gridView ), _domain ( domain ), _mapper ( gridView ), _mixed ( _mapper.size(), false ),
-         _fullandmixed ( _mapper.size(), false ), _active ( _mapper.size(), false )
+    private:
+      enum class Flag {
+        empty       = 0,
+        mixed       = 1,
+        full        = 2,
+        mixedfull   = 3,
+        activeempty = 4,
+        activefull  = 5
+      };
+
+      using Mapper = MultipleCodimMultipleGeomTypeMapper< GridView, MCMGElementLayout >;
+
+    public:
+      Flags ( const GridView &gridView )
+       : gridView_ ( gridView ), mapper_( gridView ), flags_( mapper_.size(), Flag::empty )
       {}
 
-      const bool isMixed ( const Entity& entity ) const { return _mixed[ _mapper.index( entity ) ]; }
-      const bool isFullAndMixed ( const Entity& entity ) const { return _fullandmixed[ _mapper.index( entity ) ]; }
-      const bool isActive ( const Entity& entity ) const { return _active[ _mapper.index( entity ) ]; }
+      const bool isMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixed; }
+      const bool isFullAndMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixedfull; }
 
-      const std::size_t size() const { return _mapper.size(); }
-
-      const int operator[] ( const int i ) const
+      const bool isActive ( const Entity& entity ) const
       {
-        if ( _fullandmixed[ i ] ) return 3;
-        if ( _mixed[ i ] ) return 2;
-        if ( _active[ i ] ) return 1;
-        return 0;
-      }
+        const Flag &flag = flags_[ index( entity ) ];
+        return ( flag == Flag::activeempty ) || ( flag == Flag::activefull ); }
 
-      template< class ColorFunction >
-      void reflag ( const ColorFunction& colorFunction, const double eps )
+      const std::size_t size() const { return mapper_.size(); }
+
+      const int operator[] ( const int i ) const { return static_cast< int >( flags_[ i ] ); }
+
+      template< class DF >
+      void reflag ( const DF& color, const double eps )
       {
-        // mixed cells
-        for( const auto &entity : elements( _gridView ) )
+        for ( const auto &entity : elements( gridView() ) )
         {
-          _active[ _mapper.index( entity ) ] = false;
-          _fullandmixed[ _mapper.index( entity ) ] = false;
-          _mixed[ _mapper.index( entity ) ] = ( colorFunction[ entity ] >= eps && colorFunction[ entity ] <= 1 - eps );
+          const auto idx = index( entity );
+          Flag &flag = flags_[ idx ];
+          const auto colorEn = color[ idx ];
 
+          if ( colorEn < eps )
+            flag = Flag::empty;
+          else if ( colorEn <= (1-eps) )
+            flag = Flag::mixed;
+          else
+          {
+            flag = Flag::full;
 
-          if( colorFunction[ entity ] > 1 - eps )
-            for( auto&& intersection : intersections( _gridView, entity ) )
-            {
-              if ( intersection.neighbor() )
+            for ( const auto &intersection : intersections( gridView(), entity ) )
+              if ( intersection.neighbor() && color[ index( intersection.outside() ) ] < eps )
               {
-                const Entity &neighbor = intersection.outside();
-
-                if ( colorFunction[ neighbor ] < eps )
-                  _fullandmixed[ _mapper.index( entity ) ] = true;
+                flag = Flag::mixedfull;
+                break;
               }
-            }
+          }
         }
 
-        // active cells
-        for( const auto &entity : elements( _gridView ))
+        for ( const auto &entity : elements( gridView() ) )
         {
-          if ( _mixed[ _mapper.index( entity ) ] )
-          {
-            for( auto&& is : intersections( _gridView,  entity ) )
-            {
-              if( is.neighbor() )
+          const auto idx = index( entity );
+
+          if ( flags_[ idx ] == Flag::mixed || flags_[ idx ] == Flag::mixedfull )
+            for ( const auto &intersection : intersections( gridView(), entity ) )
+              if ( intersection.neighbor() )
               {
-                auto neighbor = is.outside();
-                if( !_mixed[ _mapper.index( neighbor ) ] )
-                  _active[  _mapper.index( neighbor ) ] = true;
+                Flag &flag = flags_[ index( intersection.outside() ) ];
+
+                if ( flag == Flag::empty )
+                  flag = Flag::activeempty;
+                else if ( flag == Flag::full )
+                  flag = Flag::activefull;
               }
-            }
-          }
         }
       }
 
     private:
-      GridView _gridView;
-      Domain _domain;
-      MultipleCodimMultipleGeomTypeMapper< GridView, MCMGElementLayout > _mapper;
-      std::vector< bool > _mixed;
-      std::vector< bool > _fullandmixed;
-      std::vector< bool > _active;
+      const GridView &gridView () const { return gridView_; }
+
+      auto index ( const Entity &entity ) const -> decltype( std::declval< Mapper >().index( entity ) )
+      {
+        return mapper_.index( entity );
+      }
+
+      GridView gridView_;
+      Mapper mapper_;
+      std::vector< Flag > flags_;
     };
 
   } // namespace VoF

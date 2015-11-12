@@ -61,7 +61,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  using Flags = Dune::VoF::Flags< GridView, Stencils >;
+  using Flags = Dune::VoF::Flags< GridView >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -84,7 +84,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   ColorFunction colorFunction( gridView );
   ColorFunction update( gridView );
   ReconstructionSet reconstructionSet( gridView );
-  Flags flags ( gridView, stencils );
+  Flags flags ( gridView );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
   auto evolution = Dune::VoF::evolution(  reconstructionSet, colorFunction, eps );
 
