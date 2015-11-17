@@ -65,9 +65,8 @@ namespace Dune
       {
         std::size_t iterations = 0;
         Reconstruction &reconstruction = reconstructions[ entity ];
-        Coordinate &normal = reconstruction.normal();
+        Coordinate newNormal, &normal = reconstruction.normal();
         intersectionsEn_ = reconstructions.intersections( entity );
-        Coordinate newNormal;
 
         const auto geoEn = entity.geometry();
         const auto &stencilEn = stencil( entity );
@@ -80,28 +79,23 @@ namespace Dune
           newNormal = Coordinate( 0.0 );
 
           std::size_t count = 0;
-
           for( const auto &neighbor : stencilEn )
           {
             if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
               continue;
 
-            Reconstruction reconstructionNb = reconstructions[ neighbor ];
-
-            if ( ( reconstructionNb.normal() * normal ) <= 0.0 )
+            if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
               continue;
 
-            reconstructionNb.normal() = normal;
-            const auto geoNb = neighbor.geometry();
-
-            computeInterfaceLinePosition( geoNb, color[ neighbor ], reconstructionNb, intersectionsNb_ );
+            Reconstruction reconstructionNb( normal, 0.0 );
+            computeInterfaceLinePosition( neighbor.geometry(), color[ neighbor ], reconstructionNb, intersectionsNb_ );
 
             assert( intersectionsNb_.size() != 0 );
             Coordinate centerNb = std::accumulate( intersectionsNb_.begin(), intersectionsNb_.end(), Coordinate( 0.0 ) );
             centerNb *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsNb_.size() ) );
 
             Coordinate centerNormal = rotate90degreesCounterClockwise( centerNb - centerEn );
-            assert( centerNormal.two_norm2() > 0.0 ); // this assertion is fishy !
+            assert( centerNormal.two_norm2() > 0.0 );
 
             if ( ( centerNormal * normal ) < 0.0 )
               centerNormal *= -1.0;
@@ -110,25 +104,16 @@ namespace Dune
             ++count;
           }
 
-          if( count != 0 )
-          {
-            newNormal *= 1.0 / static_cast< typename Coordinate::value_type >( count );
-            std::swap( newNormal, normal );
-            computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
-          }
-          else
+          if( count == 0 )
             break;
+
+          newNormal *= 1.0 / static_cast< typename Coordinate::value_type >( count );
+          std::swap( newNormal, normal );
+          computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
 
           ++iterations;
         }
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
-      }
-
-      void normalize ( Coordinate &normal ) const
-      {
-        const auto length2 = normal.two_norm2();
-        assert( length2 > std::numeric_limits< decltype( length2 ) >::epsilon() );
-        normal *= 1.0 / std::sqrt( length2 );
       }
 
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencil
