@@ -77,6 +77,8 @@ namespace Dune
           Coordinate centerEn = std::accumulate( intersectionsEn_.begin(), intersectionsEn_.end(), Coordinate( 0.0 ) );
           centerEn *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsEn_.size() ) );
 
+          newNormal = Coordinate( 0.0 );
+
           std::size_t count = 0;
 
           for( const auto &neighbor : stencilEn )
