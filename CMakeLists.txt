@@ -20,6 +20,7 @@ dune_project()
 dune_enable_all_packages()
 add_subdirectory("dune")
 add_subdirectory("example")
+add_subdirectory("vof-fem")
 add_subdirectory("cmake/modules")
 
 # finalize the dune project, e.g. generating config.h etc.
