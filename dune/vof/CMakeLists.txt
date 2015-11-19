@@ -7,6 +7,7 @@ set( vof_HEADERS
   flags.hh
   geometricutility.hh
   hyperplane.hh
+  mcmgmapper.hh
   reconstruction.hh
   reconstructionSet.hh
   vertexneighborsstencil.hh
