@@ -1,12 +1,4 @@
 
-set( HEADERS
-  problems.hh
-  model.hh
-  fvscheme.hh
-)
-
-install( FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/src/vof-fem )
-
 # copy data to build source to make tests work
 configure_file( 1dgrid.dgf ${CMAKE_CURRENT_BINARY_DIR}/1dgrid.dgf COPYONLY )
 configure_file( 2dgrid.dgf ${CMAKE_CURRENT_BINARY_DIR}/2dgrid.dgf COPYONLY )

@@ -4,7 +4,7 @@
 #include <utility>
 
 //- dune-grid includes
-#include <dune/grid/common/mcmgmapper.hh>
+#include <dune/vof/mcmgmapper.hh>
 
 namespace Dune
 {
@@ -17,7 +17,7 @@ namespace Dune
     struct Flags
     {
       using GridView = GV;
-      using Entity = typename GridView::template Codim< 0 >::Entity;
+      using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
 
     private:
       enum class Flag {
@@ -29,7 +29,7 @@ namespace Dune
         activefull  = 5
       };
 
-      using Mapper = MultipleCodimMultipleGeomTypeMapper< GridView, MCMGElementLayout >;
+      using Mapper = MCMGMapper< GridView, MCMGElementLayout >;
 
     public:
       Flags ( const GridView &gridView )
@@ -104,6 +104,13 @@ namespace Dune
       Mapper mapper_;
       std::vector< Flag > flags_;
     };
+
+
+    template< class GV >
+    inline static Flags< GV > flags ( const GV &gridView )
+    {
+      return Flags< GV > ( gridView );
+    }
 
   } // namespace VoF
 

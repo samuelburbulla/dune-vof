@@ -4,7 +4,7 @@
 #include <vector>
 
 //- dune-grid includes
-#include <dune/grid/common/mcmgmapper.hh>
+#include <dune/vof/mcmgmapper.hh>
 
 //- dune-vof includes
 #include <dune/vof/hyperplane.hh>
@@ -21,10 +21,10 @@ namespace Dune
     struct ReconstructionSet
     {
       using GridView = GV;
-      using Entity = typename GridView::template Codim< 0 >::Entity;
+      using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
 
     private:
-      using Mapper = MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout >;
+      using Mapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:

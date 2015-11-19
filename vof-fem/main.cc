@@ -33,11 +33,13 @@
 #include <dune/vof/vertexneighborsstencil.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
+#include <dune/vof/flags.hh>
 
 // local includes
 #include "fvscheme.hh"
 #include "model.hh"
 #include "problems.hh"
+#include "dfwrapper.hh"
 
 // DataOutputParameters
 // --------------------
@@ -106,9 +108,8 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   using Stencils = 
     Dune::VoF::VertexNeighborsStencil< GridPartType >;
   using ReconstructionSet =
-    Dune::VoF::ReconstructionSet< GridPartType >;
-  using SchemeType =
-    Dune::VoF::Evolution< ReconstructionSet, DiscreteFunctionType >;
+    Dune::VoF::ReconstructionSet< GridPartType >;    
+
 
 
 
@@ -125,9 +126,6 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 
   ModelType model;
   ReconstructionSet reconstructions( gridPart );
-  auto reconstruction = Dune::VoF::reconstruction( grid, space, stencils, eps );
-
-  SchemeType scheme( eps );
 
   L1NormType l1norm( gridPart );
   L2NormType l2norm( gridPart );
@@ -135,8 +133,17 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   DiscreteFunctionType uh( "uh", space );
   DiscreteFunctionType update( "update", space );
   
+  auto cuh = Dune::VoF::colorFunction( uh );
+  auto cupdate = Dune::VoF::colorFunction( update );
+
+  Dune::VoF::Evolution< ReconstructionSet, decltype ( cuh ) > scheme ( eps );
+
+  auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
+
+  auto flags = Dune::VoF::flags( gridPart );
+
   SolutionType solution( model.problem(), start );
-  GridSolutionType u( "solution", solution, gridPart, 5 );
+  GridSolutionType u( "solution", solution, gridPart, 10 );
 
   double timeStep = std::pow( 2, -(3 + level ) );
   timeStep *= cfl;
@@ -150,8 +157,8 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   uh.communicate();
   dataOutput.write( timeProvider );
 
-  using RangeType = typename FunctionSpaceType::RangeType;
-  auto velocity = [ &timeProvider, &model ] ( const auto &x ) { RangeType u; model.problem().evaluate( x, timeProvider.time(), u ); return u; };
+  using DomainType = typename FunctionSpaceType::DomainType;
+  auto velocity = [ &timeProvider, &model ] ( const auto &x ) { DomainType u; model.problem().evaluate( x, timeProvider.time(), u ); return u; };
 
   for( ; timeProvider.time() < end; timeProvider.next() )
   {
@@ -160,8 +167,8 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
                 << "time = " << timeProvider.time() << ", "
                 << "dt = " << timeProvider.deltaT() << std::endl;
     
-    Dune::VoF::reconstruction( space, reconstructions );
-    scheme( uh, reconstructions, velocity, timeProvider.deltaT(), update );
+    reconstruction( cuh, reconstructions, flags );
+    scheme( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
     uh.axpy( timeProvider.deltaT(), update );
 
     solution.setTime( timeProvider.time() );

@@ -108,14 +108,14 @@ namespace Dune
       const GridView &gridView () const { return gridView_; }
       const IndexSet &indexSet () const { return indexSet_; }
 
-      const Layout< dimension > &layout () const { return layout_; }
+      Layout< dimension > &layout () const { return layout_; }
 
     private:
       Index size_;
       GV gridView_;
       const IndexSet &indexSet_;
       std::vector< Index > offset_;
-      Layout< GV::dimension > layout_;
+      mutable Layout< GV::dimension > layout_;
     };
 
   } // namespace VoF

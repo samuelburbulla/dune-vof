@@ -2,7 +2,7 @@
 #define DUNE_VOF_VERTEXNEIGHBORSSTENCIL_HH
 
 //- dune-grid includes
-#include <dune/grid/common/mcmgmapper.hh>
+#include <dune/vof/mcmgmapper.hh>
 
 namespace Dune
 {
@@ -16,7 +16,7 @@ namespace Dune
     struct VertexNeighborsStencil
     {
       using GridView = GV;
-      using Entity = typename GridView::template Codim< 0 >::Entity;
+      using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using EntitySeed = typename Entity::EntitySeed;
       using Stencil = std::vector< Entity >;
 
@@ -24,7 +24,7 @@ namespace Dune
 
     private:
       using Mapper =
-        Dune::MultipleCodimMultipleGeomTypeMapper< GridView, Dune::MCMGElementLayout >;
+        Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
 
     public:
       explicit VertexNeighborsStencil ( const GridView &gridView )
@@ -48,7 +48,7 @@ namespace Dune
 
       void getCellsInDomain()
       {
-        std::vector < std::vector < int > > cellsNextToThisVertex( gridView().size( dim ) );
+        std::vector < std::vector < int > > cellsNextToThisVertex( gridView().indexSet().size( dim ) );
 
         for( const auto &entity : elements( gridView() ) )
         {
