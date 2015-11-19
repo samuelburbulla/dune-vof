@@ -29,6 +29,8 @@ namespace Dune
     public:
       typedef GV GridView;
 
+      static const int dimension = GridView::dimension;
+
       typedef typename std::decay< decltype( std::declval< GridView >().indexSet() ) >::type IndexSet;
 
       typedef typename IndexSet::IndexType Index;
@@ -99,6 +101,7 @@ namespace Dune
 
             offset_[ GlobalGeometryTypeIndex::index( type ) ] = size_;
             size_ += indexSet().size( type );
+          }
         }
       }
 
@@ -109,7 +112,7 @@ namespace Dune
 
     private:
       Index size_;
-      GV gridView_;;
+      GV gridView_;
       const IndexSet &indexSet_;
       std::vector< Index > offset_;
       Layout< GV::dimension > layout_;
