@@ -46,8 +46,6 @@ namespace Dune
 
       const std::size_t size() const { return mapper_.size(); }
 
-      const int operator[] ( const int i ) const { return static_cast< int >( flags_[ i ] ); }
-
       template< class DF >
       void reflag ( const DF& color, const double eps )
       {
@@ -55,7 +53,7 @@ namespace Dune
         {
           const auto idx = index( entity );
           Flag &flag = flags_[ idx ];
-          const auto colorEn = color[ idx ];
+          const auto colorEn = color[ entity ];
 
           if ( colorEn < eps )
             flag = Flag::empty;
@@ -66,7 +64,7 @@ namespace Dune
             flag = Flag::full;
 
             for ( const auto &intersection : intersections( gridView(), entity ) )
-              if ( intersection.neighbor() && color[ index( intersection.outside() ) ] < eps )
+              if ( intersection.neighbor() && color[ intersection.outside() ] < eps )
               {
                 flag = Flag::mixedfull;
                 break;

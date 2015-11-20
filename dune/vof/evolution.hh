@@ -123,7 +123,7 @@ namespace Dune
     // --------
 
     template< class ReconstructionSet, class ColorFunction >
-    auto evolution ( const ReconstructionSet&, const ColorFunction&, double eps ) -> decltype( Evolution< ReconstructionSet, ColorFunction >( eps ) )
+    static inline auto evolution ( const ReconstructionSet&, const ColorFunction&, double eps ) -> decltype( Evolution< ReconstructionSet, ColorFunction >( eps ) )
     {
       return Evolution< ReconstructionSet, ColorFunction >( eps );
     }

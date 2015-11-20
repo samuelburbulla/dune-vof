@@ -1,18 +1,22 @@
-#ifndef DFWRAPPER_HH
-#define DFWRAPPER_HH
+#ifndef DUNE_VOF_FEMDFWRAPPER_HH
+#define DUNE_VOF_FEMDFWRAPPER_HH
 
 //- dune-grid includes
 #include <dune/vof/mcmgmapper.hh>
 
 
-// DFWRAPPER
-// -------------
+namespace Dune
+{
 
-namespace Dune {
-  namespace VoF {
+  namespace VoF
+  {
+
+
+    // FEMDFWRAPPER
+    // -------------
 
     template< class DF >
-    struct ColorFunction
+    struct FemDiscreteFunctionWrapper
     {
       typedef DF DiscreteFunction;
       typedef typename DiscreteFunction::GridPartType GridView;
@@ -20,7 +24,7 @@ namespace Dune {
       typedef typename DiscreteFunction::RangeFieldType ctype;
 
     public:
-      ColorFunction ( DiscreteFunction &discreteFunction )
+      FemDiscreteFunctionWrapper ( DiscreteFunction &discreteFunction )
       : discreteFunction_( discreteFunction )
       {}
 
@@ -43,17 +47,16 @@ namespace Dune {
       DiscreteFunction &discreteFunction_;
     };
 
-    
+
     template< class DiscreteFunction >
-    inline static ColorFunction< DiscreteFunction > colorFunction ( DiscreteFunction &discreteFunction ) 
+    inline static FemDiscreteFunctionWrapper< DiscreteFunction > discreteFunctionWrapper ( DiscreteFunction &discreteFunction )
     {
-      return ColorFunction< DiscreteFunction > ( discreteFunction );
+      return FemDiscreteFunctionWrapper< DiscreteFunction > ( discreteFunction );
     }
 
 
-  }
-}
+  } // namespace Dune
 
-#endif // #ifndef DFWRAPPER_HH
+} // namespace VoF
 
-
+#endif // #ifndef DUNE_VOF_FEMDFWRAPPER_HH

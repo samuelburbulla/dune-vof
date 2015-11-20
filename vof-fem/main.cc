@@ -29,17 +29,18 @@
 #include <dune/fem/space/finitevolume.hh>
 
 // dune-vof includes
+#include <dune/vof/femdfwrapper.hh>
 #include <dune/vof/evolution.hh>
-#include <dune/vof/vertexneighborsstencil.hh>
+#include <dune/vof/flags.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
-#include <dune/vof/flags.hh>
+#include <dune/vof/vertexneighborsstencil.hh>
 
 // local includes
-#include "fvscheme.hh"
-#include "model.hh"
+#include "polygon.hh"
 #include "problems.hh"
-#include "dfwrapper.hh"
+#include "vtu.hh"
+
 
 // DataOutputParameters
 // --------------------
@@ -67,6 +68,26 @@ private:
 };
 
 
+// filterReconstruction
+// --------------------
+
+template < class ReconstructionSet, class Polygon >
+static inline void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
+{
+  using Coordinate = typename Polygon::Position;
+
+  io.clear();
+  for ( auto&& is : reconstructionSet.intersectionsSet() )
+  {
+    if( is.size() != 0 )
+      io.push_back( Polygon( is ) );
+  }
+
+  // io should not be empty
+  if ( io.size() == 0 )  io.push_back( Polygon{ Coordinate ( 0.0 ), Coordinate( 1.0 ) } );
+}
+
+
 // algorithm
 // ---------
 
@@ -89,8 +110,6 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     Problem< FunctionSpaceType >;
   using SolutionType =
     Dune::Fem::InstationaryFunction< ProblemType >;
-  using ModelType =
-    Model< ProblemType >;
 
   using GridSolutionType =
     Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
@@ -99,32 +118,29 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
 
   using DataIOTupleType =
-    std::tuple< DiscreteFunctionType *, GridSolutionType * >;
+    std::tuple< DiscreteFunctionType * >;
   using DataOutputType =
     Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
-
-
-  using Stencils = 
+  using Stencils =
     Dune::VoF::VertexNeighborsStencil< GridPartType >;
   using ReconstructionSet =
-    Dune::VoF::ReconstructionSet< GridPartType >;    
-
-
-
+    Dune::VoF::ReconstructionSet< GridPartType >;
 
   using L1NormType =
     Dune::Fem::L1Norm< GridPartType >;
   using L2NormType =
     Dune::Fem::L2Norm< GridPartType >;
 
+  using Polygon =
+    Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
+
   GridPartType gridPart( grid );
   DiscreteFunctionSpaceType space( gridPart );
 
-  // build domain references for each cell
   Stencils stencils( gridPart );
 
-  ModelType model;
+  ProblemType problem;
   ReconstructionSet reconstructions( gridPart );
 
   L1NormType l1norm( gridPart );
@@ -132,51 +148,81 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 
   DiscreteFunctionType uh( "uh", space );
   DiscreteFunctionType update( "update", space );
-  
-  auto cuh = Dune::VoF::colorFunction( uh );
-  auto cupdate = Dune::VoF::colorFunction( update );
 
-  Dune::VoF::Evolution< ReconstructionSet, decltype ( cuh ) > scheme ( eps );
+  auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
+  auto cupdate = Dune::VoF::discreteFunctionWrapper( update );
 
+  auto evolution = Dune::VoF::evolution( reconstructions, cuh, eps );
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
-
   auto flags = Dune::VoF::flags( gridPart );
 
-  SolutionType solution( model.problem(), start );
-  GridSolutionType u( "solution", solution, gridPart, 10 );
+  SolutionType solution( problem, start );
+  GridSolutionType u( "solution", solution, gridPart, 9 );
 
   double timeStep = std::pow( 2, -(3 + level ) );
   timeStep *= cfl;
+  timeStep /= ProblemType::maxVelocity();
   TimeProviderType timeProvider( start, timeStep, gridPart.comm() );
 
-  DataIOTupleType dataIOTuple = std::make_tuple( &uh, &u );
+  DataIOTupleType dataIOTuple = std::make_tuple( &uh );
   DataOutputType dataOutput( grid, dataIOTuple, timeProvider, DataOutputParameters( level ) );
 
-  
   Dune::Fem::interpolate( u, uh );
   uh.communicate();
+
+  flags.reflag( cuh, eps );
+  reconstruction( cuh, reconstructions, flags );
+
+  // reconstruction output
+  std::stringstream path;
+  path << "./data/";
+  std::vector< Polygon > recIO;
+  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
+  std::stringstream name;
+  name.fill('0');
+  name << "vof-rec-" << std::to_string( level ) << "-" << std::setw(5) << 0 << ".vtu";
+  filterReconstruction( reconstructions, recIO );
+  vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+
   dataOutput.write( timeProvider );
 
   using DomainType = typename FunctionSpaceType::DomainType;
-  auto velocity = [ &timeProvider, &model ] ( const auto &x ) { DomainType u; model.problem().evaluate( x, timeProvider.time(), u ); return u; };
+  auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
 
-  for( ; timeProvider.time() < end; timeProvider.next() )
+  std::size_t count = 0;
+  for( ; timeProvider.time() <= end; )
   {
     if( Dune::Fem::Parameter::verbose() )
       std::cerr << "time step = " << timeProvider.timeStep() << ", "
                 << "time = " << timeProvider.time() << ", "
                 << "dt = " << timeProvider.deltaT() << std::endl;
-    
+
+    flags.reflag( cuh, eps );
+
     reconstruction( cuh, reconstructions, flags );
-    scheme( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
-    uh.axpy( timeProvider.deltaT(), update );
+    evolution( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
+    uh.axpy( 1.0, update );
+
+    timeProvider.next();
 
     solution.setTime( timeProvider.time() );
+
+    if ( dataOutput.willWrite( timeProvider ) )
+    {
+      count++;
+      if( Dune::Fem::Parameter::verbose() )
+        std::cout << "written reconstructions count=" << count << std::endl;
+      filterReconstruction( reconstructions, recIO );
+      std::stringstream name_;
+      name_.fill('0');
+      name_ << "vof-rec-" << std::to_string( level ) << "-" << std::setw(5) << count << ".vtu" ;
+      vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
+    }
 
     dataOutput.write( timeProvider );
   }
 
-  return std::make_tuple( l1norm.distance( u, uh ), l2norm.distance( u, uh ) );
+  return std::make_tuple( l1norm.distance( u, uh ), l2norm.distance( u, uh ) );  // wrong error, use projected solution
 }
 
 

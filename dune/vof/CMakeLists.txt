@@ -4,6 +4,7 @@ set( vofdir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof )
 set( vof_HEADERS
   brents.hh
   evolution.hh
+  femdfwrapper.hh
   flags.hh
   geometricutility.hh
   hyperplane.hh

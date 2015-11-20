@@ -11,7 +11,7 @@ namespace Dune
   {
 
     template< class GridView, class Stencils, class ColorFunction >
-    auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
+    static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
      -> decltype( ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
                                                 ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                               >( stencils ) )
