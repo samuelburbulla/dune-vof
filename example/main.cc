@@ -95,7 +95,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
-  vtkwriter.addCellData ( flags, "flags" );
+  //vtkwriter.addCellData ( flags, "flags" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
