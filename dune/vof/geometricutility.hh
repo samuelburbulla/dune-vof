@@ -22,16 +22,15 @@ namespace Dune
       return DomainVector{ -v[ 1 ], v[ 0 ] };
     }
 
-
     template< template <class> class Hyperplane, class DomainVector >
     const DomainVector lineIntersection ( const Hyperplane< DomainVector > &g, const Hyperplane< DomainVector > &l )  // make dim-universial
     {
 
-      assert ( fvector::dimension == 2 );
+      assert ( DomainVector::dimension == 2 );
 
       Dune::FieldMatrix< double, 2, 2 > A( { g.normal(), l.normal() }  );
-      fvector b( { -g.distance(), -l.distance() } );
-      fvector x;
+      DomainVector b( { -g.distance(), -l.distance() } );
+      DomainVector x;
 
       A.solve( x, b );
 
@@ -40,14 +39,14 @@ namespace Dune
 
 
     // konvexes 2D-Polygon
-    template< class V >
+    template< class DomainVector >
     struct Polygon2D
     {
-      Polygon2D< V >() {}
+      Polygon2D< DomainVector >() {}
 
-      const V operator[] ( const int i ) const { return points[ i % points.size() ]; }
+      const DomainVector operator[] ( const int i ) const { return points[ i % points.size() ]; }
 
-      void addVertex ( const V &vertex, const double TOL = 1e-12 )
+      void addVertex ( const DomainVector &vertex, const double TOL = 1e-12 )
       {
         std::size_t n = points.size();
 
@@ -64,7 +63,7 @@ namespace Dune
         else
           for( std::size_t i = 0; i < points.size(); i++ )
           {
-            V normal = points[ (i+1)%n ];
+            DomainVector normal = points[ (i+1)%n ];
 	          normal -= points[ i ];
 
             if( ( rotateCCW( normal ) * ( vertex - points[ i ] ) ) < 0 )
@@ -86,7 +85,7 @@ namespace Dune
         return sum / 2.0;
       }
 
-      bool pointInBorders ( const V &vertex ) const
+      bool pointInBorders ( const DomainVector &vertex ) const
       {
         int n = points.size();
 
@@ -103,10 +102,10 @@ namespace Dune
 
       void clear () { points.clear(); }
 
-      std::vector< V > points;
+      std::vector< DomainVector > points;
 
     private:
-      const int SkalarProdTest ( const V &vertex, const V &p1, const V &p2, const double TOL = 1e-12 ) const
+      const int SkalarProdTest ( const DomainVector &vertex, const DomainVector &p1, const DomainVector &p2, const double TOL = 1e-12 ) const
       {
         auto skalar = ( rotateCCW( p2 - p1 ) * ( vertex - p1) );
 
@@ -137,7 +136,6 @@ namespace Dune
       }
     }
 
-
     template< class DomainVector >
     bool dvEq ( const DomainVector &v, const DomainVector &w ) {
       return ( ( v - w ).one_norm() < 1e-12 );
@@ -153,7 +151,7 @@ namespace Dune
     {
       const int dim = 2;
 
-      std::vector< V > intersectionPoints;
+      std::vector< DomainVector > intersectionPoints;
 
       const auto &refElement = Dune::ReferenceElements< double, dim >::general( geo.type() );
 
@@ -162,8 +160,8 @@ namespace Dune
         int i = refElement.subEntity( k, dim-1, 0, dim );
         int j = refElement.subEntity( k, dim-1, 1, dim );
 
-        const V& c0 = geo.global( refElement.position( i, dim ) );
-        const V& c1 = geo.global( refElement.position( j, dim ) );
+        const DomainVector& c0 = geo.global( refElement.position( i, dim ) );
+        const DomainVector& c1 = geo.global( refElement.position( j, dim ) );
 
         if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
         {
@@ -188,7 +186,6 @@ namespace Dune
     }
 
 
-
     template < template <class> class Hyperplane, class DomainVector >
     bool isInner ( const DomainVector &vertex, const Hyperplane< DomainVector > &g, const double TOL = 1e-12 )
     {
@@ -201,8 +198,8 @@ namespace Dune
       return std::abs( vertex * g.normal() + g.distance() ) < TOL;
     }
 
-    template< class Geo, class V, class HyperSurface >
-    void polyAddInnerVertices ( const Geo &geo, const HyperSurface &g, Polygon2D< V >& polygon, const double TOL = 1e-12 )
+    template< class Geo, class DomainVector, class HyperSurface >
+    void polyAddInnerVertices ( const Geo &geo, const HyperSurface &g, Polygon2D< DomainVector >& polygon, const double TOL = 1e-12 )
     {
       for( int i = 0; i < geo.corners(); ++i )
         if( isInner( geo.corner( i ), g, TOL ) )
@@ -220,7 +217,7 @@ namespace Dune
     template< class Geo, template <class> class Hyperplane, class DomainVector >
     double getVolumeFraction ( const Geo &geo, const Hyperplane< DomainVector > &g )
     {
-      Polygon2D< V > polygonVertices;
+      Polygon2D< DomainVector > polygonVertices;
 
       auto lip = lineCellIntersections( geo, g );
       for( auto &v : lip )
