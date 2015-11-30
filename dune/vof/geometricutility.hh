@@ -16,10 +16,12 @@ namespace Dune
   namespace VoF
   {
 
-    template< class V >
-    inline static V rotate90degreesCounterClockwise ( const V &v )
+    template< class DomainVector >
+    inline static void rotccw ( DomainVector &v )
     {
-      return V{ -v[ 1 ], v[ 0 ] };
+      auto t = v[0];
+      v[0] = -v[1];
+      v[1] = t;
     }
 
 
@@ -67,8 +69,9 @@ namespace Dune
           {
             V normal = points[ (i+1)%n ];
 	          normal -= points[ i ];
+            rotccw( normal );
 
-            if( ( rotate90degreesCounterClockwise( normal ) * ( vertex - points[ i ] ) ) < 0 )
+            if( ( normal * ( vertex - points[ i ] ) ) < 0 )
             {
               points.insert( points.begin() + i + 1, vertex );
               return;
@@ -109,7 +112,10 @@ namespace Dune
     private:
       const int SkalarProdTest ( const V &vertex, const V &p1, const V &p2, const double TOL = 1e-12 ) const
       {
-        auto skalar = ( rotate90degreesCounterClockwise( p2 - p1 ) * ( vertex - p1) );
+        auto p = p2 - p1;
+        rotccw ( p );
+
+        auto skalar = ( p * ( vertex - p1) );
 
         return ( skalar >= 0 || std::abs( skalar ) < TOL );
       }
@@ -127,7 +133,9 @@ namespace Dune
         }
         else if( isInner( polygon[i], g ) ^ isInner( polygon[i+1], g ) )
         {
-          const HyperSurface< V > lineThroughEdge( rotate90degreesCounterClockwise( polygon[ i ] - polygon[ i+1 ] ), polygon[ i ] );
+          auto normal = polygon[ i ] - polygon[ i+1 ];
+          rotccw ( normal );
+          const HyperSurface< V > lineThroughEdge( normal, polygon[ i ] );
 
           // add intersection point
           intersectionPolygon.addVertex( lineIntersection( g, lineThroughEdge ) );
@@ -166,7 +174,9 @@ namespace Dune
         if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
         {
           // build line through edge for intersection
-          const HyperSurface< V > lineThroughEdge( rotate90degreesCounterClockwise( c0 - c1 ), c0 );
+          auto normal = c0 - c1;
+          rotccw( normal );
+          const HyperSurface< V > lineThroughEdge( normal, c0 );
 
           // add intersection point
           intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );

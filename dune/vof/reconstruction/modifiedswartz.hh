@@ -94,7 +94,10 @@ namespace Dune
             Coordinate centerNb = std::accumulate( intersectionsNb_.begin(), intersectionsNb_.end(), Coordinate( 0.0 ) );
             centerNb *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsNb_.size() ) );
 
-            Coordinate centerNormal = rotate90degreesCounterClockwise( centerNb - centerEn );
+            Coordinate centerNormal = centerNb;
+            centerNormal -= centerEn;
+            rotccw( centerNormal );
+
             assert( centerNormal.two_norm2() > 0.0 );
 
             if ( ( centerNormal * normal ) < 0.0 )
