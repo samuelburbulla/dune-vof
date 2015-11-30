@@ -65,15 +65,24 @@ namespace Dune
           return;
         }
         else
-          for( std::size_t i = 0; i < points.size(); i++ )
+          // start with last inserted edge, for the case that points are inserted in correct order
+          for( std::size_t i = n - 1; i >= 0; --i )
           {
-            DomainVector normal = points[ (i+1)%n ];
-	          normal -= points[ i ];
+            auto normal = points[ (i+1)%n ];
+            normal -= points[ i ];
             rotccw( normal );
 
-            if( ( normal * ( vertex - points[ i ] ) ) < 0 )
+            auto center = points[ i ];
+            center += points[ (i+1)%n ];
+            center *= 0.5;
+
+            center -= vertex;
+            center *= -1.0;
+
+            if( normal * center < 0 )
             {
               points.insert( points.begin() + i + 1, vertex );
+              //std::cerr << n-i << "/" << n << std::endl;
               return;
             }
           }
