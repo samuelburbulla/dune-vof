@@ -137,7 +137,8 @@ namespace Dune
         }
         else if( isInner( polygon[i], g ) ^ isInner( polygon[i+1], g ) )
         {
-          auto normal = polygon[ i ] - polygon[ i+1 ];
+          auto normal = polygon[ i ];
+          normal -= polygon[ i+1 ];
           rotccw ( normal );
           const HyperSurface< DomainVector > lineThroughEdge( normal, polygon[ i ] );
 
@@ -148,22 +149,26 @@ namespace Dune
     }
 
     template< class DomainVector >
-    void insertElementIfNotExists ( const DomainVector &v, std::vector< DomainVector > &list, const double TOL = 1e-12 )
-    {
+    bool dvComp ( const DomainVector &v, const DomainVector &w) {
+      if ( v[0] == w[0] ) return v[1] < w[1];
+      return v[0] < w[0];
+    }
 
-      for( std::size_t i = 0; i < list.size(); ++i )
-        if( ( list[ i ] - v).two_norm() < TOL )
-          return;
-
-      list.push_back( v );
+    template< class DomainVector >
+    bool dvEq ( const DomainVector &v, const DomainVector &w) {
+      return ( ( v - w ).two_norm() < 1e-12 );
     }
 
     template< class Geo, template <class> class HyperSurface, class DomainVector >
-    std::vector< DomainVector > lineCellIntersections ( const Geo &geo, const HyperSurface< DomainVector > &g, const double TOL = 1e-12 )
+    void lineCellIntersections (
+      const Geo &geo,
+      const HyperSurface< DomainVector > &g,
+      std::vector< DomainVector > &intersections,
+      const double TOL = 1e-12
+      )
     {
-      const int dim = 2;
-
-      std::vector< DomainVector > intersectionPoints;
+      const int dim = 2;  // only two-dimensional
+      intersections.clear();
 
       const auto &refElement = Dune::ReferenceElements< double, dim >::general( geo.type() );
 
@@ -178,20 +183,20 @@ namespace Dune
         if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
         {
           // build line through edge for intersection
-          auto normal = c0 - c1;
+          auto normal = c0;
+          normal -= c1;
           rotccw( normal );
           const HyperSurface< DomainVector > lineThroughEdge( normal, c0 );
 
           // add intersection point
-          intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );
+          intersections.push_back( lineIntersection( g, lineThroughEdge ) );
         }
-        else if( isOnRecLine( c0, g, TOL ) )
-          insertElementIfNotExists( c0, intersectionPoints );
-        else if( isOnRecLine( c1, g, TOL ) )
-          insertElementIfNotExists( c1, intersectionPoints );
+        else if( isOnRecLine( c0, g, TOL ) ) intersections.push_back( c0 );
+        else if( isOnRecLine( c1, g, TOL ) ) intersections.push_back( c1 );
       }
 
-      return intersectionPoints;
+      std::sort( intersections.begin(), intersections.end(), dvComp< DomainVector > );
+      std::unique( intersections.begin(), intersections.end(), dvEq< DomainVector > );
     }
 
     template < template <class> class HyperSurface, class DomainVector >
@@ -225,17 +230,16 @@ namespace Dune
     template< class Geo, template <class> class HyperSurface, class DomainVector >
     double getVolumeFraction ( const Geo &geo, const HyperSurface< DomainVector > &g )
     {
-      Polygon2D< DomainVector > polygonVertices;
+      Polygon2D< DomainVector > polygon;
 
-      auto lip = lineCellIntersections( geo, g );
-      for( auto &v : lip )
-        polygonVertices.addVertex( v );
+      std::vector< DomainVector > intersections;
+      lineCellIntersections( geo, g, intersections );
+      for( auto v : intersections )
+        polygon.addVertex( v );
 
-      polyAddInnerVertices( geo, g, polygonVertices );
+      polyAddInnerVertices( geo, g, polygon );
 
-      assert( polygonVertices.corners() <= 5 );
-
-      return polygonVertices.volume() / geo.volume();
+      return polygon.volume() / geo.volume();
     }
 
 
@@ -283,8 +287,7 @@ namespace Dune
                                         return ( getVolumeFraction( geo, h ) - concentration );
                                      }, pMin, pMax, 1e-12 );
 
-      intersections.clear();
-      intersections = lineCellIntersections( geo, g );
+      lineCellIntersections( geo, g, intersections );
     }
 
 
