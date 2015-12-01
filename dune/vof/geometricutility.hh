@@ -99,35 +99,30 @@ namespace Dune
         return sum / 2.0;
       }
 
-      bool pointInBorders ( const DomainVector &vertex ) const
+      bool pointInBorders ( const DomainVector &vertex, const double TOL = 1e-12 ) const
       {
-        int n = points.size();
+        int n = corners();
 
         if( n == 0 )
           return false;
 
-        bool inside = true;
-
         for( int i = 0; i < n; ++i )
-          inside = inside && this->SkalarProdTest( vertex, points[ i ], points[ (i+1)%n ] );
+        {
+          auto edge = points[ (i+1)%n ];
+          edge -= points[ i ];
+          rotccw ( edge );
 
-        return inside;
+          auto skalar = edge * ( vertex - points[ i ] );
+          if ( !( skalar >= 0 || std::abs( skalar ) < TOL ) ) return false;
+        }
+
+        return true;
       }
 
       void clear () { points.clear(); }
 
-      std::vector< DomainVector > points;
-
     private:
-      const int SkalarProdTest ( const DomainVector &vertex, const DomainVector &p1, const DomainVector &p2, const double TOL = 1e-12 ) const
-      {
-        auto p = p2 - p1;
-        rotccw ( p );
-
-        auto skalar = ( p * ( vertex - p1) );
-
-        return ( skalar >= 0 || std::abs( skalar ) < TOL );
-      }
+      std::vector< DomainVector > points;
 
     };
 
