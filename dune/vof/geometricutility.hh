@@ -136,6 +136,12 @@ namespace Dune
     }
 
     template< class DomainVector >
+    bool dvComp ( const DomainVector &v, const DomainVector &w) {
+      if ( v[0] == w[0] ) return v[1] < w[1];
+      return v[0] < w[0];
+    }
+
+    template< class DomainVector >
     bool dvEq ( const DomainVector &v, const DomainVector &w ) {
       return ( ( v - w ).one_norm() < 1e-12 );
     }
@@ -148,9 +154,8 @@ namespace Dune
       const double TOL = 1e-12
       )
     {
-      const int dim = 2;
-
-      std::vector< DomainVector > intersectionPoints;
+      const int dim = 2;  // only two-dimensional
+      intersections.clear();
 
       const auto &refElement = Dune::ReferenceElements< double, dim >::general( geo.type() );
 
@@ -167,16 +172,13 @@ namespace Dune
           // build line through edge for intersection
           auto normal = c0;
           normal -= c1;
-
           const Hyperplane< DomainVector > lineThroughEdge( rotateCCW( normal ), c0 );
 
           // add intersection point
-          intersectionPoints.push_back( lineIntersection( g, lineThroughEdge ) );
+          intersections.push_back( lineIntersection( g, lineThroughEdge ) );
         }
-        else if( isOnRecLine( c0, g, TOL ) )
-          insertElementIfNotExists( c0, intersectionPoints );
-        else if( isOnRecLine( c1, g, TOL ) )
-          insertElementIfNotExists( c1, intersectionPoints );
+        else if( isOnRecLine( c0, g, TOL ) ) intersections.push_back( c0 );
+        else if( isOnRecLine( c1, g, TOL ) ) intersections.push_back( c1 );
       }
 
       std::sort( intersections.begin(), intersections.end(), dvComp< DomainVector > );
@@ -216,17 +218,16 @@ namespace Dune
     template< class Geo, template <class> class Hyperplane, class DomainVector >
     double getVolumeFraction ( const Geo &geo, const Hyperplane< DomainVector > &g )
     {
-      Polygon2D< DomainVector > polygonVertices;
+      Polygon2D< DomainVector > polygon;
 
-      auto lip = lineCellIntersections( geo, g );
-      for( auto &v : lip )
-        polygonVertices.addVertex( v );
+      std::vector< DomainVector > intersections;
+      lineCellIntersections( geo, g, intersections );
+      for( auto v : intersections )
+        polygon.addVertex( v );
 
-      polyAddInnerVertices( geo, g, polygonVertices );
+      polyAddInnerVertices( geo, g, polygon );
 
-      assert( polygonVertices.corners() <= 5 );
-
-      return polygonVertices.volume() / geo.volume();
+      return polygon.volume() / geo.volume();
     }
 
 
@@ -274,8 +275,7 @@ namespace Dune
                                         return ( getVolumeFraction( geo, h ) - concentration );
                                      }, pMin, pMax, 1e-12 );
 
-      intersections.clear();
-      intersections = lineCellIntersections( geo, g );
+      lineCellIntersections( geo, g, intersections );
     }
 
 
