@@ -49,43 +49,36 @@ namespace Dune
 
       const DomainVector operator[] ( const int i ) const { return points[ i % points.size() ]; }
 
-      void addVertex ( const DomainVector &vertex, const double TOL = 1e-12 )
+      void addVertex ( const DomainVector &vertex, const bool correctOrder = false, const double TOL = 1e-12 )
       {
         std::size_t n = points.size();
 
-        // check, if point is already here
-        for( std::size_t i = 0; i < n; i++ )
-          if( (vertex - points[ i ]).two_norm() < TOL )
-            return;
-
-        // insert new vertex in counterclockwise order
-        if( n == 0 || n == 1 )
+        // no specific order needed or vertex explicitly given in correct order
+        if( n == 0 || n == 1 || correctOrder )
         {
           points.push_back( vertex );
           return;
         }
-        else
-          // start with last inserted edge, for the case that points are inserted in correct order
-          for( std::size_t i = n - 1; i >= 0; --i )
+
+        // insert new vertex in counterclockwise order
+        for( std::size_t i = 0; i < n; ++i )
+        {
+          auto normal = points[ (i+1)%n ];
+          normal -= points[ i ];
+          rotccw( normal );
+
+          auto center = points[ i ];
+          center += points[ (i+1)%n ];
+          center *= 0.5;
+
+          center -= vertex;
+
+          if( normal * center > 0 )
           {
-            auto normal = points[ (i+1)%n ];
-            normal -= points[ i ];
-            rotccw( normal );
-
-            auto center = points[ i ];
-            center += points[ (i+1)%n ];
-            center *= 0.5;
-
-            center -= vertex;
-            center *= -1.0;
-
-            if( normal * center < 0 )
-            {
-              points.insert( points.begin() + i + 1, vertex );
-              //std::cerr << n-i << "/" << n << std::endl;
-              return;
-            }
+            points.insert( points.begin() + i + 1, vertex );
+            return;
           }
+        }
       }
 
       const std::size_t corners () const { return points.size(); }
@@ -113,7 +106,7 @@ namespace Dune
           rotccw ( edge );
 
           auto skalar = edge * ( vertex - points[ i ] );
-          if ( !( skalar >= 0 || std::abs( skalar ) < TOL ) ) return false;
+          if (  skalar < 0 && std::abs( skalar ) > TOL ) return false;
         }
 
         return true;
@@ -149,13 +142,13 @@ namespace Dune
     }
 
     template< class DomainVector >
-    bool dvComp ( const DomainVector &v, const DomainVector &w) {
+    bool dvComp ( const DomainVector &v, const DomainVector &w ) {
       if ( v[0] == w[0] ) return v[1] < w[1];
       return v[0] < w[0];
     }
 
     template< class DomainVector >
-    bool dvEq ( const DomainVector &v, const DomainVector &w) {
+    bool dvEq ( const DomainVector &v, const DomainVector &w ) {
       return ( ( v - w ).two_norm() < 1e-12 );
     }
 
@@ -199,6 +192,8 @@ namespace Dune
       std::unique( intersections.begin(), intersections.end(), dvEq< DomainVector > );
     }
 
+
+
     template < template <class> class HyperSurface, class DomainVector >
     bool isInner ( const DomainVector &vertex, const HyperSurface< DomainVector > &g, const double TOL = 1e-12 )
     {
@@ -211,19 +206,12 @@ namespace Dune
       return std::abs( vertex * g.normal() + g.distance() ) < TOL;
     }
 
-    template< class Geo, class DomainVector, class HyperSurface >
-    void polyAddInnerVertices ( const Geo &geo, const HyperSurface &g, Polygon2D< DomainVector >& polygon, const double TOL = 1e-12 )
-    {
-      for( int i = 0; i < geo.corners(); ++i )
-        if( isInner( geo.corner( i ), g, TOL ) )
-          polygon.addVertex( geo.corner( i ) );
-    }
 
     template< class DomainVector, class HyperSurface >
-    void polyAddInnerVertices ( const Polygon2D< DomainVector >& sourcePolygon, const HyperSurface &g, Polygon2D< DomainVector >& endPolygon, const double TOL = 1e-12 )
+    void polyAddInnerVertices ( const Polygon2D< DomainVector > &sourcePolygon, const HyperSurface &g, Polygon2D< DomainVector >& endPolygon, const double TOL = 1e-12 )
     {
       for( std::size_t i = 0; i < sourcePolygon.corners(); ++i )
-        if( isInner( sourcePolygon[ i ], g, TOL ) )
+        if( isInner( sourcePolygon[ i ], g ) )
           endPolygon.addVertex( sourcePolygon[ i ] );
     }
 
@@ -232,12 +220,14 @@ namespace Dune
     {
       Polygon2D< DomainVector > polygon;
 
+      for( int i = 0; i < geo.corners(); ++i )
+        if( isInner( geo.corner( i ), g ) )
+          polygon.addVertex( geo.corner( i ) );
+
       std::vector< DomainVector > intersections;
       lineCellIntersections( geo, g, intersections );
       for( auto v : intersections )
         polygon.addVertex( v );
-
-      polyAddInnerVertices( geo, g, polygon );
 
       return polygon.volume() / geo.volume();
     }
