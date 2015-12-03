@@ -169,8 +169,8 @@ namespace Dune
         int i = refElement.subEntity( k, dim-1, 0, dim );
         int j = refElement.subEntity( k, dim-1, 1, dim );
 
-        const DomainVector& c0 = geo.global( refElement.position( i, dim ) );
-        const DomainVector& c1 = geo.global( refElement.position( j, dim ) );
+        const DomainVector& c0 = geo.corner( i );
+        const DomainVector& c1 = geo.corner( j );
 
         if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
         {
