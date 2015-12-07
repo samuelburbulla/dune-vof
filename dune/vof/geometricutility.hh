@@ -59,9 +59,7 @@ namespace Dune
         // insert new vertex in counterclockwise order
         for( std::size_t i = 0; i < n; ++i )
         {
-          auto normal = points[ (i+1)%n ];
-          normal -= points[ i ];
-          rotccw( normal );
+          auto normal = rotateCCW( points[ (i+1)%n ] - points[ i ] );
 
           auto center = points[ i ];
           center += points[ (i+1)%n ];
@@ -69,7 +67,7 @@ namespace Dune
 
           center -= vertex;
 
-          if( normal * center > 0 )
+          if(  * center > 0 )
           {
             points.insert( points.begin() + i + 1, vertex );
             return;
@@ -97,9 +95,7 @@ namespace Dune
 
         for( int i = 0; i < n; ++i )
         {
-          auto edge = points[ (i+1)%n ];
-          edge -= points[ i ];
-          rotccw ( edge );
+          auto edge = rotateCCW( points[ (i+1)%n ] - points[ i ] );
 
           auto skalar = edge * ( vertex - points[ i ] );
           if (  skalar < 0 && std::abs( skalar ) > TOL ) return false;
@@ -127,7 +123,6 @@ namespace Dune
         {
           auto normal = polygon[ i ];
           normal -= polygon[ i+1 ];
-
           const Hyperplane< DomainVector > lineThroughEdge( rotateCCW( normal ), polygon[ i ] );
 
           // add intersection point

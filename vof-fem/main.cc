@@ -96,7 +96,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 {
   using GridType = Grid;
   using GridPartType =
-    Dune::Fem::AdaptiveLeafGridPart< GridType >;
+    Dune::Fem::LeafGridPart< GridType >;
 
   using FunctionSpaceType =
     Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
@@ -157,7 +157,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   auto flags = Dune::VoF::flags( gridPart );
 
   SolutionType solution( problem, start );
-  GridSolutionType u( "solution", solution, gridPart, 9 );
+  GridSolutionType u( "solution", solution, gridPart, 10 );
 
   double timeStep = std::pow( 2, -(3 + level ) );
   timeStep *= cfl;
@@ -222,7 +222,9 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     dataOutput.write( timeProvider );
   }
 
-  return std::make_tuple( l1norm.distance( u, uh ), l2norm.distance( u, uh ) );  // wrong error, use projected solution
+  DiscreteFunctionType uEnd ( "uEnd", space );
+  Dune::Fem::interpolate( u, uEnd );
+  return std::make_tuple( l1norm.distance( uEnd, uh ), l2norm.distance( uEnd, uh ) );  // wrong error, use projected solution
 }
 
 
