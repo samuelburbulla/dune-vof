@@ -17,7 +17,7 @@ namespace Dune
   {
 
     template< class DomainVector >
-    inline static void rotccw ( DomainVector &v )
+    inline static void rotateccw ( DomainVector &v )
     {
       auto t = v[0];
       v[0] = -v[1];
@@ -64,7 +64,7 @@ namespace Dune
         {
           auto normal = points[ (i+1)%n ];
           normal -= points[ i ];
-          rotccw( normal );
+          rotateccw( normal );
 
           auto center = points[ i ];
           center += points[ (i+1)%n ];
@@ -102,7 +102,7 @@ namespace Dune
         {
           auto edge = points[ (i+1)%n ];
           edge -= points[ i ];
-          rotccw ( edge );
+          rotateccw ( edge );
 
           auto skalar = edge * ( vertex - points[ i ] );
           if (  skalar < 0 && std::abs( skalar ) > TOL ) return false;
@@ -131,7 +131,7 @@ namespace Dune
         {
           auto normal = polygon[ i ];
           normal -= polygon[ i+1 ];
-          rotccw ( normal );
+          rotateccw ( normal );
           const Hyperplane< DomainVector > lineThroughEdge( normal, polygon[ i ] );
 
           // add intersection point
@@ -177,7 +177,7 @@ namespace Dune
           // build line through edge for intersection
           auto normal = c0;
           normal -= c1;
-          rotccw( normal );
+          rotateccw( normal );
           const Hyperplane< DomainVector > lineThroughEdge( normal, c0 );
 
           // add intersection point

@@ -76,7 +76,7 @@ namespace Dune
 
           auto edgeNormal = geoIs.corner( 1 );
           edgeNormal -= geoIs.corner( 0 );
-          rotccw( edgeNormal );
+          rotateccw( edgeNormal );
 
           // insert in ccw order
           if ( edgeNormal * v < 0)

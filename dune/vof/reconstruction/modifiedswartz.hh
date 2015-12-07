@@ -96,7 +96,7 @@ namespace Dune
 
             Coordinate centerNormal = centerNb;
             centerNormal -= centerEn;
-            rotccw( centerNormal );
+            rotateccw( centerNormal );
 
             assert( centerNormal.two_norm2() > 0.0 );
 
