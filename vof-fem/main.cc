@@ -222,7 +222,11 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     dataOutput.write( timeProvider );
   }
 
-  return std::make_tuple( l1norm.distance( u, uh ), l2norm.distance( u, uh ) );  // wrong error, use projected solution
+  SolutionType solutionEnd( problem, timeProvider.time() );
+  GridSolutionType uEnd( "solutionEnd", solutionEnd, gridPart, 9 );
+  DiscreteFunctionType uhEnd( "uEnd", space );
+  Dune::Fem::interpolate( uEnd, uhEnd );
+  return std::make_tuple( l1norm.distance( uh, uhEnd ), l2norm.distance( uh, uhEnd ) );
 }
 
 

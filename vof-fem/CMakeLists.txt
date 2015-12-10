@@ -10,4 +10,4 @@ add_executable( "vof-fem" main.cc ${HEADERS} )
 target_link_dune_default_libraries( "vof-fem" )
 
 set_property( TARGET vof-fem APPEND PROPERTY
-  COMPILE_DEFINITIONS "YASPGRID;GRIDDIM=2" )
+  COMPILE_DEFINITIONS "ALUGRID_CUBE;GRIDDIM=2" )
