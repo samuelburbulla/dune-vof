@@ -74,15 +74,29 @@ namespace Dune
           upwind_.clear();
           flux_.clear();
 
+          auto edgeNormal = geoIs.corner( 1 );
+          edgeNormal -= geoIs.corner( 0 );
+          rotateccw( edgeNormal );
+
+          // insert in ccw order
+          if ( edgeNormal * v < 0)
+          {
+            upwind_.addVertex( geoIs.corner( 0 ), true );
+            upwind_.addVertex( geoIs.corner( 1 ), true );
+            upwind_.addVertex( geoIs.corner( 1 ) - v, true );
+            upwind_.addVertex( geoIs.corner( 0 ) - v, true );
+          }
+          else
+          {
+            upwind_.addVertex( geoIs.corner( 1 ), true );
+            upwind_.addVertex( geoIs.corner( 0 ), true );
+            upwind_.addVertex( geoIs.corner( 0 ) - v, true );
+            upwind_.addVertex( geoIs.corner( 1 ) - v, true );
+          }
+
           ctype flux = 0.0;
           if ( v * outerNormal > 0 ) // outflow
           {
-            // insert in cw/ccw order
-            upwind_.addVertex( geoIs.corner( 0 ) );
-            upwind_.addVertex( geoIs.corner( 1 ) );
-            upwind_.addVertex( geoIs.corner( 1 ) - v );
-            upwind_.addVertex( geoIs.corner( 0 ) - v );
-
             if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
               flux = truncVolume( entity, reconstructions );
             else if ( color[ entity ] >= (1 -eps_) )
@@ -90,12 +104,6 @@ namespace Dune
           }
           else if ( v * outerNormal < 0 ) // inflow
           {
-            // insert in cw/ccw order
-            upwind_.addVertex( geoIs.corner( 0 ) );
-            upwind_.addVertex( geoIs.corner( 0 ) - v );
-            upwind_.addVertex( geoIs.corner( 1 ) - v );
-            upwind_.addVertex( geoIs.corner( 1 ) );
-
             if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
               flux = -truncVolume( neighbor, reconstructions );
             else if ( color[ neighbor ] >= (1 -eps_) )

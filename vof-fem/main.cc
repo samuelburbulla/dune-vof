@@ -96,7 +96,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 {
   using GridType = Grid;
   using GridPartType =
-    Dune::Fem::AdaptiveLeafGridPart< GridType >;
+    Dune::Fem::LeafGridPart< GridType >;
 
   using FunctionSpaceType =
     Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
@@ -244,7 +244,7 @@ try {
   std::stringstream gridFile;
   gridFile << GridType::dimension << "dgrid.dgf";
 
-   //  create grid
+   // create grid
   Dune::GridPtr< GridType > gridPtr( gridFile.str() );
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
