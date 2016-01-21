@@ -27,6 +27,7 @@
 #include <dune/fem/space/common/functionspace.hh>
 #include <dune/fem/space/common/interpolate.hh>
 #include <dune/fem/space/finitevolume.hh>
+#include <dune/fem/operator/projection/l2projection.hh>
 
 // dune-vof includes
 #include <dune/vof/femdfwrapper.hh>
@@ -34,11 +35,12 @@
 #include <dune/vof/flags.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
-#include <dune/vof/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/edgeneighborsstencil.hh>
 
 // local includes
 #include "polygon.hh"
-#include "problems.hh"
+#include "problem/rotatingcircle.hh"
 #include "vtu.hh"
 
 
@@ -106,8 +108,10 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   using DiscreteFunctionType =
     Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
+  // Testproblem
   using ProblemType =
-    Problem< FunctionSpaceType >;
+    RotatingCircle< FunctionSpaceType >;
+
   using SolutionType =
     Dune::Fem::InstationaryFunction< ProblemType >;
 
@@ -122,8 +126,10 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   using DataOutputType =
     Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
+  // Stencil
   using Stencils =
     Dune::VoF::VertexNeighborsStencil< GridPartType >;
+
   using ReconstructionSet =
     Dune::VoF::ReconstructionSet< GridPartType >;
 
@@ -167,7 +173,8 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   DataIOTupleType dataIOTuple = std::make_tuple( &uh );
   DataOutputType dataOutput( grid, dataIOTuple, timeProvider, DataOutputParameters( level ) );
 
-  Dune::Fem::interpolate( u, uh );
+  Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
+  l2projection( u, uh );
   uh.communicate();
 
   flags.reflag( cuh, eps );
@@ -225,7 +232,8 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   SolutionType solutionEnd( problem, timeProvider.time() );
   GridSolutionType uEnd( "solutionEnd", solutionEnd, gridPart, 9 );
   DiscreteFunctionType uhEnd( "uEnd", space );
-  Dune::Fem::interpolate( uEnd, uhEnd );
+
+  l2projection( u, uhEnd );
   return std::make_tuple( l1norm.distance( uh, uhEnd ), l2norm.distance( uh, uhEnd ) );
 }
 

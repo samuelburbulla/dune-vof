@@ -74,9 +74,7 @@ namespace Dune
           upwind_.clear();
           flux_.clear();
 
-          auto edgeNormal = geoIs.corner( 1 );
-          edgeNormal -= geoIs.corner( 0 );
-          rotateccw( edgeNormal );
+          auto edgeNormal = rotateCCW( geoIs.corner( 1 ) - geoIs.corner( 0 ) );
 
           // insert in ccw order
           if ( edgeNormal * v < 0)

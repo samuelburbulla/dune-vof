@@ -17,13 +17,10 @@ namespace Dune
   {
 
     template< class DomainVector >
-    inline static void rotateccw ( DomainVector &v )
+    inline static DomainVector rotateCCW ( const DomainVector &v )
     {
-      auto t = v[0];
-      v[0] = -v[1];
-      v[1] = t;
+      return DomainVector{ -v[ 1 ], v[ 0 ] };
     }
-
 
     template< template <class> class Hyperplane, class DomainVector >
     const DomainVector lineIntersection ( const Hyperplane< DomainVector > &g, const Hyperplane< DomainVector > &l )  // make dim-universial
@@ -57,30 +54,27 @@ namespace Dune
         if( n == 0 || n == 1 || correctOrder )
         {
           points.push_back( vertex );
-          lastInserted = n;
         }
-
-        // insert new vertex in counterclockwise order, starting with last inserted
-        for( std::size_t j = 0; j < n; ++j )
+        else
         {
-          std::size_t i = ( lastInserted + j ) % n;
-          auto normal = points[ (i+1)%n ];
-          normal -= points[ i ];
-          rotateccw( normal );
-
-          auto center = points[ i ];
-          center += points[ (i+1)%n ];
-          center *= 0.5;
-
-          center -= vertex;
-
-          if( normal * center > 0 )
+          // insert new vertex in counterclockwise order
+          for( std::size_t i = 0; i < n; ++i )
           {
-            points.insert( points.begin() + i + 1, vertex );
-            lastInserted = i;
+            auto normal = rotateCCW( points[ (i+1)%n ] - points[ i ] );
+
+            auto center = points[ i ];
+            center += points[ (i+1)%n ];
+            center *= 0.5;
+
+            center -= vertex;
+
+            if( normal * center > 0 )
+            {
+              points.insert( points.begin() + i + 1, vertex );
+              break;
+            }
           }
         }
-
       }
 
       const std::size_t corners () const { return points.size(); }
@@ -103,9 +97,7 @@ namespace Dune
 
         for( int i = 0; i < n; ++i )
         {
-          auto edge = points[ (i+1)%n ];
-          edge -= points[ i ];
-          rotateccw ( edge );
+          auto edge = rotateCCW( points[ (i+1)%n ] - points[ i ] );
 
           auto skalar = edge * ( vertex - points[ i ] );
           if (  skalar < 0 && std::abs( skalar ) > TOL ) return false;
@@ -118,7 +110,6 @@ namespace Dune
 
     private:
       std::vector< DomainVector > points;
-      std::size_t lastInserted = 0;
     };
 
     template< class DomainVector, template <class> class Hyperplane >
@@ -134,8 +125,7 @@ namespace Dune
         {
           auto normal = polygon[ i ];
           normal -= polygon[ i+1 ];
-          rotateccw ( normal );
-          const Hyperplane< DomainVector > lineThroughEdge( normal, polygon[ i ] );
+          const Hyperplane< DomainVector > lineThroughEdge( rotateCCW( normal ), polygon[ i ] );
 
           // add intersection point
           intersectionPolygon.addVertex( lineIntersection( g, lineThroughEdge ) );
@@ -180,8 +170,7 @@ namespace Dune
           // build line through edge for intersection
           auto normal = c0;
           normal -= c1;
-          rotateccw( normal );
-          const Hyperplane< DomainVector > lineThroughEdge( normal, c0 );
+          const Hyperplane< DomainVector > lineThroughEdge( rotateCCW( normal ), c0 );
 
           // add intersection point
           intersections.push_back( lineIntersection( g, lineThroughEdge ) );
@@ -194,7 +183,6 @@ namespace Dune
       auto it = std::unique( intersections.begin(), intersections.end(), dvEq< DomainVector > );
       intersections.resize( std::distance( intersections.begin(), it ) );
     }
-
 
 
     template < template <class> class Hyperplane, class DomainVector >

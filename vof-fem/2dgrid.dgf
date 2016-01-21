@@ -5,14 +5,6 @@ Interval
 8    8    #nx ny
 #DGF
 
-BOUNDARYDOMAIN  # does not work with ALUGrid
-default 42
-#1  0 1   1 1 : inflow 0.0 % top
-#2  1 0   1 1 : inflow 0.0 % right
-#3  0 0   1 0 : inflow 0.0 % bottom
-#4  0 0   0 1 : inflow 0.0 % left
-#BOUNDARYDOMAIN
-
 GridParameter
 overlap 1
 #GridParameter
