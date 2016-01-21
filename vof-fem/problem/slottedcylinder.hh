@@ -1,17 +1,17 @@
-#ifndef PROBLEMS_HH
-#define PROBLEMS_HH
+#ifndef PROBLEM_SLOTTEDCYLINDER_HH
+#define PROBLEM_SLOTTEDCYLINDER_HH
 
 // dune-fem includes
 #include <dune/fem/space/common/functionspace.hh>
 
 template< class FunctionSpace >
-struct Problem
+struct SlottedCylinder
 {
   static_assert( Dune::AlwaysFalse< FunctionSpace >::value, "No Specialization found" );
 };
 
 template< class DomainField, class RangeField >
-struct Problem< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
+struct SlottedCylinder< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
 {
   using FunctionSpaceType = Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 >;
 
@@ -30,14 +30,7 @@ struct Problem< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
   void evaluate ( const DomainType &x, double t, RangeType &u ) const
   {
     DomainType center{ 0.5, 0.5};
-    center.axpy( std::cos( (2 * M_PI / 10)*t ), DomainType{  0.0,  0.25 } );
-    center.axpy( std::sin( (2 * M_PI / 10)*t ), DomainType{  0.25, 0.0  } );
 
-    double dist = ( x - center ).two_norm();
-
-    u = ( dist < 0.15 ) ? RangeType( 1.0 ) : RangeType( 0.0 );
-
-    /* slotted circle
     DomainType xPrime = center;
     DomainType tmp = x - center;
     xPrime.axpy( std::cos( ( 2.0 * M_PI / 10.0 ) * t ), tmp );
@@ -57,7 +50,6 @@ struct Problem< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
 
     if ( xPrime[ 1 ] > center[ 1 ] + slotWidth && std::abs( xPrime[ 0 ] - center[ 0 ] ) < slotWidth )
       u = RangeType( 0.0 );
-    */
   }
 
   void velocityField ( const DomainType &x, const double t, DomainType &rot ) const
@@ -75,7 +67,7 @@ struct Problem< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
 };
 
 template< class DomainField, class RangeField >
-struct Problem< Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 > >
+struct SlottedCylinder< Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 > >
 {
   using FunctionSpaceType = Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 >;
 
@@ -89,4 +81,4 @@ struct Problem< Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 > >
   static_assert( Dune::AlwaysFalse< DomainField >::value , "No Specialization found." );
 };
 
-#endif // PROBLEMS_HH
+#endif // PROBLEM_SLOTTEDCYLINDER_HH

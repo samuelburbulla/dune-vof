@@ -39,7 +39,7 @@
 
 // local includes
 #include "polygon.hh"
-#include "problems.hh"
+#include "problem/rotatingcircle.hh"
 #include "vtu.hh"
 
 
@@ -107,8 +107,10 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   using DiscreteFunctionType =
     Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
+  // Testproblem
   using ProblemType =
-    Problem< FunctionSpaceType >;
+    RotatingCircle< FunctionSpaceType >;
+
   using SolutionType =
     Dune::Fem::InstationaryFunction< ProblemType >;
 
