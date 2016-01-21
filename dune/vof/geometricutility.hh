@@ -67,7 +67,7 @@ namespace Dune
 
           center -= vertex;
 
-          if(  * center > 0 )
+          if( normal * center > 0 )
           {
             points.insert( points.begin() + i + 1, vertex );
             return;

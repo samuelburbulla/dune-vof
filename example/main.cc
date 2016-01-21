@@ -22,7 +22,7 @@
 #include <dune/vof/flags.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
-#include <dune/vof/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/vertexneighborsstencil.hh>
 
 //- local includes
 #include "average.hh"

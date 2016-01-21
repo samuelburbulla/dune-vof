@@ -163,7 +163,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   auto flags = Dune::VoF::flags( gridPart );
 
   SolutionType solution( problem, start );
-  GridSolutionType u( "solution", solution, gridPart, 10 );
+  GridSolutionType u( "solution", solution, gridPart, 9 );
 
   double timeStep = std::pow( 2, -(3 + level ) );
   timeStep *= cfl;
