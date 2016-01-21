@@ -34,7 +34,8 @@
 #include <dune/vof/flags.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
-#include <dune/vof/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/edgeneighborsstencil.hh>
 
 // local includes
 #include "polygon.hh"
@@ -122,8 +123,10 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   using DataOutputType =
     Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
+  // Stencil
   using Stencils =
     Dune::VoF::VertexNeighborsStencil< GridPartType >;
+
   using ReconstructionSet =
     Dune::VoF::ReconstructionSet< GridPartType >;
 
