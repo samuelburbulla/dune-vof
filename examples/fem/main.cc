@@ -40,7 +40,7 @@
 
 // local includes
 #include "polygon.hh"
-#include "problem/rotatingcircle.hh"
+#include "../problems/rotatingcircle.hh"
 #include "vtu.hh"
 
 
