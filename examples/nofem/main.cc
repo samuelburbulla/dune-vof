@@ -30,7 +30,7 @@
 #include "errors.hh"
 #include "io.hh"
 #include "polygon.hh"
-#include "problem.hh"
+#include "../problems/rotatingcircle.hh"
 #include "vtu.hh"
 
 // filterReconstruction
@@ -58,6 +58,7 @@ void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vect
 template < class GridView >
 std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
+  using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
@@ -67,9 +68,14 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
   using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
+  // Testproblem
+  using ProblemType =
+    RotatingCircle< double, GridView::dimensionworld >;
+  ProblemType problem;
+
   // calculate dt
   int numCells = parameters.get< int >( "grid.numCells" );
-  double dt = parameters.get< double >( "scheme.cflFactor" )  * ( 1.0 / numCells ) / psiMax();
+  double dt = parameters.get< double >( "scheme.cflFactor" )  * ( 1.0 / numCells ) / problem.maxVelocity();
   const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
 
@@ -104,7 +110,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
 
   // Initial reconstruction
-  average( colorFunction, [ ] ( const auto &x ) { return f( x, 0.0 ); } );
+  average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, u ); return u; } );
 
   flags.reflag( colorFunction, eps );
   reconstruction(  colorFunction, reconstructionSet, flags );
@@ -116,7 +122,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   double t = 0;
   int k = 0;
 
-  auto psit = [ &t ] ( const auto &x ) { return psi( x, t ); };
+  auto psit = [ &t, &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, t, rot ); return rot; };
 
   while ( t < endTime )
   {
@@ -152,7 +158,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
     //std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl
   }
 
-  auto ft = [ t ] ( const auto &x ) { return f( x, t ); };
+  auto ft = [ &t, &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, t, u ); return u; };
 
   return std::make_tuple( l1error( colorFunction, ft ), l2error( colorFunction, ft ) );
 }

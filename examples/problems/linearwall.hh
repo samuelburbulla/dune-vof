@@ -1,25 +1,18 @@
 #ifndef PROBLEM_LINEARWALL_HH
 #define PROBLEM_LINEARWALL_HH
 
-// dune-fem includes
-#include <dune/fem/space/common/functionspace.hh>
+//- dune-common includes
+#include <dune/common/fvector.hh>
 
-template< class FunctionSpace >
+
+template < class ctype, int dim >
 struct LinearWall
 {
-  static_assert( Dune::AlwaysFalse< FunctionSpace >::value, "No Specialization found" );
-};
-
-template< class DomainField, class RangeField >
-struct LinearWall< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
-{
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 >;
-
-  using DomainType = typename FunctionSpaceType::DomainType;
-  using RangeType = typename FunctionSpaceType::RangeType;
+  using DomainType = Dune::FieldVector< ctype, dim >;
+  using RangeType = Dune::FieldVector< ctype, 1 >;
   using ctype = RangeField;
 
-  enum { dimDomain = 1 };
+  enum { dimDomain = dim };
   enum { dimRange = 1 };
 
   void evaluate ( const DomainType &x, RangeType &u ) const
@@ -43,21 +36,6 @@ struct LinearWall< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
 
   static double maxVelocity() { return 0.08; };
 
-};
-
-template< class DomainField, class RangeField >
-struct LinearWall< Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 > >
-{
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 >;
-
-  using DomainType = typename FunctionSpaceType::DomainType;
-  using RangeType = typename FunctionSpaceType::RangeType;
-  using ctype = RangeField;
-
-  enum { dimDomain = 3 };
-  enum { dimRange = 1 };
-
-  static_assert( Dune::AlwaysFalse< DomainField >::value , "No Specialization found." );
 };
 
 #endif // PROBLEM_LINEARWALL_HH

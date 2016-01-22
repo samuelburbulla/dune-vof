@@ -1,25 +1,17 @@
 #ifndef PROBLEM_SLOTTEDCYLINDER_HH
 #define PROBLEM_SLOTTEDCYLINDER_HH
 
-// dune-fem includes
-#include <dune/fem/space/common/functionspace.hh>
+//- dune-common includes
+#include <dune/common/fvector.hh>
 
-template< class FunctionSpace >
+
+template < class ctype, int dim >
 struct SlottedCylinder
 {
-  static_assert( Dune::AlwaysFalse< FunctionSpace >::value, "No Specialization found" );
-};
+  using DomainType = Dune::FieldVector< ctype, dim >;
+  using RangeType = Dune::FieldVector< ctype, 1 >;
 
-template< class DomainField, class RangeField >
-struct SlottedCylinder< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 > >
-{
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 >;
-
-  using DomainType = typename FunctionSpaceType::DomainType;
-  using RangeType = typename FunctionSpaceType::RangeType;
-  using ctype = RangeField;
-
-  enum { dimDomain = 1 };
+  enum { dimDomain = dim };
   enum { dimRange = 1 };
 
   void evaluate ( const DomainType &x, RangeType &u ) const
@@ -64,21 +56,6 @@ struct SlottedCylinder< Dune::Fem::FunctionSpace< DomainField, RangeField, 2, 1 
 
   static double maxVelocity() { return 2 * M_PI / 10 * sqrt( 2.0 ); };
 
-};
-
-template< class DomainField, class RangeField >
-struct SlottedCylinder< Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 > >
-{
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< DomainField, RangeField, 3, 1 >;
-
-  using DomainType = typename FunctionSpaceType::DomainType;
-  using RangeType = typename FunctionSpaceType::RangeType;
-  using ctype = RangeField;
-
-  enum { dimDomain = 3 };
-  enum { dimRange = 1 };
-
-  static_assert( Dune::AlwaysFalse< DomainField >::value , "No Specialization found." );
 };
 
 #endif // PROBLEM_SLOTTEDCYLINDER_HH

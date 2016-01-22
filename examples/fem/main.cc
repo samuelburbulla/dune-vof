@@ -70,6 +70,15 @@ private:
 };
 
 
+// Problem
+// -------
+template < class Base, class FunctionSpace >
+struct Problem : public Base
+{
+  using FunctionSpaceType = FunctionSpace;
+};
+
+
 // filterReconstruction
 // --------------------
 
@@ -110,7 +119,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 
   // Testproblem
   using ProblemType =
-    RotatingCircle< FunctionSpaceType >;
+    Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
 
   using SolutionType =
     Dune::Fem::InstationaryFunction< ProblemType >;
@@ -229,10 +238,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     dataOutput.write( timeProvider );
   }
 
-  SolutionType solutionEnd( problem, timeProvider.time() );
-  GridSolutionType uEnd( "solutionEnd", solutionEnd, gridPart, 9 );
-  DiscreteFunctionType uhEnd( "uEnd", space );
-
+  DiscreteFunctionType uhEnd( "", space );
   l2projection( u, uhEnd );
   return std::make_tuple( l1norm.distance( uh, uhEnd ), l2norm.distance( uh, uhEnd ) );
 }
