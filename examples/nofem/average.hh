@@ -19,7 +19,7 @@ void average ( DF &u, const F &f )
 
     // get quadrature rule of order p
     int p = 10;
-    const auto &rule = Dune::QuadratureRules< ctype, DF::GridView::dimensionworld >::rule( geo.type(), p );
+    const auto &rule = Dune::QuadratureRules< ctype, DF::GridView::dimension >::rule( geo.type(), p );
 
     // ensure that rule has at least the requested order
     if( rule.order() < p )

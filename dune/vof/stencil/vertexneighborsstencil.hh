@@ -20,7 +20,7 @@ namespace Dune
       using EntitySeed = typename Entity::EntitySeed;
       using Stencil = std::vector< Entity >;
 
-      static constexpr int dim = GridView::dimensionworld;
+      static constexpr int dim = GridView::dimension;
 
     private:
       using Mapper =
