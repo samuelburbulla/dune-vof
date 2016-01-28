@@ -10,7 +10,6 @@ struct LinearWall
 {
   using DomainType = Dune::FieldVector< ctype, dim >;
   using RangeType = Dune::FieldVector< ctype, 1 >;
-  using ctype = RangeField;
 
   enum { dimDomain = dim };
   enum { dimRange = 1 };
