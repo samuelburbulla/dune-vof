@@ -77,11 +77,9 @@ namespace Dune
           centerEn *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsEn_.size() ) );
 
           newNormal = Coordinate( 0.0 );
-
-          std::size_t count = 0;
           for( const auto &neighbor : stencilEn )
           {
-            if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+            if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
               continue;
 
             if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
@@ -96,24 +94,30 @@ namespace Dune
 
             Coordinate centerNormal = rotateCCW( centerNb - centerEn );
             assert( centerNormal.two_norm2() > 0.0 );
+            normalize( centerNormal );
 
             if ( ( centerNormal * normal ) < 0.0 )
               centerNormal *= -1.0;
 
-            newNormal.axpy( 1.0 / centerNormal.two_norm() , centerNormal );
-            ++count;
+            newNormal += centerNormal;
           }
 
-          if( count == 0 )
+          if ( newNormal == Coordinate( 0.0 ) )
             break;
 
-          newNormal *= 1.0 / static_cast< typename Coordinate::value_type >( count );
+          normalize( newNormal );
+
           std::swap( newNormal, normal );
           computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
 
           ++iterations;
         }
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
+      }
+
+      void normalize ( Coordinate &normal ) const
+      {
+        normal /= normal.two_norm();
       }
 
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencil
