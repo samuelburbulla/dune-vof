@@ -100,6 +100,7 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   timeStep /= ProblemType::maxVelocity();
   TimeProviderType timeProvider( start, timeStep, gridPart.comm() );
 
+
   DataOutputType dataOutput( level, timeProvider );
   RecOutputType recOutput ( level );
 

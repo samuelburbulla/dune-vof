@@ -1,6 +1,7 @@
 #ifndef DUNE_VOF_FLAGS_HH
 #define DUNE_VOF_FLAGS_HH
 
+#include <algorithm>
 #include <utility>
 
 //- dune-grid includes
@@ -31,8 +32,13 @@ namespace Dune
 
       using Mapper = MCMGMapper< GridView, MCMGElementLayout >;
 
+
+    private:
+      template< class Reduce >
+      struct Exchange;
+
     public:
-      Flags ( const GridView &gridView )
+      explicit Flags ( const GridView &gridView )
        : gridView_ ( gridView ), mapper_( gridView ), flags_( mapper_.size(), Flag::empty )
       {}
 
@@ -50,7 +56,7 @@ namespace Dune
       template< class DF >
       void reflag ( const DF& color, const double eps )
       {
-        for ( const auto &entity : elements( gridView() ) )
+        for ( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           const auto idx = index( entity );
           Flag &flag = flags_[ idx ];
@@ -73,7 +79,11 @@ namespace Dune
           }
         }
 
-        for ( const auto &entity : elements( gridView() ) )
+        auto exchange1 = makeExchange( []( Flag a, Flag b ){ return b; } );
+        color.gridView().grid().communicate( exchange1, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
+
+        for ( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
+
         {
           const auto idx = index( entity );
 
@@ -89,9 +99,16 @@ namespace Dune
                   flag = Flag::activefull;
               }
         }
+
+        auto exchange2 = makeExchange( [] ( Flag a, Flag b  ) { return std::max( a, b ); } );
+        color.gridView().grid().communicate( exchange2, Dune::All_All_Interface, Dune::ForwardCommunication );
+
       }
 
     private:
+      template< class Reduce >
+      Exchange< Reduce > makeExchange ( Reduce reduce ) { return Exchange< Reduce >( *this, std::move( reduce ) ); }
+
       const GridView &gridView () const { return gridView_; }
 
       auto index ( const Entity &entity ) const -> decltype( std::declval< Mapper >().index( entity ) )
@@ -110,6 +127,54 @@ namespace Dune
     {
       return Flags< GV > ( gridView );
     }
+
+
+    // Exchange class for MPI
+    template< class GV >
+    template < class Reduce >
+    class Flags< GV >::Exchange : public Dune::CommDataHandleIF < Exchange < Reduce >, Flag >
+    {
+      public:
+
+        Exchange ( Flags &flags, Reduce reduce ) : flags_ ( flags ), reduce_( std::move( reduce ) ) {}
+
+        typedef typename Flags::Flag FlagType;
+
+        const bool contains ( const int dim, const int codim ) const { return ( codim == 0 ); }
+
+        const bool fixedsize ( const int dim, const int codim ) const { return true; }
+
+        template < class Entity >
+        const size_t size ( const Entity &e ) const { return 1; }
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension == 0, int >::type = 0 >
+        void gather ( MessageBuffer &buff, const Entity &e ) const
+        {
+          buff.write( flags_[ e ] );
+        }
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension != 0, int >::type = 0 >
+        void gather ( MessageBuffer &buff, const Entity &e ) const
+        {}
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension == 0, int >::type = 0 >
+        void scatter ( MessageBuffer &buff, const Entity &e, std::size_t n )
+        {
+          assert( n == 1 );
+          FlagType x ;
+          buff.read( x );
+          FlagType &y = flags_[ e ];
+          y = reduce_( y, x );
+        }
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension != 0, int >::type = 0 >
+        void scatter ( MessageBuffer &buff, const Entity &e, std::size_t n )
+        {}
+
+      private:
+        Flags &flags_;
+        Reduce reduce_;
+    };
 
   } // namespace VoF
 
