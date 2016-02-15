@@ -49,7 +49,13 @@ namespace Dune
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView() ) )
           if ( applyLocal( entity, flags, color, reconstructions[ entity ] ) )
-            reconstructions.intersections( entity ) = intersections_;
+          {
+            for ( auto v : intersections_ )
+              reconstructions.intersections( entity ).push_back( v );
+          }
+
+        auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
+        color.gridView().grid().communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
       }
 
     private:

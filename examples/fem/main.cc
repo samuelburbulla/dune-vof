@@ -105,6 +105,10 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
 
   auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
 
+  Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
+  l2projection( u, uh );
+  uh.communicate();
+
 
   // Time Iteration
   // ==============
@@ -124,6 +128,7 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
 
     flags.reflag( cuh, eps );
     reconstruction( cuh, reconstructions, flags );
+
     evolution( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
     update.communicate();
     uh.axpy( 1.0, update );

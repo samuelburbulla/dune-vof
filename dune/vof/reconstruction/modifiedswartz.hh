@@ -49,8 +49,6 @@ namespace Dune
       {
         initializer()( color, reconstructions, flags );
 
-        // communicate
-
         for ( const auto &entity : elements( color.gridView() ) )
         {
           if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
@@ -59,6 +57,9 @@ namespace Dune
           applyLocal( entity, flags, color, reconstructions );
           reconstructions.intersections( entity ) = intersectionsEn_;
         }
+
+        auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
+        color.gridView().grid().communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
       }
 
     private:
@@ -84,7 +85,10 @@ namespace Dune
             if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
               continue;
 
-            if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
+            //if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
+            //  continue;
+
+            if ( reconstructions[ neighbor ].normal().two_norm() < std::numeric_limits< double >::epsilon() )
               continue;
 
             Reconstruction reconstructionNb( normal, 0.0 );
@@ -104,7 +108,7 @@ namespace Dune
             newNormal += centerNormal;
           }
 
-          if ( newNormal == Coordinate( 0.0 ) )
+          if ( count == 0 )
             break;
 
           normalize( newNormal );
@@ -115,9 +119,6 @@ namespace Dune
           ++iterations;
         }
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
-
-        if ( iterations == maxIterations_ )
-          computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
       }
 
       void normalize ( Coordinate &normal ) const

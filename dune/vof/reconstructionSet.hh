@@ -58,12 +58,57 @@ namespace Dune
         std::fill( intersectionsSet_.begin(), intersectionsSet_.end(), Intersections() );
       }
 
+      struct Exchange;
+
     private:
       const Mapper &mapper () const { return mapper_; }
 
       Mapper mapper_;
       std::vector< Reconstruction > reconstructionSet_;
       std::vector< Intersections > intersectionsSet_;
+    };
+
+
+    // Exchange class for MPI
+    template< class GV >
+    class ReconstructionSet< GV >::Exchange : public Dune::CommDataHandleIF < Exchange, ReconstructionSet::Reconstruction >
+    {
+      public:
+        Exchange ( ReconstructionSet &reconstructionSet ) : reconstructionSet_ ( reconstructionSet ) {}
+
+        typedef typename ReconstructionSet::Reconstruction ReconstructionType;
+
+        const bool contains ( const int dim, const int codim ) const { return ( codim == 0 ); }
+
+        const bool fixedsize ( const int dim, const int codim ) const { return true; }
+
+        template < class Entity >
+        const size_t size ( const Entity &e ) const { return 1; }
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension == 0, int >::type = 0 >
+        void gather ( MessageBuffer &buff, const Entity &e ) const
+        {
+          buff.write( reconstructionSet_[ e ] );
+        }
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension != 0, int >::type = 0 >
+        void gather ( MessageBuffer &buff, const Entity &e ) const
+        {}
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension == 0, int >::type = 0 >
+        void scatter ( MessageBuffer &buff, const Entity &e, size_t n )
+        {
+          ReconstructionType x ;
+          buff.read( x );
+          reconstructionSet_[ e ] = x;
+        }
+
+        template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension != 0, int >::type = 0 >
+        void scatter ( MessageBuffer &buff, const Entity &e, std::size_t n )
+        {}
+
+      private:
+        ReconstructionSet &reconstructionSet_;
     };
 
   } // namespace VoF

@@ -42,7 +42,8 @@ namespace Dune
       const bool isActive ( const Entity& entity ) const
       {
         const Flag &flag = flags_[ index( entity ) ];
-        return ( flag == Flag::activeempty ) || ( flag == Flag::activefull ); }
+        return ( flag == Flag::activeempty ) || ( flag == Flag::activefull );
+      }
 
       const std::size_t size() const { return mapper_.size(); }
 
