@@ -124,16 +124,12 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 
   // Stencil
   using Stencils =
-    Dune::VoF::EdgeNeighborsStencil< GridPartType >;
-
-
+    Dune::VoF::VertexNeighborsStencil< GridPartType >;
 
   using L1NormType =
     Dune::Fem::L1Norm< GridPartType >;
   using L2NormType =
     Dune::Fem::L2Norm< GridPartType >;
-
-
 
   GridPartType gridPart( grid );
   DiscreteFunctionSpaceType space( gridPart );
@@ -203,8 +199,6 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     if ( dataOutput.willWrite( timeProvider ) )
     {
       recOutput.write ( reconstructions );
-
-      for ( const auto &entity : elements ( gridPart ) ) cflags[ entity ] = static_cast< double > ( flags[ entity ] );
       dataOutput.write( timeProvider );
 
       if( Dune::Fem::Parameter::verbose() )
