@@ -82,67 +82,37 @@ struct Problem : public Base
 // algorithm
 // ---------
 
-template< class Grid >
-std::tuple< double, double > algorithm ( Grid &grid, int level, double start, double end, double cfl, double eps )
+template< class Grid, class DF, class P >
+const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps )
 {
   using GridType = Grid;
-  using GridPartType =
-    Dune::Fem::LeafGridPart< GridType >;
+  using ProblemType = P;
+  using GridPartType = Dune::Fem::LeafGridPart< GridType >;
 
-  using FunctionSpaceType =
-    Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
+  using DomainType = typename Dune::FieldVector < double, GridType::dimensionworld >;
 
-  using DiscreteFunctionSpaceType =
-    Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
-  using DiscreteFunctionType =
-    Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
+  using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
+  using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
+  using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
-  // Testproblem
-  using ProblemType =
-    Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
+  using TimeProviderType = Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
 
-  using SolutionType =
-    Dune::Fem::InstationaryFunction< ProblemType >;
+  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
+  using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
-  using GridSolutionType =
-    Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
+  using DataIOTupleType = std::tuple< DiscreteFunctionType * >;
+  using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
+  using RecOutputType = ReconstructionWriter< ReconstructionSet, Polygon >;
 
-  using TimeProviderType =
-    Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
 
-  using ReconstructionSet =
-    Dune::VoF::ReconstructionSet< GridPartType >;
-  using Polygon =
-    Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
-
-  using DataIOTupleType =
-    std::tuple< DiscreteFunctionType * >;
-  using DataOutputType =
-    Dune::Fem::DataOutput< GridType, DataIOTupleType >;
-  using RecOutputType =
-    ReconstructionWriter< ReconstructionSet, Polygon >;
-
-  // Stencil
-  using Stencils =
-    Dune::VoF::VertexNeighborsStencil< GridPartType >;
-
-  using L1NormType =
-    Dune::Fem::L1Norm< GridPartType >;
-  using L2NormType =
-    Dune::Fem::L2Norm< GridPartType >;
+  using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
 
   GridPartType gridPart( grid );
-  DiscreteFunctionSpaceType space( gridPart );
 
   Stencils stencils( gridPart );
-
-  ProblemType problem;
   ReconstructionSet reconstructions( gridPart );
 
-  L1NormType l1norm( gridPart );
-  L2NormType l2norm( gridPart );
-
-  DiscreteFunctionType uh( "uh", space );
+  DiscreteFunctionSpaceType space( gridPart );
   DiscreteFunctionType update( "update", space );
 
   auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
@@ -151,9 +121,6 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   auto evolution = Dune::VoF::evolution( reconstructions, cuh, eps );
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
-
-  SolutionType solution( problem, start );
-  GridSolutionType u( "solution", solution, gridPart, 9 );
 
   double timeStep = std::pow( 2, -(3 + level ) );
   timeStep *= cfl;
@@ -164,19 +131,16 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   DataOutputType dataOutput( grid, dataIOTuple, timeProvider, DataOutputParameters( level ) );
   RecOutputType recOutput ( level );
 
-  Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
-  l2projection( u, uh );
-  uh.communicate();
+  auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
 
+
+  // Time Iteration
+  // ==============
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
 
   recOutput.write ( reconstructions );
   dataOutput.write( timeProvider );
-
-
-  using DomainType = typename FunctionSpaceType::DomainType;
-  auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
 
   std::size_t count = 0;
   for( ; timeProvider.time() <= end; )
@@ -187,14 +151,12 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
                 << "dt = " << timeProvider.deltaT() << std::endl;
 
     flags.reflag( cuh, eps );
-
     reconstruction( cuh, reconstructions, flags );
     evolution( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
+    update.communicate();
     uh.axpy( 1.0, update );
 
     timeProvider.next();
-
-    solution.setTime( timeProvider.time() );
 
     if ( dataOutput.willWrite( timeProvider ) )
     {
@@ -208,9 +170,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     dataOutput.write( timeProvider );
   }
 
-  DiscreteFunctionType uhEnd( "", space );
-  l2projection( u, uhEnd );
-  return std::make_tuple( l1norm.distance( uh, uhEnd ), l2norm.distance( uh, uhEnd ) );
+  return timeProvider.time();
 }
 
 
@@ -219,54 +179,88 @@ try {
 
   Dune::Fem::MPIManager::initialize( argc, argv );
 
-   // read parameter file
+
+  // Read Parameter File
+  // ===================
   Dune::Fem::Parameter::append( argc, argv );
   Dune::Fem::Parameter::append( "parameter" );
 
-  using GridType = Dune::GridSelector::GridType;
-
-  std::stringstream gridFile;
-  gridFile << GridType::dimension << "dgrid.dgf";
-
-   // create grid
-  Dune::GridPtr< GridType > gridPtr( gridFile.str() );
-  gridPtr->loadBalance();
-  GridType& grid = *gridPtr;
-
   const int level = Dune::Fem::Parameter::getValue< int >( "level", 0 );
   const int repeats = Dune::Fem::Parameter::getValue< int >( "repeats", 2 );
-  const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
-
-  Dune::Fem::GlobalRefine::apply( grid, level * refineStepsForHalf );
-
   const double startTime = Dune::Fem::Parameter::getValue< double >( "start", 0.0 );
   const double endTime = Dune::Fem::Parameter::getValue< double >( "end", 2.5 );
   const double cfl = Dune::Fem::Parameter::getValue< double >( "cfl", 1.0 );
   const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
 
-  auto oldErrors = algorithm( grid, level, startTime, endTime, cfl, eps );
 
-  std::cout << "L1 Error: " << std::setw( 16 ) << std::get< 0 >( oldErrors ) << "   ";
-  std::cout << "L2 Error: " << std::setw( 16 ) << std::get< 1 >( oldErrors ) << std::endl;
+  using GridType = Dune::GridSelector::GridType;
+  using GridPartType = Dune::Fem::LeafGridPart< GridType >;
+  using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
+  using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
+  using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
-  for( int step = level+1; step <= level+repeats; ++step )
+  // Testproblem
+  using ProblemType = Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
+  using SolutionType = Dune::Fem::InstationaryFunction< ProblemType >;
+  using GridSolutionType = Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
+  using L1NormType = Dune::Fem::L1Norm< GridPartType >;
+
+
+  // Create Grid
+  // ===========
+  std::stringstream gridFile;
+  gridFile << GridType::dimension << "dgrid.dgf";
+
+  Dune::GridPtr< GridType > gridPtr( gridFile.str() );
+  gridPtr->loadBalance();
+  GridType& grid = *gridPtr;
+  const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
+  Dune::Fem::GlobalRefine::apply( grid, level * refineStepsForHalf );
+
+
+  // EOC Calculation
+  // ===============
+  double oldL1Error;
+  for( int step = level; step <= level+repeats; ++step )
   {
-    Dune::Fem::GlobalRefine::apply( grid, refineStepsForHalf );
+    // Initialize Data
+    // ===============
+    GridPartType gridPart( grid );
+    DiscreteFunctionSpaceType space( gridPart );
+    ProblemType problem;
+    DiscreteFunctionType uh( "uh", space );
+    L1NormType l1norm( gridPart );
 
-    auto newErrors = algorithm( grid, step, startTime, endTime, cfl, eps );
+    SolutionType solution( problem, startTime );
+    GridSolutionType u( "solution", solution, gridPart, 9 );
+    Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
+    l2projection( u, uh );
+    uh.communicate();
+
+
+    // Run Algorithm
+    // ===============
+    const double actualEndTime = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
+
+
+    // Calculate Error
+    // ===============
+    solution.setTime( actualEndTime );
+    DiscreteFunctionType uhEnd( "", space );
+    l2projection( u, uhEnd );
+    const double newL1Error = l1norm.distance( uh, uhEnd );
 
     if( Dune::Fem::MPIManager::rank() == 0 )
     {
-      const double l1eoc = log( std::get< 0 >( oldErrors )  / std::get< 0 >( newErrors ) ) / M_LN2;
-      const double l2eoc = log( std::get< 1 >( oldErrors )  / std::get< 1 >( newErrors ) ) / M_LN2;
+      const double l1eoc = log( oldL1Error / newL1Error ) / M_LN2;
+      std::cout << "L1 Error: " << std::setw( 16 ) << newL1Error << std::endl;
 
-      std::cout << "L1 Error: " << std::setw( 16 ) << std::get< 0 >( newErrors ) << "   ";
-      std::cout << "L2 Error: " << std::setw( 16 ) << std::get< 1 >( newErrors ) << std::endl;
-      std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << "   ";
-      std::cout << "L2 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l2eoc << std::endl;
+      if ( step > level )
+        std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
     }
 
-    oldErrors = newErrors;
+    Dune::Fem::GlobalRefine::apply( grid, refineStepsForHalf );
+    oldL1Error = newL1Error;
   }
 
   return 0;
