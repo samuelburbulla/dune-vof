@@ -49,6 +49,8 @@ namespace Dune
       {
         initializer()( color, reconstructions, flags );
 
+        // communicate
+
         for ( const auto &entity : elements( color.gridView() ) )
         {
           if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
@@ -113,6 +115,9 @@ namespace Dune
           ++iterations;
         }
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
+
+        if ( iterations == maxIterations_ )
+          computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
       }
 
       void normalize ( Coordinate &normal ) const

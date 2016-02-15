@@ -1,5 +1,5 @@
 # select parallel process for verbose output (-1 = verbosity off)
-fem.verboserank: -1 
+fem.verboserank: -1
 
 #### Parameters for output ####
 fem.io.path: data
@@ -11,9 +11,8 @@ fem.io.savestep: 0.1
 start: 0.0
 end: 10
 
-level: 1 
-repeats: 2 
+level: 1
+repeats: 2
 
-cfl: 0.5 
-eps: 1e-9
-
+cfl: 0.5
+eps: 1e-6

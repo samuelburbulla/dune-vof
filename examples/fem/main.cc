@@ -98,6 +98,40 @@ static inline void filterReconstruction( const ReconstructionSet &reconstruction
   if ( io.size() == 0 )  io.push_back( Polygon{ Coordinate ( 0.0 ), Coordinate( 1.0 ) } );
 }
 
+static inline void writeRecPVTUFile( const std::size_t size, const std::size_t level, const std::size_t count )
+{
+  std::stringstream path;
+  path << "./data/";
+  std::stringstream name;
+  name.fill('0');
+  name << "s" << std::setw(4) << size << "-vof-rec-" << std::to_string( level ) << "-" << std::setw(6) << count << ".pvtu";
+
+  std::stringstream content;
+  content.fill('0');
+  content << R"(<?xml version="1.0"?>
+<VTKFile type="PUnstructuredGrid" version="0.1" byte_order="LittleEndian">
+  <PUnstructuredGrid GhostLevel="0">
+    <PPoints>
+      <PDataArray type="Float64" NumberOfComponents="3" Name="Coordinates" format="ascii"/>
+    </PPoints>
+    <PCells>
+      <PDataArray type="Int32" NumberOfComponents="1" Name="connectivity" format="ascii"/>
+      <PDataArray type="Int32" NumberOfComponents="1" Name="offsets" format="ascii"/>
+      <PDataArray type="UInt8" NumberOfComponents="1" Name="types" format="ascii"/>
+    </PCells>)";
+  for ( std::size_t i = 0; i < size; ++i )
+    content << "      <Piece  Source=\"s" << std::setw(4) << size << "-p" << std::setw(4) << i << "-vof-rec-" << level << "-"
+      << std::setw(5) << count << ".vtu\"/>" << std::endl;
+  content << R"(  </PUnstructuredGrid>
+</VTKFile>
+  )";
+
+  std::fstream f;
+  f.open( Dune::concatPaths( path.str(), name.str() ), std::ios::out );
+  f << content.str();
+  f.close();
+}
+
 
 // algorithm
 // ---------
@@ -137,7 +171,7 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
 
   // Stencil
   using Stencils =
-    Dune::VoF::VertexNeighborsStencil< GridPartType >;
+    Dune::VoF::EdgeNeighborsStencil< GridPartType >;
 
   using ReconstructionSet =
     Dune::VoF::ReconstructionSet< GridPartType >;
@@ -189,16 +223,22 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
 
-  // reconstruction output
+
   std::stringstream path;
   path << "./data/";
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
   std::stringstream name;
+
+  // reconstruction output
   name.fill('0');
-  name << "vof-rec-" << std::to_string( level ) << "-" << std::setw(5) << 0 << ".vtu";
-  filterReconstruction( reconstructions, recIO );
+  name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) <<  Dune::Fem::MPIManager::rank()
+    << "-vof-rec-" << std::to_string( level ) << "-" << std::setw(5) << 0 << ".vtu";
+  filterReconstruction( gridPart, reconstructions, recIO );
   vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+
+  if ( Dune::Fem::MPIManager::rank() == 0 )
+    writeRecPVTUFile( Dune::Fem::MPIManager::size(), level, 0 );
 
   dataOutput.write( timeProvider );
 
@@ -226,13 +266,22 @@ std::tuple< double, double > algorithm ( Grid &grid, int level, double start, do
     if ( dataOutput.willWrite( timeProvider ) )
     {
       count++;
-      if( Dune::Fem::Parameter::verbose() )
-        std::cout << "written reconstructions count=" << count << std::endl;
+
       filterReconstruction( reconstructions, recIO );
       std::stringstream name_;
       name_.fill('0');
-      name_ << "vof-rec-" << std::to_string( level ) << "-" << std::setw(5) << count << ".vtu" ;
+      name_ << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) <<  Dune::Fem::MPIManager::rank()
+        << "-vof-rec-" << std::to_string( level ) << "-" << std::setw(5) << count << ".vtu" ;
       vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
+
+      if ( Dune::Fem::MPIManager::rank() == 0 )
+        writeRecPVTUFile( Dune::Fem::MPIManager::size(), level, count );
+
+      for ( const auto &entity : elements ( gridPart ) ) cflags[ entity ] = static_cast< double > ( flags[ entity ] );
+      dataOutput.write( timeProvider );
+
+      if( Dune::Fem::Parameter::verbose() )
+          std::cout << "written reconstructions count=" << count << std::endl;
     }
 
     dataOutput.write( timeProvider );
