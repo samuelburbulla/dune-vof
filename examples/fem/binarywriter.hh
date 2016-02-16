@@ -37,7 +37,8 @@ public:
   {
     std::stringstream name;
     name.fill('0');
-    name << "vof-fem-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ ) << ".bin";
+    name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+      << "-vof-fem-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ ) << ".bin";
     BinaryStream binaryStream ( Dune::concatPaths( path_, name.str() ) );
     uh.write( binaryStream );
 

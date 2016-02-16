@@ -108,7 +108,7 @@ namespace Dune
             newNormal += centerNormal;
           }
 
-          if ( count == 0 )
+          if ( newNormal == Coordinate( 0 ) )
             break;
 
           normalize( newNormal );
