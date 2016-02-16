@@ -22,7 +22,6 @@
 #include <dune/fem/gridpart/leafgridpart.hh>
 #include <dune/fem/io/file/dataoutput.hh>
 #include <dune/fem/misc/l1norm.hh>
-#include <dune/fem/misc/l2norm.hh>
 #include <dune/fem/misc/mpimanager.hh>
 #include <dune/fem/space/common/functionspace.hh>
 #include <dune/fem/space/common/interpolate.hh>
@@ -39,35 +38,11 @@
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
 
 // local includes
+#include "binarywriter.hh"
 #include "polygon.hh"
 #include "reconstructionwriter.hh"
 #include "../problems/rotatingcircle.hh"
 
-
-// DataOutputParameters
-// --------------------
-
-struct DataOutputParameters
-: public Dune::Fem::LocalParameter< Dune::Fem::DataOutputParameters, DataOutputParameters >
-{
-  DataOutputParameters ( const int level )
-  : level_( level )
-  {}
-
-  DataOutputParameters ( const DataOutputParameters &other )
-  : level_( other.level_ )
-  {}
-
-  std::string prefix () const
-  {
-    std::stringstream s;
-    s << "vof-fem-" << level_ << "-";
-    return s.str();
-  }
-
-private:
-  int level_;
-};
 
 
 // Problem
@@ -100,10 +75,8 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
   using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
-  using DataIOTupleType = std::tuple< DiscreteFunctionType * >;
-  using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
+  using DataOutputType = BinaryWriter;
   using RecOutputType = ReconstructionWriter< ReconstructionSet, Polygon >;
-
 
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
 
@@ -122,13 +95,12 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
 
-  double timeStep = std::pow( 2, -(3 + level ) );
+  double timeStep = std::pow( 2, - ( 3 + level ) );
   timeStep *= cfl;
   timeStep /= ProblemType::maxVelocity();
   TimeProviderType timeProvider( start, timeStep, gridPart.comm() );
 
-  DataIOTupleType dataIOTuple = std::make_tuple( &uh );
-  DataOutputType dataOutput( grid, dataIOTuple, timeProvider, DataOutputParameters( level ) );
+  DataOutputType dataOutput( level, timeProvider );
   RecOutputType recOutput ( level );
 
   auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
@@ -140,7 +112,7 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   reconstruction( cuh, reconstructions, flags );
 
   recOutput.write ( reconstructions );
-  dataOutput.write( timeProvider );
+  dataOutput.write( uh );
 
   std::size_t count = 0;
   for( ; timeProvider.time() <= end; )
@@ -161,13 +133,11 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
     if ( dataOutput.willWrite( timeProvider ) )
     {
       recOutput.write ( reconstructions );
-      dataOutput.write( timeProvider );
+      dataOutput.write( uh );
 
       if( Dune::Fem::Parameter::verbose() )
           std::cout << "written reconstructions count=" << count << std::endl;
     }
-
-    dataOutput.write( timeProvider );
   }
 
   return timeProvider.time();
@@ -191,7 +161,8 @@ try {
   const double endTime = Dune::Fem::Parameter::getValue< double >( "end", 2.5 );
   const double cfl = Dune::Fem::Parameter::getValue< double >( "cfl", 1.0 );
   const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
-
+  const std::string path = Dune::Fem::Parameter::getValue< typename std::string >( "fem.io.path", "./data/" );
+  const int restartStep = Dune::Fem::Parameter::getValue< int >( "restartStep", -1 );
 
   using GridType = Dune::GridSelector::GridType;
   using GridPartType = Dune::Fem::LeafGridPart< GridType >;
@@ -234,7 +205,31 @@ try {
     SolutionType solution( problem, startTime );
     GridSolutionType u( "solution", solution, gridPart, 9 );
     Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
-    l2projection( u, uh );
+
+    if ( restartStep == -1 )
+    {
+      // Use initial data of problem.
+      l2projection( u, uh );
+    }
+    else
+    {
+      // Use given data in binary file.
+      std::stringstream namedata;
+      namedata.fill('0');
+      namedata << "vof-fem-" << std::to_string( step ) << "-" << std::setw(5) << restartStep << ".bin";
+      const auto filename = Dune::concatPaths( path, namedata.str() );
+      if ( !Dune::Fem::fileExists( filename ) )
+      {
+        std::cout << "Restart error: A step is given to load binary file but this file does not exist." << std::endl;
+        return 1;
+      }
+      else
+      {
+        Dune::Fem::BinaryFileInStream binaryStream ( filename );
+        uh.read( binaryStream );
+      }
+    }
+
     uh.communicate();
 
 
@@ -265,9 +260,9 @@ try {
 
   return 0;
 }
-catch (Dune::Exception &e){
+catch ( Dune::Exception &e ) {
   std::cerr << "Dune reported error: " << e << std::endl;
 }
-catch (...){
+catch (...) {
   std::cerr << "Unknown exception thrown!" << std::endl;
 }

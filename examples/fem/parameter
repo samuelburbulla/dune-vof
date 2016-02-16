@@ -11,8 +11,10 @@ fem.io.savestep: 0.1
 start: 0.0
 end: 10
 
-level: 1
-repeats: 2
+level: 2
+repeats: 0
 
 cfl: 0.5
 eps: 1e-6
+
+restartStep: -1

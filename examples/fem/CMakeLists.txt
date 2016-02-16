@@ -8,3 +8,12 @@ target_link_dune_default_libraries( "vof-fem" )
 
 set_property( TARGET vof-fem APPEND PROPERTY
   COMPILE_DEFINITIONS "ALUGRID_CUBE;GRIDDIM=2" )
+
+
+
+
+add_executable( "bin2vtk" bin2vtk.cc ${HEADERS} )
+target_link_dune_default_libraries( "bin2vtk" )
+
+set_property( TARGET bin2vtk APPEND PROPERTY
+COMPILE_DEFINITIONS "ALUGRID_CUBE;GRIDDIM=2" )
