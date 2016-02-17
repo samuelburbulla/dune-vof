@@ -71,14 +71,9 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
   using TimeProviderType = Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
-
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
-  using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
-
   using DataOutputType = BinaryWriter;
-  using RecOutputType = ReconstructionWriter< ReconstructionSet, Polygon >;
-
-  using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
+  using Stencils = Dune::VoF::EdgeNeighborsStencil< GridPartType >;
 
   GridPartType gridPart( grid );
 
@@ -100,9 +95,7 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   timeStep /= ProblemType::maxVelocity();
   TimeProviderType timeProvider( start, timeStep, gridPart.comm() );
 
-
   DataOutputType dataOutput( level, timeProvider );
-  RecOutputType recOutput ( level );
 
   auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
 
@@ -111,8 +104,7 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
 
-  recOutput.write ( reconstructions );
-  dataOutput.write( uh );
+  dataOutput.write( grid, uh );
 
   std::size_t count = 0;
   for( ; timeProvider.time() <= end; )
@@ -133,8 +125,7 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
 
     if ( dataOutput.willWrite( timeProvider ) )
     {
-      recOutput.write ( reconstructions );
-      dataOutput.write( uh );
+      dataOutput.write( grid, uh );
 
       if( Dune::Fem::Parameter::verbose() )
           std::cout << "written reconstructions count=" << count << std::endl;
@@ -192,7 +183,7 @@ try {
 
   // EOC Calculation
   // ===============
-  double oldL1Error;
+  double oldL1Error = 0;
   for( int step = level; step <= level+repeats; ++step )
   {
     // Initialize Data

@@ -86,7 +86,7 @@ namespace Dune
               continue;
 
             //if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
-            //  continue;
+              //continue;
 
             if ( reconstructions[ neighbor ].normal().two_norm() < std::numeric_limits< double >::epsilon() )
               continue;
@@ -104,6 +104,9 @@ namespace Dune
 
             if ( ( centerNormal * normal ) < 0.0 )
               centerNormal *= -1.0;
+
+            if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
+              continue;
 
             newNormal += centerNormal;
           }

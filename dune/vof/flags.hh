@@ -51,6 +51,9 @@ namespace Dune
         return ( flag == Flag::activeempty ) || ( flag == Flag::activefull );
       }
 
+      const Flag& operator[] ( const Entity& entity ) const { return flags_[ index( entity ) ]; }
+      Flag& operator[] ( const Entity& entity ) { return flags_[ index( entity ) ]; }
+
       const std::size_t size() const { return mapper_.size(); }
 
       template< class DF >

@@ -18,7 +18,7 @@ struct ReconstructionWriter
 {
   ReconstructionWriter ( const std::size_t level ) : level_ ( level ) {};
 
-  void write( const ReconstructionSet &reconstructionSet ) const
+  void write( const ReconstructionSet &reconstructionSet )
   {
     using Coordinate = typename Polygon::Position;
 
@@ -47,6 +47,8 @@ struct ReconstructionWriter
 
     count_++;
   }
+
+  std::size_t& count () { return count_; }
 
 private:
 
@@ -90,7 +92,7 @@ private:
 
 
   const std::size_t level_;
-  mutable std::size_t count_ = 0;
+  std::size_t count_ = 0;
   mutable std::vector< Polygon > io;
 
 };
