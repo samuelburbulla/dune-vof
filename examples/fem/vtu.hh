@@ -100,6 +100,10 @@ public:
     vtu << "    <Piece NumberOfPoints=\"" << overallSize_ << "\" "
         << "NumberOfCells=\"" << v_.size() << "\">" << std::endl;
 
+    vtu << "      <CellData Normals=\"normals\">" << std::endl;
+    writeNormals( vtu );
+    vtu << "      </CellData>" << std::endl;
+
     vtu << "      <Points>" << std::endl;
     writeCoordinates( vtu );
     vtu << "      </Points>" << std::endl;
@@ -153,6 +157,15 @@ private:
     for( std::size_t i = 1; i < size; ++i )
       offsets[ i ] = offsets[ i - 1 ] + v_[ i ].size();
     writeDataArray( vtu, "offsets", offsets );
+  }
+
+  void writeNormals( std::ostream &vtu ) const
+  {
+    std::vector< Position > normals( overallSize_ );
+    for( std::size_t i = 0; i < overallSize_; ++i  )
+      normals[ i ] = v_[ i ].normal();
+
+    writeDataArray( vtu, "normals", normals );
   }
 
   void writeTypes ( std::ostream &vtu ) const

@@ -14,11 +14,13 @@ public:
 
   Polygon () {}
 
-  Polygon ( std::initializer_list< PointType > const &l ) : data_( l.begin(), l.end() ) {}
-  Polygon ( std::vector< PointType > const &l ) : data_( l.begin(), l.end() ) {}
+  Polygon ( std::vector< PointType > const &l, const PointType &normal ) : data_( l.begin(), l.end() ), normal_( normal ) {}
 
   Position &operator[] ( std::size_t i ) { return data_[ i ]; }
   const Position &operator[] ( std::size_t i ) const { return data_[ i ]; }
+
+  Position& normal () { return normal_; }
+  const Position& normal () const { return normal_; }
 
   iterator begin () { return data_.begin(); }
   const_iterator begin () const { return data_.begin(); }
@@ -35,6 +37,7 @@ public:
 
 private:
   Container data_;
+  Position normal_;
 };
 
 

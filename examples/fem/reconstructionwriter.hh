@@ -13,22 +13,26 @@
 // ReconstructionWriter
 // --------------------
 
-template < class ReconstructionSet, class Polygon >
+template < class GridView, class ReconstructionSet, class Polygon >
 struct ReconstructionWriter
 {
-  ReconstructionWriter ( const std::size_t level ) : level_ ( level ) {};
+  ReconstructionWriter ( const GridView& gridView, const std::size_t level ) : gridView_( gridView ), level_ ( level ) {};
 
   void write( const ReconstructionSet &reconstructionSet )
   {
     using Coordinate = typename Polygon::Position;
 
-    io.clear();
-    for ( const auto& intersections : reconstructionSet.intersectionsSet() )
-      if ( intersections.size() != 0 )
-        io.push_back( Polygon( intersections ) );
+    std::vector< Polygon > io;
+    for ( const auto& entity : Dune::elements( gridView_ ) )
+    {
+      const auto& is = reconstructionSet.intersections( entity );
+
+      if ( !is.empty() )
+        io.emplace_back( Polygon ( is, reconstructionSet[ entity ].normal() ) );
+    }
 
     // io should not be empty
-    if ( io.size() == 0 )  io.push_back( Polygon{ Coordinate ( 0.0 ), Coordinate( 0.0 ) } );
+    if ( io.empty() )  io.push_back( Polygon( std::vector< Coordinate >{ Coordinate ( 0.0 ), Coordinate( 0.0 ) }, Coordinate( 0.0 ) ) );
 
     VTUWriter< std::vector< Polygon > > vtuwriter( io );
 
@@ -66,6 +70,9 @@ private:
   R"(<?xml version="1.0"?>
   <VTKFile type="PUnstructuredGrid" version="0.1" byte_order="LittleEndian">
     <PUnstructuredGrid GhostLevel="0">
+      <PCellData Normals="normals">
+        <PDataArray type="Float64" NumberOfComponents="3" Name="normals" format="ascii"/>
+      </PCellData>
       <PPoints>
         <PDataArray type="Float64" NumberOfComponents="3" Name="Coordinates" format="ascii"/>
       </PPoints>
@@ -73,7 +80,8 @@ private:
         <PDataArray type="Int32" NumberOfComponents="1" Name="connectivity" format="ascii"/>
         <PDataArray type="Int32" NumberOfComponents="1" Name="offsets" format="ascii"/>
         <PDataArray type="UInt8" NumberOfComponents="1" Name="types" format="ascii"/>
-      </PCells>)";
+      </PCells>
+)";
 
     for ( std::size_t i = 0; i < size; ++i )
       content << "      <Piece  Source=\"s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << i << "-vof-rec-" << level_ << "-"
@@ -90,7 +98,7 @@ private:
     f.close();
   }
 
-
+  const GridView gridView_;
   const std::size_t level_;
   std::size_t count_ = 0;
   mutable std::vector< Polygon > io;

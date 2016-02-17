@@ -199,8 +199,8 @@ try {
     // Write reconstruction to vtu file
     // --------------------------------
     using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
-    using RecOutputType = ReconstructionWriter< ReconstructionSet, Polygon >;
-    RecOutputType recOutput ( level );
+    using RecOutputType = ReconstructionWriter< GridPartType, ReconstructionSet, Polygon >;
+    RecOutputType recOutput ( gridPart, level );
 
     recOutput.count() = number;
     recOutput.write ( reconstructions );

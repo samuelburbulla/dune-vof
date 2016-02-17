@@ -41,7 +41,10 @@
 #include "binarywriter.hh"
 #include "polygon.hh"
 #include "reconstructionwriter.hh"
+#include "../problems/linearwall.hh"
 #include "../problems/rotatingcircle.hh"
+#include "../problems/sflow.hh"
+#include "../problems/slottedcylinder.hh"
 
 
 
