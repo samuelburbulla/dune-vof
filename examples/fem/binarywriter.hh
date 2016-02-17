@@ -22,7 +22,7 @@ public:
   {
     saveTime_ = timeProvider.time();
     path_ = Dune::Fem::Parameter::getValue< typename std::string >( "fem.io.path", "./data/" );
-    saveStep_ = Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 );
+    saveStep_ = std::max( Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 ), timeProvider.deltaT() );
     Dune::Fem::createDirectory ( path_ );
   }
 
@@ -32,30 +32,35 @@ public:
     return timeProvider.time() - saveTime_ >= -0.5 * saveStep_;
   }
 
-  template < class Grid, class DF >
-  const void write ( const Grid& grid, const DF &uh )
+  template < class Grid, class DF, class TP >
+  const void write ( const Grid& grid, const DF &uh, const TP& timeProvider, const bool forced = false )
   {
-    std::stringstream name;
-    name.fill('0');
-    name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
-      << "-vof-fem-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ );
 
-    std::stringstream dfname;
-    dfname << name.str() << ".bin";
-    BinaryStream binaryStream ( Dune::concatPaths( path_, dfname.str() ) );
-    uh.write( binaryStream );
-
-    /*
-    if ( Dune::Fem::MPIManager::rank() == 0 )
+    if ( willWrite( timeProvider ) || forced )
     {
-      std::stringstream gridname;
-      gridname << name.str() << ".grid";
-      Dune::BackupRestoreFacility< Grid >::backup( grid, Dune::concatPaths( path_, gridname.str() ) );
-    }
-    */
+      std::stringstream name;
+      name.fill('0');
+      name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+        << "-vof-fem-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ );
 
-    saveTime_ += saveStep_;
-    writeStep_++;
+      std::stringstream dfname;
+      dfname << name.str() << ".bin";
+      BinaryStream binaryStream ( Dune::concatPaths( path_, dfname.str() ) );
+      binaryStream << timeProvider.time();
+      uh.write( binaryStream );
+
+      /*
+      if ( Dune::Fem::MPIManager::rank() == 0 )
+      {
+        std::stringstream gridname;
+        gridname << name.str() << ".grid";
+        Dune::BackupRestoreFacility< Grid >::backup( grid, Dune::concatPaths( path_, gridname.str() ) );
+      }
+      */
+
+      saveTime_ += saveStep_;
+      writeStep_++;
+    }
   }
 
 private:

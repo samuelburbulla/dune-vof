@@ -104,9 +104,8 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
 
-  dataOutput.write( grid, uh );
+  dataOutput.write( grid, uh, timeProvider );
 
-  std::size_t count = 0;
   for( ; timeProvider.time() <= end; )
   {
     if( Dune::Fem::Parameter::verbose() )
@@ -122,15 +121,10 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
     uh.axpy( 1.0, update );
 
     timeProvider.next();
-
-    if ( dataOutput.willWrite( timeProvider ) )
-    {
-      dataOutput.write( grid, uh );
-
-      if( Dune::Fem::Parameter::verbose() )
-          std::cout << "written reconstructions count=" << count << std::endl;
-    }
+    dataOutput.write( grid, uh, timeProvider );
   }
+
+  dataOutput.write( grid, uh, timeProvider, true );
 
   return timeProvider.time();
 }
@@ -208,7 +202,8 @@ try {
       // Use given data in binary file.
       std::stringstream namedata;
       namedata.fill('0');
-      namedata << "vof-fem-" << std::to_string( step ) << "-" << std::setw(5) << restartStep << ".bin";
+      namedata << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+        << "-vof-fem-" << std::to_string( step ) << "-" << std::setw(5) << restartStep << ".bin";
       const auto filename = Dune::concatPaths( path, namedata.str() );
       if ( !Dune::Fem::fileExists( filename ) )
       {

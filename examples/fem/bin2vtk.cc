@@ -80,43 +80,23 @@ try {
   Dune::Fem::Parameter::append( "parameter" );
 
   // check if input file is valid
-  if ( argc != 2 )
+  if ( argc != 3 )
   {
-    std::cout << "No input file given." << std::endl;
+    std::cout << "Usage: bin2vtk <name> <level>" << std::endl;
     return 1;
   }
 
-  auto file = std::string( argv[1] );
-
-  std::ifstream f;
-  f.open( file );
-  if ( !f.good() )
-  {
-    std::cout << "Input file not found." << std::endl;
-    return 1;
-  }
+  // Create filename
+  // ---------------
+  const std::string name ( argv[1] );
+  const std::size_t level ( std::stoul( argv[2] ) );
+  std::size_t number = 0;
 
 
-  // Parse filename
-  // --------------
-
-  auto pfile = file.substr( 0, file.find_last_of('.') );
-  const int number = std::stoi( pfile.substr( pfile.find_last_of('-')+1 ) );
-  auto pfile2 = pfile.substr( 0, pfile.find_last_of('-') );
-  const int level = std::stoi( pfile2.substr( pfile2.find_last_of('-')+1 ) );
-  auto pfile3 = pfile2.substr( 0, pfile.find_last_of('-') );
-  pfile3 = pfile3.substr( 0, pfile.find_last_of('-') );
-  pfile3 = pfile3.substr( 0, pfile.find_last_of('-') );
-  //const int rank = std::stoi( pfile3.substr( pfile3.find_last_of('p')+1 ) );
-  auto pfile4 = pfile3.substr( 0, pfile.find_last_of('-') );
-  const int size = std::stoi( pfile4.substr( pfile4.find_last_of('s')+1 ) );
-
-
-  // supress output
-  // --------------
-  std::cout.setstate( std::ios_base::failbit );
-  std::cerr.setstate( std::ios_base::failbit );
-
+  std::stringstream timepvd;
+  timepvd << "<?xml version=\"1.0\"?>" << std::endl << "<VTKFile type=\"Collection\" version=\"0.1\">" << std::endl << "  <Collection>" << std::endl;
+  std::stringstream timepvdRec;
+  timepvdRec << "<?xml version=\"1.0\"?>" << std::endl << "<VTKFile type=\"Collection\" version=\"0.1\">" << std::endl << "  <Collection>" << std::endl;
 
   // Create grid
   // -----------
@@ -153,68 +133,98 @@ try {
   DiscreteFunctionType uh( "uh", space );
 
 
-  // Read data from binary file
-  std::stringstream binfile;
-  binfile.fill('0');
-  binfile << "./data/" << "s" << std::setw(4) << size << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank() << "-vof-fem-"
-    << std::setw(1) << level << "-" << std::setw(5) << number << ".bin";
+  for ( ; ; number++ )
+  {
+    // Open next binary file
+    // ---------------------
+    std::stringstream filename;
+    filename.fill('0');
+    filename << "./data/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+      << "-" << name << "-" << level << "-" << std::setw(5) << number;
 
-  using BinaryStream = Dune::Fem::BinaryFileInStream;
-  BinaryStream binaryStream ( binfile.str() );
-  uh.read( binaryStream );
+    if ( !std::ifstream ( filename.str() + ".bin" ) ) break;
 
+    using BinaryStream = Dune::Fem::BinaryFileInStream;
+    BinaryStream binaryStream ( filename.str() + ".bin" );
 
+    double timeValue;
+    binaryStream >> timeValue;
 
-
-  // Rebuild flags and reconstruction
-  // --------------------------------
-
-  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
-  ReconstructionSet reconstructions( gridPart );
-
-  using Stencils = Dune::VoF::EdgeNeighborsStencil< GridPartType >;
-  Stencils stencils( gridPart );
-
-  const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
-  auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
-  auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
-  auto flags = Dune::VoF::flags( gridPart );
-  DiscreteFunctionType dfFlags ( "flags", space );
-
-  flags.reflag( cuh, eps );
-  reconstruction( cuh, reconstructions, flags );
+    uh.read( binaryStream );
+    uh.communicate();
 
 
-  for ( auto& entity : elements( gridPart ) )
-    dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
+    // Rebuild flags and reconstruction
+    // --------------------------------
 
-  // Write data to vtk file
-  // ----------------------
-  using DataIOTupleType = std::tuple< DiscreteFunctionType *, DiscreteFunctionType * >;
-  using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
+    using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
+    ReconstructionSet reconstructions( gridPart );
 
-  DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags );
-  DataOutputType dataOutput( grid, dataIOTuple );
+    using Stencils = Dune::VoF::EdgeNeighborsStencil< GridPartType >;
+    Stencils stencils( gridPart );
 
-  double savestep = Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0 );
-  savestep *= 1.0001;
-  TimeProviderType tp ( 0.0, savestep );
-  for ( int i = 0; i < number; ++i ) tp.next();
+    const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
+    auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
+    auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
+    auto flags = Dune::VoF::flags( gridPart );
+    DiscreteFunctionType dfFlags ( "flags", space );
 
-  std::stringstream outfile;
-  outfile << pfile << ".vtk";
-  dataOutput.write( tp, outfile.str() );
+    flags.reflag( cuh, eps );
+    reconstruction( cuh, reconstructions, flags );
 
 
-  // Write reconstruction to vtu file
-  // --------------------------------
-  using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
-  using RecOutputType = ReconstructionWriter< ReconstructionSet, Polygon >;
-  RecOutputType recOutput ( level );
+    for ( auto& entity : elements( gridPart ) )
+      dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
 
-  recOutput.count() = number;
-  recOutput.write ( reconstructions );
+    // Write data to vtk file
+    // ----------------------
+    using DataIOTupleType = std::tuple< DiscreteFunctionType *, DiscreteFunctionType * >;
+    using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
+    DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags );
+    DataOutputType dataOutput( grid, dataIOTuple );
+
+    double savestep = Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0 );
+    savestep *= 1.0001;
+    TimeProviderType tp ( 0.0, savestep );
+    for ( std::size_t i = 0; i < number; ++i ) tp.next();
+
+    dataOutput.write( tp, filename.str() + ".vtu" );
+
+    std::stringstream pvtu;
+    pvtu.fill('0');
+    pvtu << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << std::setw(6) << number << ".pvtu";
+    timepvd << "    <DataSet timestep=\"" << timeValue << "\" group=\"\" part=\"0\" file=\"" << pvtu.str() << "\"/>" << std::endl;
+
+    // Write reconstruction to vtu file
+    // --------------------------------
+    using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
+    using RecOutputType = ReconstructionWriter< ReconstructionSet, Polygon >;
+    RecOutputType recOutput ( level );
+
+    recOutput.count() = number;
+    recOutput.write ( reconstructions );
+
+    std::stringstream pvtuRec;
+    pvtuRec.fill('0');
+    pvtuRec << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-vof-rec-" << level << "-" << std::setw(6) << number << ".pvtu";
+    timepvdRec << "    <DataSet timestep=\"" << timeValue << "\" group=\"\" part=\"0\" file=\"" << pvtuRec.str() << "\"/>" << std::endl;
+
+  }
+
+  std::stringstream seriesName;
+  seriesName.fill('0');
+  seriesName << "./data/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << level;
+
+  timepvd << "  </Collection>" << std::endl << "</VTKFile>" << std::endl;
+  std::ofstream pvdFile ( seriesName.str() + "-data.pvd" );
+  pvdFile << timepvd.str();
+  pvdFile.close();
+
+  timepvdRec << "  </Collection>" << std::endl << "</VTKFile>" << std::endl;
+  std::ofstream pvdFileRec ( seriesName.str() + "-reconstruction.pvd" );
+  pvdFileRec << timepvdRec.str();
+  pvdFileRec.close();
 
   return 0;
 }
