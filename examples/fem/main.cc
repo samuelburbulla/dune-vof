@@ -146,7 +146,7 @@ try {
 
   const int level = Dune::Fem::Parameter::getValue< int >( "level", 0 );
   const int repeats = Dune::Fem::Parameter::getValue< int >( "repeats", 2 );
-  const double startTime = Dune::Fem::Parameter::getValue< double >( "start", 0.0 );
+  double startTime = Dune::Fem::Parameter::getValue< double >( "start", 0.0 );
   const double endTime = Dune::Fem::Parameter::getValue< double >( "end", 2.5 );
   const double cfl = Dune::Fem::Parameter::getValue< double >( "cfl", 1.0 );
   const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
@@ -216,6 +216,9 @@ try {
       else
       {
         Dune::Fem::BinaryFileInStream binaryStream ( filename );
+        double timestamp;
+        binaryStream >> timestamp;
+        startTime = timestamp;
         uh.read( binaryStream );
       }
     }
