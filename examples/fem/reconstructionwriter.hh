@@ -20,8 +20,6 @@ struct ReconstructionWriter
 
   void write( const ReconstructionSet &reconstructionSet )
   {
-    using Coordinate = typename Polygon::Position;
-
     std::vector< Polygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
@@ -30,9 +28,6 @@ struct ReconstructionWriter
       if ( !is.empty() )
         io.emplace_back( Polygon ( is, reconstructionSet[ entity ].normal() ) );
     }
-
-    // io should not be empty
-    if ( io.empty() )  io.push_back( Polygon( std::vector< Coordinate >{ Coordinate ( 0.0 ), Coordinate( 0.0 ) }, Coordinate( 0.0 ) ) );
 
     VTUWriter< std::vector< Polygon > > vtuwriter( io );
 

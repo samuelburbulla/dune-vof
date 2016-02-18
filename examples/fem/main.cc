@@ -141,8 +141,9 @@ const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, i
 
   comm.barrier();
   elapsedTime += MPI_Wtime();
+  auto totalElapsedTime = comm.sum( elapsedTime );
 
-  return std::make_tuple ( timeProvider.time(), elapsedTime );
+  return std::make_tuple ( timeProvider.time(), totalElapsedTime );
 }
 
 
@@ -173,7 +174,7 @@ try {
   using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
   // Testproblem
-  using ProblemType = Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
+  using ProblemType = Problem< SFlow< double, GridPartType::dimensionworld >, FunctionSpaceType >;
   using SolutionType = Dune::Fem::InstationaryFunction< ProblemType >;
   using GridSolutionType = Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
   using L1NormType = Dune::Fem::L1Norm< GridPartType >;
@@ -241,7 +242,7 @@ try {
 
     // Run Algorithm
     // ===============
-    auto results = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps, false );
+    auto results = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
 
     const double actualEndTime = std::get<0> ( results );
     const double elapsedTime = std::get<1> ( results );

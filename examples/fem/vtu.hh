@@ -1,6 +1,7 @@
 #ifndef VTU_HH
 #define VTU_HH
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <functional>
@@ -152,11 +153,14 @@ private:
   void writeOffsets ( std::ostream &vtu ) const
   {
     const std::size_t size = v_.size();
-    std::vector< std::int32_t > offsets( size );
-    offsets[ 0 ] = v_[ 0 ].size();
-    for( std::size_t i = 1; i < size; ++i )
-      offsets[ i ] = offsets[ i - 1 ] + v_[ i ].size();
-    writeDataArray( vtu, "offsets", offsets );
+    std::vector< std::int32_t > offsets;
+    if ( !v_.empty() )
+    {
+      offsets.push_back( v_[ 0 ].size() );
+      for( std::size_t i = 1; i < size; ++i )
+        offsets.push_back( offsets[ i - 1 ] + v_[ i ].size() );
+      writeDataArray( vtu, "offsets", offsets );
+    }
   }
 
   void writeNormals( std::ostream &vtu ) const
