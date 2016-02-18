@@ -8,6 +8,7 @@
 #include <sstream>
 #include <tuple>
 #include <utility>
+#include <chrono>
 
 // dune-common includes
 #include <dune/common/exceptions.hh>
@@ -57,11 +58,12 @@ struct Problem : public Base
 };
 
 
+
 // algorithm
 // ---------
 
 template< class Grid, class DF, class P >
-const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps )
+const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
 {
   using GridType = Grid;
   using ProblemType = P;
@@ -102,12 +104,18 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
 
   auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
 
+  const auto& comm = Dune::Fem::MPIManager::comm();
+
   // Time Iteration
   // ==============
+  comm.barrier();
+  double elapsedTime = - MPI_Wtime();
+
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
 
-  dataOutput.write( grid, uh, timeProvider );
+  if ( writeData )
+    dataOutput.write( grid, uh, timeProvider );
 
   for( ; timeProvider.time() <= end; )
   {
@@ -124,12 +132,17 @@ const double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start
     uh.axpy( 1.0, update );
 
     timeProvider.next();
-    dataOutput.write( grid, uh, timeProvider );
+    if ( writeData )
+      dataOutput.write( grid, uh, timeProvider );
   }
 
-  dataOutput.write( grid, uh, timeProvider, true );
+  if ( writeData )
+    dataOutput.write( grid, uh, timeProvider, true );
 
-  return timeProvider.time();
+  comm.barrier();
+  elapsedTime += MPI_Wtime();
+
+  return std::make_tuple ( timeProvider.time(), elapsedTime );
 }
 
 
@@ -228,8 +241,10 @@ try {
 
     // Run Algorithm
     // ===============
-    const double actualEndTime = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
+    auto results = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps, false );
 
+    const double actualEndTime = std::get<0> ( results );
+    const double elapsedTime = std::get<1> ( results );
 
     // Calculate Error
     // ===============
@@ -241,7 +256,7 @@ try {
     if( Dune::Fem::MPIManager::rank() == 0 )
     {
       const double l1eoc = log( oldL1Error / newL1Error ) / M_LN2;
-      std::cout << "L1 Error: " << std::setw( 16 ) << newL1Error << std::endl;
+      std::cout << "L1 Error: " << std::setw( 16 ) << newL1Error << "   Duration: " << elapsedTime << "s" << std::endl;
 
       if ( step > level )
         std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
