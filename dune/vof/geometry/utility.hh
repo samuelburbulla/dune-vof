@@ -12,6 +12,7 @@
 
 #include <dune/vof/brents.hh>
 #include <dune/vof/geometry/hyperplane.hh>
+#include <dune/vof/geometry/polytope.hh>
 
 namespace Dune
 {
@@ -38,81 +39,6 @@ namespace Dune
 
       return x;
     }
-
-
-    // konvexes 2D-Polygon
-    template< class DomainVector >
-    struct Polygon2D
-    {
-      Polygon2D< DomainVector >() {}
-
-      const DomainVector operator[] ( const int i ) const { return points[ i % points.size() ]; }
-
-      void addVertex ( const DomainVector &vertex, const bool correctOrder = false, const double TOL = 1e-12 )
-      {
-        std::size_t n = points.size();
-
-        // no specific order needed or vertex explicitly given in correct order
-        if( n == 0 || n == 1 || correctOrder )
-        {
-          points.push_back( vertex );
-        }
-        else
-        {
-          // insert new vertex in counterclockwise order
-          for( std::size_t i = 0; i < n; ++i )
-          {
-            auto normal = rotateCCW( points[ (i+1)%n ] - points[ i ] );
-
-            auto center = points[ i ];
-            center += points[ (i+1)%n ];
-            center *= 0.5;
-
-            center -= vertex;
-
-            if( normal * center > 0 )
-            {
-              points.insert( points.begin() + i + 1, vertex );
-              break;
-            }
-          }
-        }
-      }
-
-      const std::size_t corners () const { return points.size(); }
-
-      double volume () const
-      {
-        double sum = 0;
-        int n = points.size();
-        for( int i = 0; i < n; i++ )
-          sum += ( points[ i ][ 1 ] + points[ (i+1)%n ][ 1 ] ) * ( points[ i ][ 0 ] - points[ (i+1)%n ][ 0 ] );
-        return sum / 2.0;
-      }
-
-      bool pointInBorders ( const DomainVector &vertex, const double TOL = 1e-12 ) const
-      {
-        int n = corners();
-
-        if( n == 0 )
-          return false;
-
-        for( int i = 0; i < n; ++i )
-        {
-          auto edge = rotateCCW( points[ (i+1)%n ] - points[ i ] );
-
-          auto skalar = edge * ( vertex - points[ i ] );
-          if (  skalar < 0 && std::abs( skalar ) > TOL ) return false;
-        }
-
-        return true;
-      }
-
-      void clear () { points.clear(); }
-
-    private:
-      std::vector< DomainVector > points;
-    };
 
     template< class DomainVector, template <class> class Hyperplane >
     void polygonLineIntersection ( const Polygon2D< DomainVector > &polygon, const Hyperplane< DomainVector > &g, Polygon2D< DomainVector > &intersectionPolygon )

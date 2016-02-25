@@ -7,6 +7,7 @@ set( vof_HEADERS
   femdfwrapper.hh
   flags.hh
   geometry/hyperplane.hh
+  geometry/polytope.hh
   geometry/utility.hh
   mcmgmapper.hh
   reconstruction.hh
