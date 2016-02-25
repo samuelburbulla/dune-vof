@@ -19,59 +19,60 @@ namespace Dune
   namespace VoF
   {
 
+    // distance
+    // --------
+
+    template< class ObjectA, class ObjectB >
+    double distance ( const ObjectA&, const ObjectB& )
+    {
+      static_assert( AlwaysFalse< ObjectA >::value, "Not yet implemented!");
+    };
+
+     // hyperplane / point distance
+    template< class Coord >
+    double distance ( const Hyperplane< Coord >& plane, const Coord& point )
+    {
+      return plane.normal() * point + plane.distance();
+    }
+
+    template< class Coord >
+    double distance ( const Coord& point, const Hyperplane< Coord >& plane )
+    {
+      return plane.normal() * point + plane.distance();
+    }
+
     template< class DomainVector >
     inline static DomainVector rotateCCW ( const DomainVector &v )
     {
       return DomainVector{ -v[ 1 ], v[ 0 ] };
     }
 
-    template< template <class> class Hyperplane, class DomainVector >
-    const DomainVector lineIntersection ( const Hyperplane< DomainVector > &g, const Hyperplane< DomainVector > &l )  // make dim-universial
-    {
-
-      assert ( DomainVector::dimension == 2 );
-
-      Dune::FieldMatrix< double, 2, 2 > A( { g.normal(), l.normal() }  );
-      DomainVector b( { -g.distance(), -l.distance() } );
-      DomainVector x;
-
-      A.solve( x, b );
-
-      return x;
-    }
-
+     // polygon / half space   intersection (incomplete - part 1)
     template< class DomainVector, template <class> class Hyperplane >
     void polygonLineIntersection ( const Polygon2D< DomainVector > &polygon, const Hyperplane< DomainVector > &g, Polygon2D< DomainVector > &intersectionPolygon )
     {
+      using std::abs;
+
       for ( std::size_t i = 0; i < polygon.corners(); ++i )
       {
-        if( isOnRecLine( polygon[i], g ) )
-        {
+        auto ci  = distance( g, polygon[ i ] );
+        auto cip = distance( g, polygon[ i+1 ] );
+
+        if( abs( ci ) < 1e-12 )
           intersectionPolygon.addVertex( polygon[i] );
-        }
-        else if( isInner( polygon[i], g ) ^ isInner( polygon[i+1], g ) )
+        else if( ( ci > 0.0 ) ^ ( cip > 0.0 ) )
         {
-          auto normal = polygon[ i ];
-          normal -= polygon[ i+1 ];
-          const Hyperplane< DomainVector > lineThroughEdge( rotateCCW( normal ), polygon[ i ] );
+          DomainVector point;
+          point.axpy( -cip / ( ci - cip ), polygon[ i ] );
+          point.axpy(  ci  / ( ci - cip ), polygon[ i+1 ] );
 
           // add intersection point
-          intersectionPolygon.addVertex( lineIntersection( g, lineThroughEdge ) );
+          intersectionPolygon.addVertex( point );
         }
       }
     }
 
-    template< class DomainVector >
-    bool dvComp ( const DomainVector &v, const DomainVector &w ) {
-      if ( v[0] == w[0] ) return v[1] < w[1];
-      return v[0] < w[0];
-    }
-
-    template< class DomainVector >
-    bool dvEq ( const DomainVector &v, const DomainVector &w ) {
-      return ( ( v - w ).one_norm() < 1e-12 );
-    }
-
+     // cell / line intersection
     template< class Geo, template <class> class Hyperplane, class DomainVector >
     void lineCellIntersections ( const Geo &geo,
                                  const Hyperplane< DomainVector > &g,
@@ -79,9 +80,10 @@ namespace Dune
                                  const double TOL = 1e-12
       )
     {
+      using std::abs;
+
       const int dim = 2;  // only two-dimensional
       intersections.clear();
-
       const auto &refElement = Dune::ReferenceElements< double, dim >::general( geo.type() );
 
       for( int k = 0; k < refElement.size( dim-1 ); ++k )
@@ -89,49 +91,52 @@ namespace Dune
         int i = refElement.subEntity( k, dim-1, 0, dim );
         int j = refElement.subEntity( k, dim-1, 1, dim );
 
-        const DomainVector& c0 = geo.corner( i );
-        const DomainVector& c1 = geo.corner( j );
+        const DomainVector& x0 = geo.corner( i );
+        const DomainVector& x1 = geo.corner( j );
 
-        if( isInner( c0, g, TOL ) ^ isInner( c1, g, TOL ) )
+        auto c0 = distance( g, x0 );
+        auto c1 = distance( g, x1 );
+
+        if( ( c0 > 0.0 ) ^ ( c1 > 0.0 ) )
         {
-          // build line through edge for intersection
-          auto normal = c0;
-          normal -= c1;
-          const Hyperplane< DomainVector > lineThroughEdge( rotateCCW( normal ), c0 );
+          DomainVector point;
+          point.axpy( -c1 / ( c0 - c1 ), x0 );
+          point.axpy(  c0 / ( c0 - c1 ), x1 );
 
           // add intersection point
-          intersections.push_back( lineIntersection( g, lineThroughEdge ) );
+          intersections.push_back( point );
         }
-        else if( isOnRecLine( c0, g, TOL ) ) intersections.push_back( c0 );
-        else if( isOnRecLine( c1, g, TOL ) ) intersections.push_back( c1 );
+        else if( abs( c0 ) < TOL  )
+          intersections.push_back( x0 );
+        else if( abs( c1 ) < TOL )
+          intersections.push_back( x1 );
       }
 
-      std::sort( intersections.begin(), intersections.end(), dvComp< DomainVector > );
-      auto it = std::unique( intersections.begin(), intersections.end(), dvEq< DomainVector > );
+      std::sort( intersections.begin(), intersections.end(),
+        [] ( const DomainVector& v, const DomainVector& w )
+        {
+          if ( v[ 0 ] == w[ 0 ] )
+            return v[ 1 ] < w[ 1 ];
+          return v[ 0 ] < w[ 0 ];
+        } );
+
+      auto it = std::unique( intersections.begin(), intersections.end(),
+        [] ( const DomainVector& v, const DomainVector& w )
+        {
+          return ( v - w ).two_norm2() < std::numeric_limits< typename DomainVector::value_type >::epsilon();
+        } );
       intersections.resize( std::distance( intersections.begin(), it ) );
     }
 
-
-    template < template <class> class Hyperplane, class DomainVector >
-    bool isInner ( const DomainVector &vertex, const Hyperplane< DomainVector > &g, const double TOL = 1e-12 )
-    {
-      return ( vertex * g.normal() + g.distance() ) >= TOL;
-    }
-
-    template < template <class> class Hyperplane, class DomainVector >
-    bool isOnRecLine ( const DomainVector &vertex, const Hyperplane< DomainVector > &g, const double TOL = 1e-12 )
-    {
-      return std::abs( vertex * g.normal() + g.distance() ) < TOL;
-    }
-
-
+     // polygon / half space   intersection (incomplete - part 2)
     template< class DomainVector, class Hyperplane >
     void polyAddInnerVertices ( const Polygon2D< DomainVector > &sourcePolygon, const Hyperplane &g, Polygon2D< DomainVector >& endPolygon, const double TOL = 1e-12 )
     {
       for( std::size_t i = 0; i < sourcePolygon.corners(); ++i )
-        if( isInner( sourcePolygon[ i ], g ) )
+        if( distance( sourcePolygon[ i ], g ) > 0.0 )
           endPolygon.addVertex( sourcePolygon[ i ] );
     }
+
 
     template< class Geo, template <class> class Hyperplane, class DomainVector >
     double getVolumeFraction ( const Geo &geo, const Hyperplane< DomainVector > &g )
@@ -139,7 +144,7 @@ namespace Dune
       Polygon2D< DomainVector > polygon;
 
       for( int i = 0; i < geo.corners(); ++i )
-        if( isInner( geo.corner( i ), g ) )
+        if( distance( geo.corner( i ), g ) > 0.0 )
           polygon.addVertex( geo.corner( i ) );
 
       std::vector< DomainVector > intersections;
