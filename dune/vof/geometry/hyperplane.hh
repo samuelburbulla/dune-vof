@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_HYPERPLANE_HH
-#define DUNE_VOF_HYPERPLANE_HH
+#ifndef DUNE_VOF_GEOMETRY_HYPERPLANE_HH
+#define DUNE_VOF_GEOMETRY_HYPERPLANE_HH
 
 namespace Dune
 {
@@ -35,11 +35,11 @@ namespace Dune
        : normal_( normal ), dist_( -1.0*( normal * point ) )
       {}
 
-      const Coordinate& normal() const { return normal_; }
-      Coordinate& normal() { return normal_; }
+      const Coordinate& normal () const { return normal_; }
+      Coordinate& normal () { return normal_; }
 
-      const ctype& distance() const { return dist_; }
-      ctype& distance() { return dist_; }
+      const ctype& distance () const { return dist_; }
+      ctype& distance () { return dist_; }
 
     private:
       Coordinate normal_;
@@ -50,4 +50,4 @@ namespace Dune
 
 } // end of namespace Dune
 
-#endif // #ifndef DUNE_VOF_HYPERPLANE_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_HYPERPLANE_HH

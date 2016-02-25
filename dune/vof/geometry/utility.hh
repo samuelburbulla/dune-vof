@@ -1,15 +1,17 @@
-#ifndef DUNE_VOF_GEOMETRICUTILITY_HH
-#define DUNE_VOF_GEOMETRICUTILITY_HH
+#ifndef DUNE_VOF_GEOMETRY_UTILITY_HH
+#define DUNE_VOF_GEOMETRY_UTILITY_HH
 
 #include <cassert>
 
 #include <limits>
 #include <vector>
 
+#include <dune/common/deprecated.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
 #include <dune/vof/brents.hh>
+#include <dune/vof/geometry/hyperplane.hh>
 
 namespace Dune
 {
@@ -145,11 +147,10 @@ namespace Dune
     }
 
     template< class Geo, template <class> class Hyperplane, class DomainVector >
-    void lineCellIntersections (
-      const Geo &geo,
-      const Hyperplane< DomainVector > &g,
-      std::vector< DomainVector > &intersections,
-      const double TOL = 1e-12
+    void lineCellIntersections ( const Geo &geo,
+                                 const Hyperplane< DomainVector > &g,
+                                 std::vector< DomainVector > &intersections,
+                                 const double TOL = 1e-12
       )
     {
       const int dim = 2;  // only two-dimensional
@@ -276,4 +277,4 @@ namespace Dune
 
 } // namespace Dune
 
-#endif // #ifndef DUNE_VOF_GEOMETRICUTILITY_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_UTILITY_HH

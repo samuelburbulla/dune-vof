@@ -151,7 +151,6 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
       ++saveNumber;
     }
 
-
     if ( (int)(( t / endTime ) * 100) > (int)(( (t-1) / endTime ) * 100) )
     	std::cerr << "\r" << numCells << " [" << (int)(( t / endTime ) * 100) << "%]";
 

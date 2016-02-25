@@ -7,7 +7,7 @@
 #include <dune/vof/mcmgmapper.hh>
 
 //- dune-vof includes
-#include <dune/vof/hyperplane.hh>
+#include <dune/vof/geometry/hyperplane.hh>
 
 namespace Dune
 {

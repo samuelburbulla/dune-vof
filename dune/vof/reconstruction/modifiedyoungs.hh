@@ -9,7 +9,7 @@
 //- dune-common includes
 #include <dune/common/fmatrix.hh>
 
-#include <dune/vof/geometricutility.hh>
+#include <dune/vof/geometry/utility.hh>
 
 namespace Dune
 {

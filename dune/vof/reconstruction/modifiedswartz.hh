@@ -4,7 +4,7 @@
 #include <numeric>
 #include <vector>
 
-#include <dune/vof/geometricutility.hh>
+#include <dune/vof/geometry/utility.hh>
 
 namespace Dune
 {

@@ -6,12 +6,13 @@ set( vof_HEADERS
   evolution.hh
   femdfwrapper.hh
   flags.hh
-  geometricutility.hh
-  hyperplane.hh
+  geometry/hyperplane.hh
+  geometry/utility.hh
   mcmgmapper.hh
   reconstruction.hh
   reconstructionSet.hh
-  vertexneighborsstencil.hh
+  stencil/edgeneighborsstencil.hh
+  stencil/vertexneighborsstencil.hh
 )
 
 install(FILES ${vof_HEADERS} DESTINATION ${vofdir})

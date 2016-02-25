@@ -5,7 +5,7 @@
 #include <dune/common/fvector.hh>
 
 //- local includes
-#include <dune/vof/geometricutility.hh>
+#include <dune/vof/geometry/utility.hh>
 
 namespace Dune
 {
