@@ -6,7 +6,7 @@ set( vof_HEADERS
   evolution.hh
   femdfwrapper.hh
   flags.hh
-  geometry/hyperplane.hh
+  geometry/halfspace.hh
   geometry/polytope.hh
   geometry/utility.hh
   mcmgmapper.hh

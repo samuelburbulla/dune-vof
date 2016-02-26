@@ -11,7 +11,7 @@
 #include <dune/common/fvector.hh>
 
 #include <dune/vof/brents.hh>
-#include <dune/vof/geometry/hyperplane.hh>
+#include <dune/vof/geometry/halfspace.hh>
 #include <dune/vof/geometry/polytope.hh>
 
 namespace Dune
@@ -30,13 +30,13 @@ namespace Dune
 
      // hyperplane / point distance
     template< class Coord >
-    double distance ( const Hyperplane< Coord >& plane, const Coord& point )
+    double distance ( const HalfSpace< Coord >& plane, const Coord& point )
     {
       return plane.normal() * point + plane.distance();
     }
 
     template< class Coord >
-    double distance ( const Coord& point, const Hyperplane< Coord >& plane )
+    double distance ( const Coord& point, const HalfSpace< Coord >& plane )
     {
       return plane.normal() * point + plane.distance();
     }
@@ -48,8 +48,8 @@ namespace Dune
     }
 
      // polygon / half space   intersection (incomplete - part 1)
-    template< class DomainVector, template <class> class Hyperplane >
-    void polygonLineIntersection ( const Polygon2D< DomainVector > &polygon, const Hyperplane< DomainVector > &g, Polygon2D< DomainVector > &intersectionPolygon )
+    template< class DomainVector, template <class> class HalfSpace >
+    void polygonLineIntersection ( const Polygon2D< DomainVector > &polygon, const HalfSpace< DomainVector > &g, Polygon2D< DomainVector > &intersectionPolygon )
     {
       using std::abs;
 
@@ -73,9 +73,9 @@ namespace Dune
     }
 
      // cell / line intersection
-    template< class Geo, template <class> class Hyperplane, class DomainVector >
+    template< class Geo, template <class> class HalfSpace, class DomainVector >
     void lineCellIntersections ( const Geo &geo,
-                                 const Hyperplane< DomainVector > &g,
+                                 const HalfSpace< DomainVector > &g,
                                  std::vector< DomainVector > &intersections,
                                  const double TOL = 1e-12
       )
@@ -129,8 +129,8 @@ namespace Dune
     }
 
      // polygon / half space   intersection (incomplete - part 2)
-    template< class DomainVector, class Hyperplane >
-    void polyAddInnerVertices ( const Polygon2D< DomainVector > &sourcePolygon, const Hyperplane &g, Polygon2D< DomainVector >& endPolygon, const double TOL = 1e-12 )
+    template< class DomainVector, class HalfSpace >
+    void polyAddInnerVertices ( const Polygon2D< DomainVector > &sourcePolygon, const HalfSpace &g, Polygon2D< DomainVector >& endPolygon, const double TOL = 1e-12 )
     {
       for( std::size_t i = 0; i < sourcePolygon.corners(); ++i )
         if( distance( sourcePolygon[ i ], g ) > 0.0 )
@@ -138,8 +138,8 @@ namespace Dune
     }
 
 
-    template< class Geo, template <class> class Hyperplane, class DomainVector >
-    double getVolumeFraction ( const Geo &geo, const Hyperplane< DomainVector > &g )
+    template< class Geo, template <class> class HalfSpace, class DomainVector >
+    double getVolumeFraction ( const Geo &geo, const HalfSpace< DomainVector > &g )
     {
       Polygon2D< DomainVector > polygon;
 

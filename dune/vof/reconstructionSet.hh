@@ -7,7 +7,7 @@
 #include <dune/vof/mcmgmapper.hh>
 
 //- dune-vof includes
-#include <dune/vof/geometry/hyperplane.hh>
+#include <dune/vof/geometry/halfspace.hh>
 
 namespace Dune
 {
@@ -28,7 +28,7 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:
-      using Reconstruction = Hyperplane< Coordinate >;
+      using Reconstruction = HalfSpace< Coordinate >;
       using Intersections = std::vector< Coordinate >;
 
       using iterator = typename std::vector< Reconstruction >::iterator;
