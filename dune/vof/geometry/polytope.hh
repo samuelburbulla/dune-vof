@@ -45,14 +45,14 @@ namespace Dune {
 
       int size ( int codim = 0 ) const
       {
-        DUNE_THROW( NotImplemented, "size( ... ) not yet imeplemented." )
+        DUNE_THROW( NotImplemented, "size( ... ) not yet imeplemented." );
         return 0;
       }
 
       template< int codim >
       const typename Codim< codim >::Polytope& subPolytope ( int i ) const
       {
-        assert( i < size( cdoim ) );
+        assert( i < size( codim ) );
       }
 
     private:
@@ -73,10 +73,10 @@ namespace Dune {
     public:
       template< int codim >
       struct Codim {
-        using Topology = AlgebraicPolytope< dim - codim >;
-        using Polytope  = Polytope< Coord, dim-codim >;
+        using SubTopology = AlgebraicPolytope< dim - codim >;
+        using SubPolytope  = Polytope< Coord, dim-codim >;
       };
-      using Topology = typename Codim< 0 >::Topology;
+      using Topology = typename Codim< 0 >::SubTopology;
 
       using Coordinate = Coord;
       using ctype = typename Coordinate::value_type;
