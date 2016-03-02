@@ -6,7 +6,9 @@ set( vof_HEADERS
   evolution.hh
   femdfwrapper.hh
   flags.hh
+  geometry/algorithm.hh
   geometry/halfspace.hh
+  geometry/intersection.hh
   geometry/polytope.hh
   geometry/utility.hh
   mcmgmapper.hh
