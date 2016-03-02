@@ -6,10 +6,9 @@
 #include <limits>
 #include <vector>
 
-//- dune-common includes
 #include <dune/common/fmatrix.hh>
 
-#include <dune/vof/geometry/utility.hh>
+#include <dune/vof/geometry/algorithm.hh>
 
 namespace Dune
 {

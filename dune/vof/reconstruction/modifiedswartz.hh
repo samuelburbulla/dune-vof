@@ -1,10 +1,11 @@
 #ifndef DUNE_VOF_RECONSTRUCTION_MODIFIEDSWARTZ_HH
 #define DUNE_VOF_RECONSTRUCTION_MODIFIEDSWARTZ_HH
 
+#include <cmath>
 #include <numeric>
 #include <vector>
 
-#include <dune/vof/geometry/utility.hh>
+#include <dune/vof/geometry/algorithm.hh>
 
 namespace Dune
 {
