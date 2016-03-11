@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include <dune/common/deprecated.hh>
+#include <dune/common/typetraits.hh>
 
 namespace Dune
 {
@@ -93,6 +94,16 @@ namespace Dune
     inline static DomainVector DUNE_DEPRECATED_MSG( "Use generalizedCrossProduct( ... ) instead." ) rotateCCW ( const DomainVector &v )
     {
       return generalizedCrossProduct( v );
+    }
+
+
+    // normalize
+    // ---------
+
+    template< class Coord >
+    auto normalize ( Coord &normal ) -> void_t< decltype( std::declval< Coord >().two_norm() ) >
+    {
+      normal /= normal.two_norm();
     }
 
 

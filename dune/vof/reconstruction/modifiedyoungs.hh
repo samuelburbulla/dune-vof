@@ -99,20 +99,6 @@ namespace Dune
         return m;
       }
 
-      bool normalize ( Coordinate &normal ) const
-      {
-        const ctype length2 = normal.two_norm2();
-        if ( length2 < std::numeric_limits< ctype >::epsilon() )
-        {
-          normal = Coordinate( 0.0 );
-
-          return false;
-        }
-        normal *= 1.0 / std::sqrt( length2 );
-
-        return true;
-      }
-
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencils
 
       StencilSet &stencils_;

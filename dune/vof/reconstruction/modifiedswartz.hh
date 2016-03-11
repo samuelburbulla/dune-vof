@@ -125,11 +125,6 @@ namespace Dune
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
       }
 
-      void normalize ( Coordinate &normal ) const
-      {
-        normal /= normal.two_norm();
-      }
-
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencil
       const InitialReconstruction &initializer () const { return initializer_; }
 
