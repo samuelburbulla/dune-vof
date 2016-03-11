@@ -7,11 +7,24 @@
 
 #include <dune/vof/brents.hh>
 #include <dune/vof/geometry/halfspace.hh>
+#include <dune/vof/geometry/intersection.hh>
 #include <dune/vof/geometry/polytope.hh>
 
 namespace Dune {
 
   namespace VoF {
+
+    // locateHalfSpace
+    // ---------------
+
+    template< class Coord >
+    auto locateHalfSpace ( const Polytope< Coord, Coord::dimension >& polytope, const Coord& normal, const double& fill ) -> HalfSpace< Coord >
+    {
+      DUNE_THROW( NotImplemented, "locateHalfSpace( ... ) not yet implemented." );
+    }
+
+    // computeInterfaceLinePosition
+    // ----------------------------
 
     template< class Geo, template <class> class HalfSpace, class DomainVector >
     double getVolumeFraction ( const Geo &geo, const HalfSpace< DomainVector > &g )
@@ -22,8 +35,8 @@ namespace Dune {
         if( g.levelSet( geo.corner( i ) ) > 0.0 )
           polygon.addVertex( geo.corner( i ) );
 
-      std::vector< DomainVector > intersections;
-      lineCellIntersections( geo, g, intersections );
+      std::vector< DomainVector >  intersections = intersect( g.boundary(), geo );
+
       for( auto v : intersections )
         polygon.addVertex( v );
 
@@ -31,7 +44,7 @@ namespace Dune {
     }
 
     template< class Geometry, class Color, class Reconstruction >
-    void computeInterfaceLinePosition ( const Geometry &geo, const Color &concentration, Reconstruction &g )
+    void DUNE_DEPRECATED_MSG( "Use locateHalfSpace( ... ) instead." ) computeInterfaceLinePosition ( const Geometry &geo, const Color &concentration, Reconstruction &g )
     {
       using vtype = decltype( geo.volume() );
       using limits = std::numeric_limits< vtype >;

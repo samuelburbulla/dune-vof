@@ -74,10 +74,8 @@ namespace Dune
           upwind_.clear();
           flux_.clear();
 
-          auto edgeNormal = rotateCCW( geoIs.corner( 1 ) - geoIs.corner( 0 ) );
-
           // insert in ccw order
-          if ( edgeNormal * v < 0)
+          if ( rotateCCW( geoIs.corner( 1 ) - geoIs.corner( 0 ) ) * v < 0.0 )
           {
             upwind_.addVertex( geoIs.corner( 0 ), true );
             upwind_.addVertex( geoIs.corner( 1 ), true );
@@ -96,14 +94,14 @@ namespace Dune
           if ( v * outerNormal > 0 ) // outflow
           {
             if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
-              flux = truncVolume( entity, reconstructions );
+              flux = truncVolume( upwind_, reconstructions[ entity ] );
             else if ( color[ entity ] >= (1 -eps_) )
               flux = upwind_.volume();
           }
           else if ( v * outerNormal < 0 ) // inflow
           {
             if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
-              flux = -truncVolume( neighbor, reconstructions );
+              flux = -truncVolume( upwind_, reconstructions[ neighbor ] );
             else if ( color[ neighbor ] >= (1 -eps_) )
               flux = -upwind_.volume();
           }
@@ -112,10 +110,10 @@ namespace Dune
         }
       }
 
-      ctype truncVolume ( const Entity &entity, const ReconstructionSet &reconstructions ) const
+      ctype truncVolume ( const Polygon& upwind, const Reconstruction& reconstruction ) const
       {
-        polygonLineIntersection( upwind_, reconstructions[ entity ], flux_ );
-        polyAddInnerVertices( upwind_, reconstructions[ entity ], flux_ );
+        polygonLineIntersection( upwind, reconstruction, flux_ );
+        polyAddInnerVertices( upwind, reconstruction, flux_ );
 
         return flux_.volume();
       }
