@@ -1,13 +1,13 @@
 #ifndef DUNE_VOF_RECONSTRUCTIONSET_HH
 #define DUNE_VOF_RECONSTRUCTIONSET_HH
 
+#include <algorithm>
 #include <vector>
 
-//- dune-grid includes
-#include <dune/vof/mcmgmapper.hh>
+#include <dune/common/deprecated.hh>
 
-//- dune-vof includes
 #include <dune/vof/geometry/halfspace.hh>
+#include <dune/vof/mcmgmapper.hh>
 
 namespace Dune
 {
@@ -29,51 +29,43 @@ namespace Dune
 
     public:
       using Reconstruction = HalfSpace< Coordinate >;
-      using Intersections = std::vector< Coordinate >;
 
       using iterator = typename std::vector< Reconstruction >::iterator;
       using const_iterator = typename std::vector< Reconstruction >::const_iterator;
-
-      explicit ReconstructionSet ( const GridView &gridView )
-       : mapper_( gridView ), reconstructionSet_( mapper().size() ), intersectionsSet_( mapper().size() )
-       {}
-
-      const Reconstruction& operator[] ( const Entity &entity ) const { return reconstructionSet_[ mapper().index( entity ) ]; }
-      Reconstruction& operator[] ( const Entity &entity ) { return reconstructionSet_[ mapper().index( entity ) ]; }
-
-      iterator begin () { return reconstructionSet_.begin(); }
-      const_iterator begin () const { return reconstructionSet_.begin(); }
-
-      iterator end () { return reconstructionSet_.end(); }
-      const_iterator end () const { return reconstructionSet_.end(); }
-
-      const Intersections& intersections ( const Entity &entity ) const { return intersectionsSet_[ mapper().index( entity ) ]; }
-      Intersections& intersections ( const Entity &entity ) { return intersectionsSet_[ mapper().index( entity ) ]; }
-
-      const std::vector< Intersections >& intersectionsSet () const { return intersectionsSet_; }
-
-      const void clear()
-      {
-        std::fill( reconstructionSet_.begin(), reconstructionSet_.end(), Reconstruction() );
-        std::fill( intersectionsSet_.begin(), intersectionsSet_.end(), Intersections() );
-      }
+      using Index = typename Mapper::Index;
 
       struct Exchange;
+
+      explicit ReconstructionSet ( const GridView &gridView )
+       : mapper_( gridView ), reconstructionSet_( mapper().size() )
+       {}
+
+      const Reconstruction& operator[] ( const Entity &entity ) const DUNE_DEPRECATED_MSG( "Use access via index instead." ) { return reconstructionSet_[ mapper().index( entity ) ]; }
+      Reconstruction& operator[] ( const Entity &entity ) DUNE_DEPRECATED_MSG( "Use access via index instead." ) { return reconstructionSet_[ mapper().index( entity ) ]; }
+
+      const Reconstruction& operator[] ( const Index &index ) const { return reconstructionSet_[ index ]; }
+      Reconstruction& operator[] ( const Index &index ) { return reconstructionSet_[ index ]; }
+
+      iterator begin () { return reconstructionSet_.begin(); }
+      iterator end () { return reconstructionSet_.end(); }
+
+      const_iterator begin () const { return reconstructionSet_.begin(); }
+      const_iterator end () const { return reconstructionSet_.end(); }
+
+      void clear() { std::fill( reconstructionSet_.begin(), reconstructionSet_.end(), Reconstruction() ); }
 
     private:
       const Mapper &mapper () const { return mapper_; }
 
       Mapper mapper_;
       std::vector< Reconstruction > reconstructionSet_;
-      std::vector< Intersections > intersectionsSet_;
     };
 
 
     // Exchange class for MPI
     template< class GV >
-    class ReconstructionSet< GV >::Exchange : public Dune::CommDataHandleIF < Exchange, ReconstructionSet::Reconstruction >
+    struct ReconstructionSet< GV >::Exchange : public Dune::CommDataHandleIF < Exchange, ReconstructionSet::Reconstruction >
     {
-      public:
         Exchange ( ReconstructionSet &reconstructionSet ) : reconstructionSet_ ( reconstructionSet ) {}
 
         typedef typename ReconstructionSet::Reconstruction ReconstructionType;
