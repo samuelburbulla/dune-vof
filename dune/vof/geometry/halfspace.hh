@@ -37,6 +37,10 @@ namespace Dune
        : innerNormal_( normal ), distanceToOrigin_( dist )
       {}
 
+      HalfSpace ( const Boundary& plane )
+      : HalfSpace( plane.normal_, plane.distanceToOrigin_ )
+      {}
+
       HalfSpace ( const Coordinate& normal, const Coordinate& point ) DUNE_DEPRECATED_MSG( "HalfSpace( normal, point ) might be inconsistent." )
        : innerNormal_( normal ), distanceToOrigin_( -1.0*( normal * point ) )
       {}
@@ -86,7 +90,11 @@ namespace Dune
 
       ctype levelSet ( const Coordinate& point ) const { return normal_ * point + distanceToOrigin_; }
 
+      operator HalfSpace< Coordinate > () const { return HalfSpace< Coordinate >( *this ); }
+
     private:
+      friend HalfSpace< Coordinate >;
+
       Coordinate normal_;
       ctype distanceToOrigin_;
     };
