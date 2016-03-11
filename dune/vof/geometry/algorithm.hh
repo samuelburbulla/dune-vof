@@ -10,6 +10,12 @@
 #include <dune/vof/geometry/intersection.hh>
 #include <dune/vof/geometry/polytope.hh>
 
+/*
+ * TODO:
+ * - implement locateHalfSpace( ... )
+ * - ...
+ */
+
 namespace Dune {
 
   namespace VoF {

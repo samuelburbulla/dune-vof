@@ -6,10 +6,11 @@
 
 #include <dune/common/deprecated.hh>
 
-// TODO:
-//  - concretise interface of AlgebraicPolytope / Polytope
-//  - add datat representation and implementation
-// (- remove Polygon2d )
+/*
+ * TODO:
+ * - properly implement AlgebraicPolytope / Polytope
+ * - ...
+ */
 
 namespace Dune {
 

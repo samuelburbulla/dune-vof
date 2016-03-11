@@ -9,6 +9,13 @@
 
 #include <dune/vof/geometry/algorithm.hh>
 
+/*
+ * TODO:
+ * - [84,87], [104,107] use the proper intersection interface once implemented.
+ * - remove or replace calls that trigger deprecation warnings.
+ * - ...
+ */
+
 namespace Dune
 {
   namespace VoF

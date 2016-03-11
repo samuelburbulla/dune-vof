@@ -10,6 +10,12 @@
 
 #include <dune/vof/geometry/algorithm.hh>
 
+/*
+ * TODO:
+ * - remove or replace calls that trigger deprecation warnings.
+ * - ...
+ */
+
 namespace Dune
 {
   namespace VoF

@@ -7,6 +7,14 @@
 //- local includes
 #include <dune/vof/geometry/intersection.hh>
 
+/*
+ * TODO:
+ * - [82,96] move Polygon construction into a seperate function and use Polytope once implemented.
+ * - [120,126] use Polytope and the proper intersection interface once they are implemeted.
+ * - remove or replace calls that trigger deprecation warnings.
+ * - ...
+ */
+
 namespace Dune
 {
   namespace VoF

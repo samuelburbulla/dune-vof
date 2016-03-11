@@ -17,6 +17,11 @@
 #include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
 
+/*
+ * TODO:
+ * - implement intersection implementations (free functions / callable ?)
+ * - ...
+ */
 
 namespace Dune {
 
