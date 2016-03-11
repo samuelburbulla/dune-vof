@@ -47,11 +47,12 @@ namespace Dune
       {
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView() ) )
-          if ( applyLocal( entity, flags, color, reconstructions[ entity ] ) )
-          {
-            for ( auto v : intersections_ )
-              reconstructions.intersections( entity ).push_back( v );
-          }
+        {
+          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+            continue;
+
+          applyLocal( entity, flags, color, reconstructions[ entity ] );
+        }
 
         auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
         color.gridView().communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
@@ -59,11 +60,8 @@ namespace Dune
 
     private:
       template< class Flags >
-      bool applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
+      void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
       {
-        if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
-          return false;
-
         const auto geometry = entity.geometry();
 
         Coordinate &normal = reconstruction.normal();
@@ -82,12 +80,11 @@ namespace Dune
         }
         AtA.solve( normal, Atb );
 
-        if( !normalize( normal ) )
-          return false;
+        if( normal.two_norm2() < std::numeric_limits< ctype >::epsilon() )
+          return;
 
-        computeInterfaceLinePosition( geometry, colorEn, reconstruction, intersections_ );
-
-        return true;
+        normalize( normal );
+        computeInterfaceLinePosition( geometry, colorEn, reconstruction );
       }
 
       Matrix outerProduct ( const Vector &a, const Vector &b ) const
@@ -102,8 +99,6 @@ namespace Dune
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencils
 
       StencilSet &stencils_;
-
-      mutable std::vector< Coordinate > intersections_;
     };
 
   }       // end of namespace VoF

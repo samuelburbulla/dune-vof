@@ -30,9 +30,8 @@ namespace Dune {
       return polygon.volume() / geo.volume();
     }
 
-
-    template< class Geometry, class Color, class Reconstruction, class PointList>
-    void computeInterfaceLinePosition ( const Geometry &geo, const Color &concentration, Reconstruction &g, PointList &intersections )
+    template< class Geometry, class Color, class Reconstruction >
+    void computeInterfaceLinePosition ( const Geometry &geo, const Color &concentration, Reconstruction &g )
     {
       using vtype = decltype( geo.volume() );
       using limits = std::numeric_limits< vtype >;
@@ -74,8 +73,6 @@ namespace Dune {
                                         Reconstruction h( g.normal(), p );
                                         return ( getVolumeFraction( geo, h ) - concentration );
                                      }, pMin, pMax, 1e-12 );
-
-      lineCellIntersections( geo, g, intersections );
     }
 
   } // namespace VoF

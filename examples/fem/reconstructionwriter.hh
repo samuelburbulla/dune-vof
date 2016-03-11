@@ -5,9 +5,13 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <vector>
+
+#include <dune/common/exceptions.hh>
 
 // local includes
 #include "vtu.hh"
+
 
 
 // ReconstructionWriter
@@ -23,7 +27,9 @@ struct ReconstructionWriter
     std::vector< Polygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
-      const auto& is = reconstructionSet.intersections( entity );
+      // const auto& is = reconstructionSet.intersections( entity );
+      DUNE_THROW( Dune::NotImplemented, "entity / hyperplane intersection." );
+      std::vector< typename Polygon::Position > is;
 
       if ( !is.empty() )
         io.emplace_back( Polygon ( is, reconstructionSet[ entity ].normal() ) );

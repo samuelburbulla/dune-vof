@@ -5,6 +5,8 @@
 #include <numeric>
 #include <vector>
 
+#include <dune/common/exceptions.hh>
+
 #include <dune/vof/geometry/algorithm.hh>
 
 namespace Dune
@@ -56,7 +58,6 @@ namespace Dune
             continue;
 
           applyLocal( entity, flags, color, reconstructions );
-          reconstructions.intersections( entity ) = intersectionsEn_;
         }
 
         auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
@@ -70,15 +71,15 @@ namespace Dune
         std::size_t iterations = 0;
         Reconstruction &reconstruction = reconstructions[ entity ];
         Coordinate newNormal, &normal = reconstruction.normal();
-        intersectionsEn_ = reconstructions.intersections( entity );
 
         const auto geoEn = entity.geometry();
         const auto &stencilEn = stencil( entity );
         do
         {
-          assert( intersectionsEn_.size() != 0 );
-          Coordinate centerEn = std::accumulate( intersectionsEn_.begin(), intersectionsEn_.end(), Coordinate( 0.0 ) );
-          centerEn *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsEn_.size() ) );
+          DUNE_THROW( NotImplemented, "entity / hyplerplane intersection." );
+          Coordinate centerEn;
+          // Coordinate centerEn = std::accumulate( intersectionsEn_.begin(), intersectionsEn_.end(), Coordinate( 0.0 ) );
+          // centerEn *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsEn_.size() ) );
 
           newNormal = Coordinate( 0.0 );
           for( const auto &neighbor : stencilEn )
@@ -93,11 +94,12 @@ namespace Dune
               continue;
 
             Reconstruction reconstructionNb( normal, 0.0 );
-            computeInterfaceLinePosition( neighbor.geometry(), color[ neighbor ], reconstructionNb, intersectionsNb_ );
+            computeInterfaceLinePosition( neighbor.geometry(), color[ neighbor ], reconstructionNb );
 
-            assert( intersectionsNb_.size() != 0 );
-            Coordinate centerNb = std::accumulate( intersectionsNb_.begin(), intersectionsNb_.end(), Coordinate( 0.0 ) );
-            centerNb *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsNb_.size() ) );
+            DUNE_THROW( NotImplemented, "entity / hyplerplane intersection." );
+            Coordinate centerNb;
+            // Coordinate centerNb = std::accumulate( intersectionsNb_.begin(), intersectionsNb_.end(), Coordinate( 0.0 ) );
+            // centerNb *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsNb_.size() ) );
 
             Coordinate centerNormal = rotateCCW( centerNb - centerEn );
             assert( centerNormal.two_norm2() > 0.0 );
@@ -118,7 +120,7 @@ namespace Dune
           normalize( newNormal );
 
           std::swap( newNormal, normal );
-          computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction, intersectionsEn_ );
+          computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction );
 
           ++iterations;
         }
@@ -131,9 +133,6 @@ namespace Dune
       StencilSet &stencils_;
       InitialReconstruction initializer_;
       const std::size_t maxIterations_;
-
-      mutable std::vector< Coordinate > intersectionsEn_;
-      mutable std::vector< Coordinate > intersectionsNb_;
     };
 
   } // namespace VoF
