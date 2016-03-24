@@ -5,8 +5,10 @@
 #include <cstddef>
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <dune/common/deprecated.hh>
@@ -14,6 +16,7 @@
 #include <dune/common/typetraits.hh>
 
 #include <dune/vof/geometry/halfspace.hh>
+#include <dune/vof/geometry/polygon.hh>
 #include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
 
@@ -118,20 +121,22 @@ namespace Dune {
         return __impl::intersect( b, a );
       }
 
+      A a_;
+      B b_;
+
     public:
       GeometricIntersection ( A a, B b )
       : a_( a ), b_( b )
       {}
 
-      using Result = decltype( apply( std::declval< A >(), std::declval< B >() ) );
+
+      using Result = decltype( apply( std::declval< decltype( std::cref( a_ ).get() ) >(),
+                                      std::declval< decltype( std::cref( b_ ).get() ) >() ) );
 
       operator Result ()
       {
-        return apply( a_, b_ );
+        return apply( std::cref( a_ ).get() , std::cref( b_ ).get() );
       }
-
-      A a_;
-      B b_;
     };
 
     template< class A, class B >
