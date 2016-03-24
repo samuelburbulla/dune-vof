@@ -46,62 +46,79 @@ namespace Dune {
         DUNE_THROW( NotImplemented, "__impl::intersect( ... ) not yet implemented." );
       }
 
-      // old implementation for testing...
+      // polygon implementations
 
-      template< class Geometry >
-      auto DUNE_DEPRECATED_MSG( "" ) intersect ( const Geometry& geometry, const HyperPlane< typename Geometry::GlobalCoordinate >& plane ) -> std::vector< typename Geometry::GlobalCoordinate >
+      template< class Coord >
+      auto intersect ( const Polygon< Coord >& polygon, const HalfSpace< Coord >& halfSpace ) -> Polygon< Coord >
       {
-        using Coordinate = typename Geometry::GlobalCoordinate;
-        using limits = std::numeric_limits< typename Coordinate::value_type >;
+        if ( !halfSpace )
+          return Polygon< Coord >();
 
-        using std::abs;
+        auto container = typename Line< Coord >::Container();
+        container.reserve( polygon.size() );
 
-        std::vector< Coordinate > intersections;
-
-        const int dim = 2;  // only two-dimensional
-        const auto &refElement = Dune::ReferenceElements< double, dim >::general( geometry.type() );
-
-        for( int k = 0; k < refElement.size( dim-1 ); ++k )
+        for( int i = 0; i < polygon.size( 1 ); ++i )
         {
-          int i = refElement.subEntity( k, dim-1, 0, dim );
-          int j = refElement.subEntity( k, dim-1, 1, dim );
+          auto edge = polygon.edge( i );
 
-          const Coordinate& x0 = geometry.corner( i );
-          const Coordinate& x1 = geometry.corner( j );
+          auto l0 = halfSpace.levelSet( edge.vertex( 0 ) );
+          auto l1 = halfSpace.levelSet( edge.vertex( 1 ) );
 
-          auto c0 = plane.levelSet( x0 );
-          auto c1 = plane.levelSet( x1 );
+          if( l0 > 0.0 )
+            container.push_back( edge.vertex( 0 ) );
 
-          if( ( c0 > 0.0 ) ^ ( c1 > 0.0 ) )
+          if ( ( l0 > 0.0 ) ^ ( l1 > 0.0 ) )
           {
-            Coordinate point;
-            point.axpy( -c1 / ( c0 - c1 ), x0 );
-            point.axpy(  c0 / ( c0 - c1 ), x1 );
+            Coord point;
+            point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
+            point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
 
-            // add intersection point
-            intersections.push_back( point );
+            container.push_back( point );
           }
-          else if( abs( c0 ) < limits::epsilon() )
-            intersections.push_back( x0 );
-          else if( abs( c1 ) < limits::epsilon() )
-            intersections.push_back( x1 );
         }
 
-        std::sort( intersections.begin(), intersections.end(),
-          [] ( const Coordinate& v, const Coordinate& w )
-          {
-            if ( v[ 0 ] == w[ 0 ] )
-              return v[ 1 ] < w[ 1 ];
-            return v[ 0 ] < w[ 0 ];
-          } );
-
-        auto it = std::unique( intersections.begin(), intersections.end(),
-          [] ( const Coordinate& v, const Coordinate& w ) { return ( v - w ).two_norm2() < limits::epsilon(); } );
-        intersections.resize( std::distance( intersections.begin(), it ) );
-
-        return intersections;
+        if ( container.empty() )
+          return Polygon< Coord >();
+        else
+          return Polygon< Coord >( std::move( container ) );
       }
 
+      template< class Coord >
+      auto intersect ( const Polygon< Coord >& polygon, const HyperPlane< Coord >& plane ) -> Line< Coord >
+      {
+        using limits = std::numeric_limits< typename Coord::value_type >;
+        using std::abs;
+
+        if ( !plane )
+          return Line< Coord >();
+
+        auto container = typename Line< Coord >::Container();
+        container.reserve( 2u );
+
+        for( int i = 0; i < polygon.size( 1 ); ++i )
+        {
+          auto edge = polygon.edge( i );
+
+          auto l0 = plane.levelSet( edge.vertex( 0 ) );
+          auto l1 = plane.levelSet( edge.vertex( 1 ) );
+
+          if ( ( l0 > 0.0 ) ^ ( l1 > 0.0 ) )
+          {
+            Coord point;
+            point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
+            point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
+
+            container.push_back( point );
+          }
+          else if ( abs( l0 ) < limits::epsilon() )
+            container.push_back( edge.vertex( 0 ) );
+        }
+
+        if ( container.empty() )
+          return Line< Coord >();
+        else
+          return Line< Coord >( std::move( container ) );
+      }
 
     } // namespace __impl
 
