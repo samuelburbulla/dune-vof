@@ -23,8 +23,8 @@ namespace Dune {
     template< class, int > class Polytope;
 
 
-    // AlgebraicPolytop
-    // ----------------
+    // AlgebraicPolytope
+    // -----------------
 
     template< int dim >
     class AlgebraicPolytope
@@ -44,7 +44,7 @@ namespace Dune {
       // constructors ?
       // ...
 
-      int size ( int codim = 0 ) const
+      int size ( int codim = dim ) const
       {
         DUNE_THROW( NotImplemented, "size( ... ) not yet imeplemented." );
         return 0;
@@ -62,8 +62,8 @@ namespace Dune {
     };
 
 
-    // Polytop
-    // -------
+    // Polytope
+    // --------
 
     template< class Coord, int dim >
     class Polytope
@@ -85,14 +85,15 @@ namespace Dune {
 
       static constexpr int dimension = dim;
       static constexpr int dimensionworld = Coordinate::dimension;
+      static_assert( dimension <= dimensionworld, "dimension larger than dimensionworld." );
 
       Polytope ( const Topology& topology, const Container& vertices )
       : topology_( topology ), vertices_( vertices.begin(), vertices.end() )
       {
-        assert( size( 0 ) == vertices().size() );
+        assert( size( dim ) == vertices().size() );
       };
 
-      int size ( int codim = 0 ) const { return topology().size( codim ); }
+      int size ( int codim = dim ) const { return topology().size( codim ); }
       const Topology& topology () const { return topology_; }
 
       // subTopology, subPolytope ... ?
@@ -100,7 +101,7 @@ namespace Dune {
 
       const Coordinate& vertex ( int i ) const
       {
-        assert( i < size( 0 ) );
+        assert( i < size( dim ) );
         return vertices_[ i ];
       }
 
@@ -116,19 +117,6 @@ namespace Dune {
         return 0.0;
       }
 
-      // old interface ...
-      // -----------------
-
-      int corners () const DUNE_DEPRECATED_MSG( "Use size( 0 ) instead." ) { return topology().size( 0 ); }
-
-      const Coordinate& operator[] ( int i ) const DUNE_DEPRECATED_MSG( "Use vertex( ... ) and topology information instead." )
-      {
-        return vertices_[ i % vertices_.size() ];
-      }
-
-      void addVertex ( const Coordinate&, bool = false, double = 1e-12 ) DUNE_DEPRECATED_MSG( "Functionality removed from interface." ) {}
-      void clear () DUNE_DEPRECATED_MSG( "Functionality removed from interface." ) {}
-
     private:
       const Container& vertices ()  const { return vertices_; }
 
@@ -136,67 +124,6 @@ namespace Dune {
       Container vertices_;
     };
 
-
-
-     // OLD CODE / INTERFACE
-
-     // konvexes 2D-Polygon
-    template< class DomainVector >
-    struct DUNE_DEPRECATED_MSG( "Use Polytope< ... > when it is implemented." ) Polygon2D
-    {
-      Polygon2D< DomainVector >() {}
-
-      const DomainVector operator[] ( const int i ) const { return points[ i % points.size() ]; }
-
-      void addVertex ( const DomainVector &vertex, const bool correctOrder = false, const double TOL = 1e-12 )
-      {
-        std::size_t n = points.size();
-
-        // no specific order needed or vertex explicitly given in correct order
-        if( n == 0 || n == 1 || correctOrder )
-        {
-          points.push_back( vertex );
-        }
-        else
-        {
-          // insert new vertex in counterclockwise order
-          for( std::size_t i = 0; i < n; ++i )
-          {
-            auto normal = points[ (i+1)%n ] - points[ i ];
-            std::swap( normal[ 0 ], normal[ 1 ] );
-            normal[ 0 ] *= -1.0;
-
-            auto center = points[ i ];
-            center += points[ (i+1)%n ];
-            center *= 0.5;
-
-            center -= vertex;
-
-            if( normal * center > 0 )
-            {
-              points.insert( points.begin() + i + 1, vertex );
-              break;
-            }
-          }
-        }
-      }
-
-      const std::size_t corners () const { return points.size(); }
-
-      double volume () const
-      {
-        double sum = 0;
-        int n = points.size();
-        for( int i = 0; i < n; i++ )
-          sum += ( points[ i ][ 1 ] + points[ (i+1)%n ][ 1 ] ) * ( points[ i ][ 0 ] - points[ (i+1)%n ][ 0 ] );
-        return sum / 2.0;
-      }
-
-      void clear () { points.clear(); }
-
-    private:
-      std::vector< DomainVector > points;
-    };
 
   } // namespace VoF
 
