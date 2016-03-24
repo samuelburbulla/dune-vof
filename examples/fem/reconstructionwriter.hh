@@ -9,6 +9,10 @@
 
 #include <dune/common/exceptions.hh>
 
+#include <dune/vof/geometry/intersection.hh>
+#include <dune/vof/geometry/polygon.hh>
+#include <dune/vof/geometry/polytope.hh>
+
 // local includes
 #include "vtu.hh"
 
@@ -24,15 +28,20 @@ struct ReconstructionWriter
 
   void write( const ReconstructionSet &reconstructionSet )
   {
+    using Dune::VoF::make_polygon;
+    using Dune::VoF::intersect;
+
     std::vector< Polygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
-      // const auto& is = reconstructionSet.intersections( entity );
-      DUNE_THROW( Dune::NotImplemented, "entity / hyperplane intersection." );
+      Dune::VoF::Line< typename Polygon::Position > intersection = intersect( make_polygon( entity.geometry() ), reconstructionSet[ entity ].boundary() );
+
       std::vector< typename Polygon::Position > is;
+      for( int i = 0; i < intersection.size(); ++i )
+        is.push_back( intersection.vertex( i ) );
 
       if ( !is.empty() )
-        io.emplace_back( Polygon ( is, reconstructionSet[ entity ].normal() ) );
+        io.push_back( Polygon ( is, reconstructionSet[ entity ].innerNormal() ) );
     }
 
     VTUWriter< std::vector< Polygon > > vtuwriter( io );
