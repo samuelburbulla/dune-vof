@@ -8,13 +8,9 @@
 #include <dune/common/exceptions.hh>
 
 #include <dune/vof/geometry/algorithm.hh>
-
-/*
- * TODO:
- * - [84,87], [104,107] use the proper intersection interface once implemented.
- * - remove or replace calls that trigger deprecation warnings.
- * - ...
- */
+#include <dune/vof/geometry/polygon.hh>
+#include <dune/vof/geometry/polytope.hh>
+#include <dune/vof/geometry/utility.hh>
 
 namespace Dune
 {
@@ -77,18 +73,17 @@ namespace Dune
       {
         std::size_t iterations = 0;
         Reconstruction &reconstruction = reconstructions[ entity ];
-        Coordinate newNormal, &normal = reconstruction.normal();
+        Coordinate newNormal, normal = reconstruction.innerNormal();
 
         const auto geoEn = entity.geometry();
-        const auto &stencilEn = stencil( entity );
+        const auto& stencilEn = stencil( entity );
+        auto polygonEn = make_polygon( geoEn );
+
         do
         {
-          DUNE_THROW( NotImplemented, "entity / hyplerplane intersection." );
-          Coordinate centerEn;
-          // Coordinate centerEn = std::accumulate( intersectionsEn_.begin(), intersectionsEn_.end(), Coordinate( 0.0 ) );
-          // centerEn *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsEn_.size() ) );
+          Line< Coordinate > lineEn = intersect( std::cref( polygonEn ), reconstruction.boundary() );
 
-          newNormal = Coordinate( 0.0 );
+          newNormal = Coordinate( 0 );
           for( const auto &neighbor : stencilEn )
           {
             if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
@@ -97,18 +92,13 @@ namespace Dune
             //if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
               //continue;
 
-            if ( reconstructions[ neighbor ].normal().two_norm() < std::numeric_limits< double >::epsilon() )
+            if ( reconstructions[ neighbor ].innerNormal().two_norm() < std::numeric_limits< double >::epsilon() )
               continue;
 
-            Reconstruction reconstructionNb( normal, 0.0 );
-            computeInterfaceLinePosition( neighbor.geometry(), color[ neighbor ], reconstructionNb );
+            const auto& polygonNb = make_polygon( neighbor.geometry() );
+            Line< Coordinate > lineNb = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
 
-            DUNE_THROW( NotImplemented, "entity / hyplerplane intersection." );
-            Coordinate centerNb;
-            // Coordinate centerNb = std::accumulate( intersectionsNb_.begin(), intersectionsNb_.end(), Coordinate( 0.0 ) );
-            // centerNb *= ( 1.0 / static_cast< typename Coordinate::value_type >( intersectionsNb_.size() ) );
-
-            Coordinate centerNormal = rotateCCW( centerNb - centerEn );
+            Coordinate centerNormal = generalizedCrossProduct( lineNb.centroid() - lineEn.centroid() );
             assert( centerNormal.two_norm2() > 0.0 );
             normalize( centerNormal );
 
@@ -126,9 +116,9 @@ namespace Dune
 
           normalize( newNormal );
 
-          std::swap( newNormal, normal );
-          computeInterfaceLinePosition( geoEn, color[ entity ], reconstruction );
+          reconstruction = locateHalfSpace( polygonEn, newNormal, color[ entity ] );
 
+          std::swap( newNormal, normal );
           ++iterations;
         }
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );

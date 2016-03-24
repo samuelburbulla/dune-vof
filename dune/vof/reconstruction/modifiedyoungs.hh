@@ -9,12 +9,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <dune/vof/geometry/algorithm.hh>
-
-/*
- * TODO:
- * - remove or replace calls that trigger deprecation warnings.
- * - ...
- */
+#include <dune/vof/geometry/utility.hh>
 
 namespace Dune
 {
@@ -70,7 +65,7 @@ namespace Dune
       {
         const auto geometry = entity.geometry();
 
-        Coordinate &normal = reconstruction.normal();
+        Coordinate normal;
         const Coordinate center = geometry.center();
         const auto colorEn = color[ entity ];
 
@@ -87,10 +82,13 @@ namespace Dune
         AtA.solve( normal, Atb );
 
         if( normal.two_norm2() < std::numeric_limits< ctype >::epsilon() )
+        {
+          reconstruction = Reconstruction();
           return;
+        }
 
         normalize( normal );
-        computeInterfaceLinePosition( geometry, colorEn, reconstruction );
+        reconstruction = locateHalfSpace( make_polygon( geometry ), normal, colorEn );
       }
 
       Matrix outerProduct ( const Vector &a, const Vector &b ) const
