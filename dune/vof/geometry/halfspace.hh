@@ -30,8 +30,9 @@ namespace Dune
       static constexpr int dimension = Coordinate::dimension;
       static constexpr int dimensionworld = Coordinate::dimension;
 
-      HalfSpace () = default;
-      HalfSpace ( const HalfSpace &other ) = default;
+      HalfSpace ()
+      : innerNormal_( 0 ), distanceToOrigin_( 0.0 )
+      {}
 
       HalfSpace ( const Coordinate& normal, const ctype& dist )
        : innerNormal_( normal ), distanceToOrigin_( dist )
@@ -45,10 +46,12 @@ namespace Dune
        : innerNormal_( normal ), distanceToOrigin_( -1.0*( normal * point ) )
       {}
 
-      const Coordinate& normal () const DUNE_DEPRECATED_MSG( "Use innerNormal() instead." ) { return innerNormal_; }
-      const ctype& distance () const DUNE_DEPRECATED_MSG( "distance() will be removed." ) { return distanceToOrigin_; }
-
       const Coordinate& innerNormal () const { return innerNormal_; }
+
+      Boundary boundary () const { return Boundary( innerNormal(), distanceToOrigin_ ); }
+
+      ctype levelSet ( const Coordinate& point ) const { return innerNormal() * point + distanceToOrigin_; }
+
       Coordinate outerNormal () const
       {
         Coordinate outer( innerNormal() );
@@ -56,12 +59,10 @@ namespace Dune
         return outer;
       }
 
-      Boundary boundary () const { return Boundary( innerNormal(), distanceToOrigin_ ); }
-
-      ctype levelSet ( const Coordinate& point ) const { return innerNormal() * point + distanceToOrigin_; }
-
-      Coordinate& normal () DUNE_DEPRECATED_MSG( "Mutability will be removed." ) { return innerNormal_; }
-      ctype& distance () DUNE_DEPRECATED_MSG( "Mutability will be removed." ) { return distanceToOrigin_; }
+      explicit operator bool () const
+      {
+        return innerNormal_.two_norm2() > 0.5;
+      }
 
     private:
       Coordinate innerNormal_;
@@ -81,8 +82,9 @@ namespace Dune
       static constexpr int dimension = Coordinate::dimension - 1;
       static constexpr int dimensionworld = Coordinate::dimension;
 
-      HyperPlane () = default;
-      HyperPlane ( const HyperPlane &other ) = default;
+      HyperPlane ()
+      : normal_( 0 ), distanceToOrigin_( 0.0 )
+      {}
 
       HyperPlane ( const Coordinate& normal, const ctype& dist )
        : normal_( normal ), distanceToOrigin_( dist )
@@ -91,6 +93,11 @@ namespace Dune
       ctype levelSet ( const Coordinate& point ) const { return normal_ * point + distanceToOrigin_; }
 
       operator HalfSpace< Coordinate > () const { return HalfSpace< Coordinate >( *this ); }
+
+      explicit operator bool () const
+      {
+        return normal_.two_norm2() > 0.5;
+      }
 
     private:
       friend HalfSpace< Coordinate >;
