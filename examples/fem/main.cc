@@ -78,7 +78,7 @@ const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, i
   using TimeProviderType = Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
   using DataOutputType = BinaryWriter;
-  using Stencils = Dune::VoF::EdgeNeighborsStencil< GridPartType >;
+  using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
 
   GridPartType gridPart( grid );
 
@@ -174,7 +174,7 @@ try {
   using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
   // Testproblem
-  using ProblemType = Problem< SFlow< double, GridPartType::dimensionworld >, FunctionSpaceType >;
+  using ProblemType = Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
   using SolutionType = Dune::Fem::InstationaryFunction< ProblemType >;
   using GridSolutionType = Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
   using L1NormType = Dune::Fem::L1Norm< GridPartType >;
