@@ -54,7 +54,7 @@ namespace Dune {
         if ( !halfSpace )
           return Polygon< Coord >();
 
-        auto container = typename Line< Coord >::Container();
+        auto container = typename Polygon< Coord >::Container();
         container.reserve( polygon.size() );
 
         for( int i = 0; i < polygon.size( 1 ); ++i )
