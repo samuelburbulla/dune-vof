@@ -93,8 +93,8 @@ namespace Dune {
           return Line< Coord >();
 
         auto container = typename Line< Coord >::Container();
-        container.reserve( 2u );
 
+        std::size_t j = 0u;
         for( int i = 0; i < polygon.size( 1 ); ++i )
         {
           auto edge = polygon.edge( i );
@@ -108,13 +108,13 @@ namespace Dune {
             point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
             point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
 
-            container.push_back( point );
+            container[ j++ ] = point ;
           }
           else if ( abs( l0 ) < limits::epsilon() )
-            container.push_back( edge.vertex( 0 ) );
+            container[ j++ ] = edge.vertex( 0 );
         }
 
-        if ( container.empty() )
+        if ( j < 2 )
           return Line< Coord >();
         else
           return Line< Coord >( std::move( container ) );

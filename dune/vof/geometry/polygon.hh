@@ -89,24 +89,23 @@ namespace Dune {
     public:
       using Coordinate = Coord;
       using ctype = typename Coordinate::value_type;
-      using Container = std::vector< Coordinate >;
+      using Container = std::array< Coordinate, 2 >;
 
       static constexpr int dimension = 1;
       static constexpr int dimensionworld = Coordinate::dimension;
       static_assert( dimension <= dimensionworld, "dimension larger than dimensionworld." );
 
       Line ()
+      : vertices_{ Coordinate( 0 ), Coordinate( 0 ) }
       {}
 
       Line ( Container vertices )
       : vertices_( std::move( vertices ) )
-      {
-        assert( vertices_.size() == 2 );
-      };
+      {}
 
       Line ( const Coordinate& v0, const Coordinate& v1 )
       : vertices_{ v0, v1 }
-      {};
+      {}
 
       const Coordinate& vertex ( int i ) const
       {
@@ -128,7 +127,7 @@ namespace Dune {
 
       // Implementation defined
 
-      int size ( int codim = 1 ) const { return ( codim == 0 ) ? 1 : vertices().size() ; }
+      int size ( int codim = 1 ) const { return ( codim == 0 ) ? 1 : 2; }
 
     private:
       const Container& vertices ()  const { return vertices_; }
