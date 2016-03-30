@@ -102,11 +102,23 @@ namespace Dune
             assert( centerNormal.two_norm2() > 0.0 );
             normalize( centerNormal );
 
-            if ( ( centerNormal * normal ) < 0.0 )
+            if ( centerNormal * normal < 0.0 )
               centerNormal *= -1.0;
 
-            if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
-              continue;
+
+
+            if ( std::abs( centerNormal * normal ) < 1e-3 )
+            {
+              if ( std::abs( centerNormal * reconstructions[ neighbor ].normal() ) < 1e-3 )
+                continue;
+
+              if ( centerNormal * reconstructions[ neighbor ].normal() < 0 )
+                centerNormal *= -1.0;
+            }
+
+
+            //if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
+            //  continue;
 
             newNormal += centerNormal;
           }

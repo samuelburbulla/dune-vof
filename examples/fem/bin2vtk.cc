@@ -46,17 +46,14 @@
 struct DataOutputParameters
 : public Dune::Fem::LocalParameter< Dune::Fem::DataOutputParameters, DataOutputParameters >
 {
-  DataOutputParameters ( const int level )
-  : level_( level )
-  {}
+  DataOutputParameters ( const int level, const int savecount )
+   : level_ ( level ), savecount_ ( savecount ) {}
 
-  DataOutputParameters ( const DataOutputParameters &other )
-  : level_( other.level_ )
-  {}
+  virtual bool willWrite ( bool write ) const { return true; }
 
-  bool willWrite ( ) { return true; }
+  virtual int startcounter () const { return savecount_; }
 
-  std::string prefix () const
+  virtual std::string prefix () const
   {
     std::stringstream s;
     s << "vof-fem-" << level_ << "-";
@@ -64,7 +61,7 @@ struct DataOutputParameters
   }
 
 private:
-  int level_;
+  int level_, savecount_;
 };
 
 
@@ -125,8 +122,6 @@ try {
     Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
   using DiscreteFunctionType =
     Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
-  using TimeProviderType =
-    Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
 
   GridPartType gridPart( grid );
   DiscreteFunctionSpaceType space( gridPart );
@@ -182,18 +177,12 @@ try {
     using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
     DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags );
-    DataOutputType dataOutput( grid, dataIOTuple );
-
-    double savestep = Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0 );
-    savestep *= 1.0001;
-    TimeProviderType tp ( 0.0, savestep );
-    for ( std::size_t i = 0; i < number; ++i ) tp.next();
-
-    dataOutput.write( tp, filename.str() + ".vtu" );
+    DataOutputType dataOutput( grid, dataIOTuple, DataOutputParameters( level, number ) );
+    dataOutput.write();
 
     std::stringstream pvtu;
     pvtu.fill('0');
-    pvtu << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << std::setw(6) << number << ".pvtu";
+    pvtu << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-vof-fem-" << level << "-" << std::setw(6) << number << ".pvtu";
     timepvd << "    <DataSet timestep=\"" << timeValue << "\" group=\"\" part=\"0\" file=\"" << pvtu.str() << "\"/>" << std::endl;
 
     // Write reconstruction to vtu file
@@ -214,7 +203,7 @@ try {
 
   std::stringstream seriesName;
   seriesName.fill('0');
-  seriesName << "./data/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << level;
+  seriesName << "./data/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-vof-fem-" << level;
 
   timepvd << "  </Collection>" << std::endl << "</VTKFile>" << std::endl;
   std::ofstream pvdFile ( seriesName.str() + "-data.pvd" );
