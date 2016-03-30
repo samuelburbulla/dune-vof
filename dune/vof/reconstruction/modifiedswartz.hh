@@ -89,24 +89,30 @@ namespace Dune
             if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
               continue;
 
-            //if ( ( reconstructions[ neighbor ].normal() * normal ) <= 0.0 )
-              //continue;
+            // disregard opposite interface
+            if ( ( reconstructions[ neighbor ].innerNormal() * normal ) <= 0.0 )
+              continue;
 
-            if ( reconstructions[ neighbor ].innerNormal().two_norm() < std::numeric_limits< double >::epsilon() )
+            // disregard empty neighbors
+            if ( reconstructions[ neighbor ].innerNormal() == Coordinate( 0 ) )
               continue;
 
             const auto& polygonNb = make_polygon( neighbor.geometry() );
             Line< Coordinate > lineNb = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
 
-            Coordinate centerNormal = generalizedCrossProduct( lineNb.centroid() - lineEn.centroid() );
-            assert( centerNormal.two_norm2() > 0.0 );
+            Coordinate direction = lineNb.centroid() - lineEn.centroid();
+            Coordinate centerNormal = normal;
+            centerNormal.axpy( -(normal * direction) / direction.two_norm2(), direction );
+
+            // Coordinate centerNormal = generalizedCrossProduct( lineNb.centroid() - lineEn.centroid() );
+            // assert( centerNormal.two_norm2() > 0.0 );
             normalize( centerNormal );
 
-            if ( ( centerNormal * normal ) < 0.0 )
-              centerNormal *= -1.0;
+            // if ( ( centerNormal * normal ) < 0.0 )
+            //   centerNormal *= -1.0;
 
-            if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
-              continue;
+            // if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
+            //   continue;
 
             newNormal += centerNormal;
           }
