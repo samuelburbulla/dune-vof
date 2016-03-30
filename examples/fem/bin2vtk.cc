@@ -77,16 +77,16 @@ try {
   Dune::Fem::Parameter::append( "parameter" );
 
   // check if input file is valid
-  if ( argc != 3 )
+  if ( argc != 2 )
   {
-    std::cout << "Usage: bin2vtk <name> <level>" << std::endl;
+    std::cout << "Usage: bin2vtk <level>" << std::endl;
     return 1;
   }
 
   // Create filename
   // ---------------
-  const std::string name ( argv[1] );
-  const std::size_t level ( std::stoul( argv[2] ) );
+  const std::string name ( "vof-fem" );
+  const std::size_t level ( Dune::Fem::Parameter::getValue( "fem.io.level", 0 ) );
   std::size_t number = 0;
 
 
@@ -108,7 +108,6 @@ try {
   GridType& grid = *gridPtr;
 
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
-
   Dune::Fem::GlobalRefine::apply( grid, level * refineStepsForHalf );
 
 
@@ -149,6 +148,7 @@ try {
     uh.communicate();
 
 
+
     // Rebuild flags and reconstruction
     // --------------------------------
 
@@ -167,9 +167,11 @@ try {
     flags.reflag( cuh, eps );
     reconstruction( cuh, reconstructions, flags );
 
-
     for ( auto& entity : elements( gridPart ) )
       dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
+
+
+
 
     // Write data to vtk file
     // ----------------------
