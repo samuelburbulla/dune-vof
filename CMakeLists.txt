@@ -20,6 +20,7 @@ dune_project()
 dune_enable_all_packages()
 add_subdirectory("dune")
 add_subdirectory("examples")
+add_subdirectory("doc/doxygen")
 add_subdirectory("cmake/modules")
 
 # finalize the dune project, e.g. generating config.h etc.
