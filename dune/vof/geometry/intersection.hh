@@ -17,7 +17,6 @@
 
 #include <dune/vof/geometry/halfspace.hh>
 #include <dune/vof/geometry/polygon.hh>
-#include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
 
 /*

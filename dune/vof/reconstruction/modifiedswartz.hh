@@ -9,7 +9,6 @@
 
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/polygon.hh>
-#include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
 
 namespace Dune

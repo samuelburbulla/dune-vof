@@ -9,7 +9,6 @@
 //- local includes
 #include <dune/vof/geometry/intersection.hh>
 #include <dune/vof/geometry/polygon.hh>
-#include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
 
 /*
