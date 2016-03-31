@@ -9,14 +9,9 @@
 
 #include <dune/vof/brents.hh>
 #include <dune/vof/geometry/halfspace.hh>
-#include <dune/vof/geometry/intersection.hh>
-#include <dune/vof/geometry/polygon.hh>
+#include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/geometry/2d/polygon.hh>
 
-/*
- * TODO:
- * - implement locateHalfSpace( ... )
- * - ...
- */
 
 namespace Dune {
 
@@ -33,13 +28,6 @@ namespace Dune {
 
     // locateHalfSpace
     // ---------------
-
-
-    template< class Coord >
-    auto locateHalfSpace ( const Polytope< Coord, Coord::dimension >& polytope, const Coord& normal, double fill ) -> HalfSpace< Coord >
-    {
-      DUNE_THROW( NotImplemented, "locateHalfSpace( ... ) not yet implemented." );
-    }
 
     template< class Coord >
     auto locateHalfSpace ( const Polygon< Coord >& polygon, const Coord& normal, double fill ) -> HalfSpace< Coord >

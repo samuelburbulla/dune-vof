@@ -1,51 +1,22 @@
-#ifndef DUNE_VOF_GEOMETRY_INTERSECT_HH
-#define DUNE_VOF_GEOMETRY_INTERSECT_HH
+#ifndef DUNE_VOF_GEOMETRY_2D_INTERSECT_HH
+#define DUNE_VOF_GEOMETRY_2D_INTERSECT_HH
 
 #include <cassert>
 #include <cstddef>
 
 #include <algorithm>
-#include <functional>
 #include <limits>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include <dune/common/deprecated.hh>
-#include <dune/common/exceptions.hh>
-#include <dune/common/typetraits.hh>
-
 #include <dune/vof/geometry/halfspace.hh>
-#include <dune/vof/geometry/polygon.hh>
-#include <dune/vof/geometry/utility.hh>
-
-/*
- * TODO:
- * - implement intersection implementations (free functions / callable ?)
- * - ...
- */
+#include <dune/vof/geometry/2d/polygon.hh>
 
 namespace Dune {
 
   namespace VoF {
 
     namespace __impl {
-
-      // intersect( ... ) implementations
-
-      template< class Coord >
-      auto intersect ( const Polytope< Coord, Coord::dimension >& polytope, const HalfSpace< Coord >& halfSpace ) -> Polytope< Coord, Coord::dimension >
-      {
-        DUNE_THROW( NotImplemented, "__impl::intersect( ... ) not yet implemented." );
-      }
-
-      template< class Coord >
-      auto intersect ( const Polytope< Coord, Coord::dimension >& polytope, const HyperPlane< Coord >& plane ) -> Polytope< Coord, Coord::dimension-1 >
-      {
-        DUNE_THROW( NotImplemented, "__impl::intersect( ... ) not yet implemented." );
-      }
-
-      // polygon implementations
 
       template< class Coord >
       auto intersect ( const Polygon< Coord >& polygon, const HalfSpace< Coord >& halfSpace ) -> Polygon< Coord >
@@ -121,48 +92,8 @@ namespace Dune {
 
     } // namespace __impl
 
-
-    template< class A, class B >
-    class GeometricIntersection
-    {
-      template< class A_, class B_ >
-      static auto apply ( const A_& a, const B_& b ) -> decltype( __impl::intersect( std::declval< A_ >(), std::declval< B_ >() ) )
-      {
-        return __impl::intersect( a, b );
-      }
-
-      template< class A_, class B_ >
-      static auto apply ( const A_& a, const B_& b ) -> std::enable_if_t< !std::is_same< A_, B_ >::value, decltype( __impl::intersect( std::declval< B_ >(), std::declval< A_ >() ) ) >
-      {
-        return __impl::intersect( b, a );
-      }
-
-      A a_;
-      B b_;
-
-    public:
-      GeometricIntersection ( A a, B b )
-      : a_( a ), b_( b )
-      {}
-
-
-      using Result = decltype( apply( std::declval< decltype( std::cref( a_ ).get() ) >(),
-                                      std::declval< decltype( std::cref( b_ ).get() ) >() ) );
-
-      operator Result ()
-      {
-        return apply( std::cref( a_ ).get() , std::cref( b_ ).get() );
-      }
-    };
-
-    template< class A, class B >
-    auto intersect ( A&& a, B&& b ) -> GeometricIntersection< A, B >
-    {
-      return GeometricIntersection< A, B >( std::forward< A >( a ), std::forward< B >( b ) );
-    }
-
   } // namespace VoF
 
 } // namespace Dune
 
-#endif // #ifndef DUNE_VOF_GEOMETRY_INTERSECT_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_2D_INTERSECT_HH

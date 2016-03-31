@@ -90,13 +90,6 @@ namespace Dune
     }
 
 
-    template< class DomainVector >
-    inline static DomainVector DUNE_DEPRECATED_MSG( "Use generalizedCrossProduct( ... ) instead." ) rotateCCW ( const DomainVector &v )
-    {
-      return generalizedCrossProduct( v );
-    }
-
-
     // normalize
     // ---------
 

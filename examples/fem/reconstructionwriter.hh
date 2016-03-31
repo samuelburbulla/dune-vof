@@ -9,8 +9,8 @@
 
 #include <dune/common/exceptions.hh>
 
-#include <dune/vof/geometry/intersection.hh>
-#include <dune/vof/geometry/polygon.hh>
+#include <dune/vof/geometry/2d/polygon.hh>
+#include <dune/vof/geometry/intersect.hh>
 
 // local includes
 #include "vtu.hh"

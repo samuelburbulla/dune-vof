@@ -7,15 +7,9 @@
 #include <dune/common/fvector.hh>
 
 //- local includes
-#include <dune/vof/geometry/intersection.hh>
-#include <dune/vof/geometry/polygon.hh>
+#include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>
 
-/*
- * TODO:
- * - use Polytope and once it is implemented.
- * - ...
- */
 
 namespace Dune
 {
