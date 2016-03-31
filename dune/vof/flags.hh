@@ -14,6 +14,12 @@ namespace Dune
 
     // Flag the entities of a gridView as mixed or active
 
+    /**
+     * \ingroup Method
+     * \brief set of flags
+     *
+     * \tparam  GV  grid view
+     */
     template< class GV >
     struct Flags
     {
@@ -34,6 +40,11 @@ namespace Dune
 
 
     private:
+      /**
+       * \brief MPI communication handler
+       *
+       * \tparam  Reduce  reduction functor
+       */
       template< class Reduce >
       struct Exchange;
 
@@ -56,6 +67,13 @@ namespace Dune
 
       const std::size_t size() const { return mapper_.size(); }
 
+      /**
+       * \brief update set of flags
+       *
+       * \tparam  DF  discrete function type
+       * \param color discrete function
+       * \param eps   marker tolerance
+       */
       template< class DF >
       void reflag ( const DF& color, const double eps )
       {
@@ -125,6 +143,13 @@ namespace Dune
     };
 
 
+    /**
+     * \ingroup Method
+     * \brief generate set of flags
+     *
+     * \tparam GV grid view
+     * \param gridView
+     */
     template< class GV >
     inline static Flags< GV > flags ( const GV &gridView )
     {

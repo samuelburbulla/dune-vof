@@ -21,6 +21,13 @@ namespace Dune
     // MCMGMapper
     // ----------
 
+    /**
+     * \ingroup Other
+     * \brief multiple codim multipe geometry type mapper
+     *
+     * \tparam GV       grid view
+     * \tparam Layout   mapper layout
+     */
     template< typename GV, template< int > class Layout >
     class MCMGMapper
     {

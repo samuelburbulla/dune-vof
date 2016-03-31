@@ -25,6 +25,7 @@ namespace Dune {
   namespace VoF {
 
     /**
+     * \ingroup Geometry
      * \brief expression template for intersection algorithms
      */
     template< class A, class B >
@@ -60,6 +61,7 @@ namespace Dune {
 
 
     /**
+     * \ingroup Geometry
      * \brief intersect two geometric bodies
      */
     template< class A, class B >

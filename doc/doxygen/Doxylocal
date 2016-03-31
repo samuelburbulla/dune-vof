@@ -1,1 +1,3 @@
-INPUT                 += @top_srcdir@/dune/
+INPUT += @srcdir@/mainpage.txt \
+         @srcdir@/modules.txt \
+         @top_srcdir@/dune/

@@ -10,7 +10,6 @@
 #include <dune/common/deprecated.hh>
 #include <dune/common/exceptions.hh>
 
-
 namespace Dune {
 
   namespace VoF {
@@ -19,6 +18,12 @@ namespace Dune {
     template< class > class Line;
 
 
+    /**
+     * \ingroup geo2d
+     * \brief (oriented) polygon
+     *
+     * \tparam  Coord  global coordinate type
+     */
     template< class Coord >
     class Polygon
     {
@@ -43,18 +48,27 @@ namespace Dune {
         assert( vertices_.size() > 0 );
       }
 
+      /**
+       * \brief i-th vertex
+       */
       const Coordinate& vertex ( int i ) const
       {
         assert( i < size( 2 ) );
         return vertices()[ i ];
       }
 
+      /**
+       * \brief i-th edge
+       */
       Edge edge ( int i ) const
       {
         assert( i < size( 1 ) );
         return Edge{ vertex( i ), vertex( (i+1)%size( 1 ) ) };
       }
 
+      /**
+       * \brief signed volume
+       */
       ctype volume () const
       {
         double sum = 0;
@@ -64,6 +78,9 @@ namespace Dune {
         return sum / 2.0;
       }
 
+      /**
+       * \brief centroid
+       */
       Coordinate centroid () const
       {
         DUNE_THROW( NotImplemented, "Polygon.centroid() not yet implemented." );
@@ -79,7 +96,12 @@ namespace Dune {
       Container vertices_;
     };
 
-
+    /**
+     * \ingroup geo2d
+     * \brief (oriented) line
+     *
+     * \tparam  Coord  global coordinate type
+     */
     template< class Coord >
     class Line
     {
@@ -113,11 +135,17 @@ namespace Dune {
         return vertices()[ i ];
       }
 
+      /**
+       * \brief signed volume
+       */
       ctype volume () const
       {
         return ( vertex( 0 ) - vertex( 1 ) ).two_norm();
       }
 
+      /**
+       * \brief centroid
+       */
       Coordinate centroid () const
       {
         auto c = vertex( 0 ) + vertex( 1 );
@@ -136,12 +164,25 @@ namespace Dune {
     };
 
 
+    /**
+     * \ingroup geo2d
+     * \brief generate polygon
+     *
+     * \param vertices vertices assumed to be in order
+     * \tparam  Coord  global coordinate type
+     */
     template< class Coord >
     static inline auto make_polygon( std::vector< Coord > vertices ) -> Polygon< Coord >
     {
       return Polygon< Coord >( std::move( vertices) );
     }
 
+    /**
+     * \ingroup geo2d
+     * \brief generate polygon
+     *
+     * \param geometry dune geometry
+     */
     template< class Geometry >
     static inline auto make_polygon( const Geometry& geometry ) -> Polygon< typename Geometry::GlobalCoordinate >
     {

@@ -12,9 +12,15 @@ namespace Dune
   {
 
 
-    // FEMDFWRAPPER
-    // -------------
+    // FemDiscreteFunctionWrapper
+    // --------------------------
 
+    /**
+     * \ingroup Other
+     * \brief wrapper for a dune-fem discrete function
+     *
+     * \tparam  DF  discrete function type
+     */
     template< class DF >
     struct FemDiscreteFunctionWrapper
     {

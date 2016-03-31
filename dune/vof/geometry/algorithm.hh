@@ -17,6 +17,13 @@ namespace Dune {
 
   namespace VoF {
 
+
+    /**
+     * \ingroup Geometry
+     * \brief calculate fraction of the volume of the intersection of a half space with a polygon
+     *
+     * \tparam  Coord  global coordinate type
+     */
     template< class Coord >
     double getVolumeFraction ( const Polygon< Coord > &polygon, const HalfSpace< Coord > &halfSpace )
     {
@@ -29,8 +36,17 @@ namespace Dune {
     // locateHalfSpace
     // ---------------
 
+    /**
+     * \ingroup Geometry
+     * \brief locate half space with a given normal that intersects a polygon so it has a given volume fraction
+     *
+     * \param polygon   polygon
+     * \param normal    normal vector
+     * \param fraction  volume fraction
+     * \tparam  Coord  global coordinate type
+     */
     template< class Coord >
-    auto locateHalfSpace ( const Polygon< Coord >& polygon, const Coord& normal, double fill ) -> HalfSpace< Coord >
+    auto locateHalfSpace ( const Polygon< Coord >& polygon, const Coord& normal, double fraction ) -> HalfSpace< Coord >
     {
       using ctype = typename HalfSpace< Coord >::ctype;
       using limits = std::numeric_limits< ctype >;
@@ -49,12 +65,12 @@ namespace Dune {
 
         volume = getVolumeFraction( polygon, hs );
 
-        if( ( volume <= volMax ) && ( volume >= fill ) )
+        if( ( volume <= volMax ) && ( volume >= fraction ) )
         {
           pMax = dist;
           volMax = volume;
         }
-        if( ( volume >= volMin ) && ( volume <= fill ) )
+        if( ( volume >= volMin ) && ( volume <= fraction ) )
         {
           pMin = dist;
           volMin = volume;
@@ -69,9 +85,9 @@ namespace Dune {
       else if ( volMin == volMax )
         return HalfSpace< Coord >( normal, pMin );
       else
-        return HalfSpace< Coord >( normal, brentsMethod( [ &polygon, &normal, &fill ] ( ctype p ) -> ctype {
+        return HalfSpace< Coord >( normal, brentsMethod( [ &polygon, &normal, &fraction ] ( ctype p ) -> ctype {
                                                             HalfSpace< Coord > hs( normal, p );
-                                                            return ( getVolumeFraction( polygon, hs ) - fill );
+                                                            return ( getVolumeFraction( polygon, hs ) - fraction );
                                                           }, pMin, pMax, 1e-12 ) );
     }
 

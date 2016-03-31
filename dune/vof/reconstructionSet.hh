@@ -17,6 +17,12 @@ namespace Dune
     // ReconstructionSet
     // -----------------
 
+    /**
+     * \ingroup Other
+     * \brief set of reconstructions
+     *
+     * \tparam  GV  grid view
+     */
     template< class GV >
     struct ReconstructionSet
     {
@@ -34,6 +40,9 @@ namespace Dune
       using const_iterator = typename std::vector< Reconstruction >::const_iterator;
       using Index = typename Mapper::Index;
 
+      /**
+       * \brief MPI communication handler
+       */
       struct Exchange;
 
       explicit ReconstructionSet ( const GridView &gridView )

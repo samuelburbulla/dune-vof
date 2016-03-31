@@ -10,24 +10,28 @@ namespace Dune
   namespace VoF
   {
 
+    /**
+     * \ingroup Method
+     * \brief   generate modified Swartz reconstruction operator with a modifed Youngs reconstruction as inital guess
+     * \details \see Reconstruction
+     *
+     * \tparam  GridView
+     * \tparam  Stencils
+     * \tparam  ColorFunction
+     * \param   gv        grid view
+     * \param   cf        discrete function
+     * \param   stencils  set of stencils
+     * \return [description]
+     */
     template< class GridView, class Stencils, class ColorFunction >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
-     -> decltype( ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                                ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
-                                              >( stencils ) )
+     -> ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
+                                      ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >
     {
       return ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
                                            ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                          >( stencils );
     }
-/*
-    template< class GridView, class Stencils, class ColorFunction >
-    static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
-     -> decltype( ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils ) )
-    {
-      return ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
-    }
-*/
 
   } // namespace VoF
 

@@ -20,6 +20,12 @@ namespace Dune
     // HalfSpace
     // ---------
 
+    /**
+     * \ingroup Geometry
+     * \brief half space represented as a plane in hesse normal form
+     *
+     * \tparam  Coord  global coordinate type
+     */
     template < class Coord >
     struct HalfSpace
     {
@@ -42,16 +48,28 @@ namespace Dune
       : HalfSpace( plane.normal_, plane.distanceToOrigin_ )
       {}
 
-      HalfSpace ( const Coordinate& normal, const Coordinate& point ) DUNE_DEPRECATED_MSG( "HalfSpace( normal, point ) might be inconsistent." )
+      HalfSpace ( const Coordinate& normal, const Coordinate& point )
        : innerNormal_( normal ), distanceToOrigin_( -1.0*( normal * point ) )
       {}
 
+      /**
+       * \brief inner normal (used in the representation)
+       */
       const Coordinate& innerNormal () const { return innerNormal_; }
 
+      /**
+       * \brief bounding hyperplane
+       */
       Boundary boundary () const { return Boundary( innerNormal(), distanceToOrigin_ ); }
 
+      /**
+       * \brief level set function of the bounding plane
+       */
       ctype levelSet ( const Coordinate& point ) const { return innerNormal() * point + distanceToOrigin_; }
 
+      /**
+       * \brief outer normal (returns a copy)
+       */
       Coordinate outerNormal () const
       {
         Coordinate outer( innerNormal() );
@@ -73,6 +91,12 @@ namespace Dune
     // HyperPlane
     // ----------
 
+    /**
+     * \ingroup Geometry
+     * \brief plane in hesse normal form
+     *
+     * \tparam  Coord  global coordinate type
+     */
     template< class Coord >
     struct HyperPlane
     {
@@ -90,8 +114,14 @@ namespace Dune
        : normal_( normal ), distanceToOrigin_( dist )
       {}
 
+      /**
+       * \brief level set
+       */
       ctype levelSet ( const Coordinate& point ) const { return normal_ * point + distanceToOrigin_; }
 
+      /**
+       * \brief cast into half space bounded by this plane
+       */
       operator HalfSpace< Coordinate > () const { return HalfSpace< Coordinate >( *this ); }
 
       explicit operator bool () const

@@ -16,11 +16,20 @@ namespace Dune
   namespace VoF
   {
 
-    // maybe further "dunified" with trait classes ...
-
     // ModifiedSwartzReconstruction
     // ----------------------------
 
+
+    /**
+     * \ingroup   Reconstruction
+     * \brief     modified Swartz reconstruction operator
+     * \details   Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 15ff
+     *
+     * \tparam  DF  discrete function type
+     * \tparam  RS  reconstruction set type
+     * \tparam  StS stencils type
+     * \tparam  IR  initial reconstruction type
+     */
     template< class DF, class RS, class StS, class IR >
     struct ModifiedSwartzReconstruction
     {
@@ -48,7 +57,14 @@ namespace Dune
        : stencils_( stencils ), initializer_( stencils ), maxIterations_( maxIterations )
       {}
 
-
+      /**
+       * \brief   (global) operator application
+       *
+       * \tparam  Flags           set
+       * \param   color           color function
+       * \param   reconstructions set of interface
+       * \param   flags           set of flags
+       */
       template< class Flags >
       void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
       {
@@ -67,6 +83,15 @@ namespace Dune
       }
 
     private:
+      /**
+       * \brief   (local) operator application
+       *
+       * \tparam  Flags
+       * \param   entity          current element
+       * \param   flags           set of flags
+       * \param   color           color functions
+       * \param   reconstructions set of reconstruction
+       */
       template< class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, ReconstructionSet &reconstructions ) const
       {

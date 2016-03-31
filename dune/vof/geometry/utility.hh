@@ -12,6 +12,9 @@ namespace Dune
   namespace VoF
   {
 
+    /**
+     * /brief namespace containing specific implementations
+     */
     namespace __impl {
 
       // isHomogeneous
@@ -35,10 +38,18 @@ namespace Dune
       {};
 
 
+      /**
+       * \brief   check if all types in a parameter pack are the same
+       *
+       * \tparam  ...Ts   pack of types
+       */
       template< class ... Ts >
       struct isHomogeneous : isHomogeneousHelper< Ts ... >
       {};
 
+      /**
+       * \brief   specialisation of isHomogeneous for an empty pack
+       */
       template<>
       struct isHomogeneous<> : std::false_type
       {};
@@ -46,10 +57,18 @@ namespace Dune
 
       // GCPImpl
       // -------
-
+       /**
+        * \brief generalized cross product implementation
+        *
+        * \tparam   T   type of coordinate
+        * \tparam   I   number of arguments
+        */
       template< class T, std::size_t I, class SFINAE = std::enable_if_t< T::dimension-1 == I > >
       struct GCPImpl;
 
+      /**
+       * \brief generalized cross product implementation for 2D
+       */
       template< class T >
       struct GCPImpl< T, 1 >
       {
@@ -62,6 +81,9 @@ namespace Dune
         }
       };
 
+      /**
+       * \brief generalized cross product implementation for 3D
+       */
       template< class T >
       struct GCPImpl< T, 2 >
       {
@@ -83,6 +105,13 @@ namespace Dune
     // generalizedCrossProduct
     // -----------------------
 
+    /**
+     * \ingroup Geometry
+     * \brief generalized cross product
+     *
+     * \tparam  ...Coords   global coordinates
+     * \param   coords      pack of coordinates
+     */
     template< class ... Coords >
     auto generalizedCrossProduct ( const Coords& ... coords ) -> typename __impl::GCPImpl< typename __impl::isHomogeneous< Coords ... >::type, sizeof...(Coords) >::Coordinate
     {
@@ -93,10 +122,17 @@ namespace Dune
     // normalize
     // ---------
 
+    /**
+     * \ingroup Geometry
+     * \brief normalize vector
+     *
+     * \tparam  Coord   global coordinate type
+     * \param   v       vector
+     */
     template< class Coord >
-    auto normalize ( Coord &normal ) -> void_t< decltype( std::declval< Coord >().two_norm() ) >
+    auto normalize ( Coord &v ) -> void_t< decltype( std::declval< Coord >().two_norm() ) >
     {
-      normal /= normal.two_norm();
+      v /= v.two_norm();
     }
 
 

@@ -12,6 +12,12 @@ namespace Dune
     // EdgeNeighborsStencil
     // ----------------------
 
+    /**
+     * \ingroup Method
+     * \brief  set of edge neighbors stencils
+     *
+     * \tparam  GV  grid view
+     */
     template< class GV >
     struct EdgeNeighborsStencil
     {

@@ -15,13 +15,25 @@ namespace Dune
   namespace VoF
   {
 
-    // brent
-    // -----
+    // brentsMethod
+    // ------------
 
-    //Quelle: Wikipedia (Brent-Verfahren)
+    /**
+     * \ingroup Other
+     * \brief Brendt's method
+     *
+     * \tparam  F             functor type
+     * \tparam  X             real type
+     * \tparam  Y             real type
+     * \param   f             functor (X -> Y)
+     * \param   a,b           pair of interval bounds and functor value
+     * \param   tolerance     tolerance
+     * \param   maxIterations maximum number of iterations
+     */
     template< class F, class X, class Y >
-    inline static typename std::enable_if< std::is_arithmetic< X >::value && std::is_arithmetic< Y >::value, std::pair< X, Y > >::type
-    brentsMethod ( F f, std::pair< X, Y > a, std::pair< X, Y > b, X tolerance, std::size_t maxIterations = std::numeric_limits< std::size_t >::max() )
+    inline static auto brentsMethod ( F f, std::pair< X, Y > a, std::pair< X, Y > b, X tolerance,
+                                      std::size_t maxIterations = std::numeric_limits< std::size_t >::max() )
+      -> typename std::enable_if< std::is_arithmetic< X >::value && std::is_arithmetic< Y >::value, std::pair< X, Y > >::type
     {
       using std::abs;
       using Z = decltype( a.second * b.second );
@@ -104,9 +116,21 @@ namespace Dune
       return b;
     }
 
+    /**
+     * \ingroup Other
+     * \brief Brendt's method
+     *
+     * \tparam  F             functor type
+     * \tparam  T             real type
+     * \param   f             functor
+     * \param   a,b           interval bounds
+     * \param   tolerance     tolerance
+     * \param   maxIterations maximum number of iterations
+     */
     template< class F, class T >
-    inline static typename std::enable_if< std::is_arithmetic< T >::value, T >::type
-    brentsMethod ( F f, T a, T b, T tolerance, std::size_t maxIterations = std::numeric_limits< std::size_t >::max() )
+    inline static auto brentsMethod ( F f, T a, T b, T tolerance,
+                                      std::size_t maxIterations = std::numeric_limits< std::size_t >::max() )
+      -> typename std::enable_if< std::is_arithmetic< T >::value, T >::type
     {
       using std::abs;
 

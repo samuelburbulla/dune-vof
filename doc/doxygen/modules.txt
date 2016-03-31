@@ -1,0 +1,47 @@
+/**
+  \defgroup   VoF   Dune - VoF
+*/
+
+/**
+ * \defgroup  Geometry
+ * \ingroup   VoF
+ *
+ * \brief     geometric algorithms and concepts
+ */
+
+  /**
+   * \defgroup  geo2d  2D
+   * \ingroup   Geometry
+   *
+   * \brief     implementations for geometric algorithms and concepts in 2D
+   */
+
+  /**
+   * \defgroup  geo3d  3D
+   * \ingroup   Geometry
+   *
+   * \brief     implementations for geometric algorithms and concepts in 3D
+   */
+
+/**
+ * \defgroup  Method
+ * \ingroup   VoF
+ *
+ * \brief     the VoF Method
+ */
+
+/**
+ * \defgroup  Reconstruction
+ * \ingroup   Method
+ *
+ * \brief     interface reconstructions
+ */
+
+/**
+ * \defgroup  Other
+ * \ingroup   VoF
+ *
+ * \brief     all the things not belonging in one of ther other groups
+ */
+
+

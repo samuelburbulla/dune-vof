@@ -16,6 +16,15 @@ namespace Dune
   namespace VoF
   {
 
+    /**
+     * \ingroup Reconstruction
+     * \brief   modified Youngs reconstruction operator
+     * \details Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 15ff
+     *
+     * \tparam DF   discrete function type
+     * \tparam RS   reconstruction set type
+     * \tparam StS  stencils type
+     */
     template< class DF, class RS, class StS >
     struct ModifiedYoungsReconstruction
     {
@@ -43,6 +52,14 @@ namespace Dune
        : stencils_( stencils )
       {}
 
+      /**
+       * \brief   (global) operator application
+       *
+       * \tparam  Flags
+       * \param   color           color function
+       * \param   reconstructions set of interface
+       * \param   flags           set of flags
+       */
       template< class Flags >
       void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
       {
@@ -60,6 +77,15 @@ namespace Dune
       }
 
     private:
+      /**
+       * \brief   (local) operator application
+       *
+       * \tparam  Flags
+       * \param   entity          current element
+       * \param   flags           set of flags
+       * \param   color           color functions
+       * \param   reconstructions set of reconstruction
+       */
       template< class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
       {

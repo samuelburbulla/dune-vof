@@ -1,0 +1,7 @@
+/** \mainpage Dune - VoF Automatic Documentation
+
+\section intro Introduction
+
+Welcome to the documentation pages. This documentation has been
+generated using Doxygen, a free source code documentation system for
+documenting C/C++ code.

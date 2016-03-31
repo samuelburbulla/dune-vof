@@ -19,6 +19,14 @@ namespace Dune
     // Evolution
     // ---------
 
+    /**
+     * \ingroup Method
+     * \brief operator for time evoution
+     * \details Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 24ff
+     *
+     * \tparam  RS  reconstructions set type
+     * \tparam  DF  discrete function type
+     */
     template< class RS, class DF >
     struct Evolution
     {
@@ -40,6 +48,18 @@ namespace Dune
        : eps_( eps )
       {}
 
+      /**
+       * \brief (gobal) operator application
+       *
+       * \tparam  Velocity        velocity field type
+       * \tparam  Flags
+       * \param   color           discrete function
+       * \param   reconstructions set of reconstructions
+       * \param   velocity        velocity field
+       * \param   dt              time step
+       * \param   update          discrete function of flow
+       * \param   flags           set of flags
+       */
       template< class Velocity, class Flags >
       void operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, const double dt,
                         ColorFunction &update, const Flags &flags ) const
@@ -56,6 +76,19 @@ namespace Dune
       }
 
     private:
+      /**
+       * \brief (local) operator application
+       *
+       * \tparam  Velocity        velocity field type
+       * \tparam  Flags
+       * \param   entity          current element
+       * \param   flags           set of flags
+       * \param   dt              time step
+       * \param   color           discrete function
+       * \param   reconstructions set of reconstructions
+       * \param   velocity        velocity field
+       * \param   update          discrete function of flow
+       */
       template< class Velocity, class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const double dt, const ColorFunction &color, const ReconstructionSet &reconstructions,
                         const Velocity& velocity, ColorFunction &update ) const
@@ -97,6 +130,13 @@ namespace Dune
         }
       }
 
+      /**
+       * \brief generate upwind polygon
+       *
+       * \tparam  IntersectionGeometry
+       * \param   iGeometry intersection geometry
+       * \param   v         upwind shift
+       */
       template< class IntersectionGeometry >
       inline Polygon_ upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v ) const
       {
@@ -106,6 +146,9 @@ namespace Dune
           return Polygon_( { iGeometry.corner( 1 ), iGeometry.corner( 0 ), iGeometry.corner( 0 ) - v, iGeometry.corner( 1 ) - v } );
       }
 
+      /**
+       * \brief volume of truncated upwind polygon
+       */
       inline ctype truncVolume ( const Polygon_& upwind, const Reconstruction& halfSpace ) const
       {
         Polygon_ intersection = intersect( std::cref( upwind ), std::cref( halfSpace ) );
@@ -119,6 +162,16 @@ namespace Dune
     // evolution
     // --------
 
+    /**
+     * \ingroup Method
+     * \brief generate time evolution operator
+     *
+     * \tparam  ReconstructionSet
+     * \tparam  ColorFunction
+     * \param   rs                  reconstruction set
+     * \param   eps                 marker tolerance
+     * \return [description]
+     */
     template< class ReconstructionSet, class ColorFunction >
     static inline auto evolution ( const ReconstructionSet&, const ColorFunction&, double eps ) -> decltype( Evolution< ReconstructionSet, ColorFunction >( eps ) )
     {

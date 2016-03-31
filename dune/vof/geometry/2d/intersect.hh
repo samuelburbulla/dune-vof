@@ -16,8 +16,19 @@ namespace Dune {
 
   namespace VoF {
 
+    /**
+     * \brief namespace containing specific implementations
+     */
     namespace __impl {
 
+
+      /**
+       * \ingroup geo2d
+       * \brief implementation for an intersection between a polygon and a half space
+       *
+       * \tparam  Coord  type of the global coordinate
+       * \return  the intersection polygon
+       */
       template< class Coord >
       auto intersect ( const Polygon< Coord >& polygon, const HalfSpace< Coord >& halfSpace ) -> Polygon< Coord >
       {
@@ -53,6 +64,14 @@ namespace Dune {
           return Polygon< Coord >( std::move( container ) );
       }
 
+
+      /**
+       * \ingroup geo2d
+       * \brief implementation for an intersection between a polygon and a hyperplane
+       *
+       * \tparam  Coord  type of the global coordinate
+       * \return the intersection line
+       */
       template< class Coord >
       auto intersect ( const Polygon< Coord >& polygon, const HyperPlane< Coord >& plane ) -> Line< Coord >
       {
