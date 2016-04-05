@@ -40,7 +40,7 @@ namespace Dune
       using Entity = typename ReconstructionSet::Entity;
 
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
-      using Polygon_ = Polygon< Coordinate >;
+      using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon, Polyhedron >::type;
 
       using ctype = typename ColorFunction::ctype;
     public:
@@ -138,7 +138,8 @@ namespace Dune
        * \param   v         upwind shift
        */
       template< class IntersectionGeometry >
-      inline Polygon_ upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v ) const
+      inline auto upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v ) const
+        -> typename std::enable_if< std::is_same< Polygon, Polytope >::value, Polygon >::type
       {
         if ( ( generalizedCrossProduct( iGeometry.corner( 1 ) - iGeometry.corner( 0 ) ) * v ) < 0.0 )
           return Polygon_( { iGeometry.corner( 0 ), iGeometry.corner( 1 ), iGeometry.corner( 1 ) - v, iGeometry.corner( 0 ) - v } );
@@ -146,12 +147,56 @@ namespace Dune
           return Polygon_( { iGeometry.corner( 1 ), iGeometry.corner( 0 ), iGeometry.corner( 0 ) - v, iGeometry.corner( 1 ) - v } );
       }
 
+
+      template< class IntersectionGeometry >
+      inline auto upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v ) const
+        -> typename std::enable_if< std::is_same< Polyhedron, Polytope >::value, Polyhedron >::type
+      {
+        std::vector< Coordinate > nodes;
+
+        if ( iGeometry.outerNormal() * v < 0.0 )
+        {
+          for ( std::size_t i = 0; i < iGeometry.corners(); ++i )
+          nodes.push_back( iGeometry.corner( i ) - v );
+
+          for ( std::size_t i = 0; i < iGeometry.corners(); ++i )
+          nodes.push_back( iGeometry.corner( i ) );
+        }
+        else
+        {
+          for ( std::size_t i = 0; i < iGeometry.corners(); ++i )
+            nodes.push_back( iGeometry.corner( i ) );
+
+          for ( std::size_t i = 0; i < iGeometry.corners(); ++i )
+            nodes.push_back( iGeometry.corner( i ) - v );
+        }
+
+
+        auto type = iGeometry.type();
+        if( type.isTriangle() )
+        {
+          auto geo = Dune::GeometryType;
+          geo.makePrism();
+          auto polyhedron = make_polygon( geo );
+          return Polyhedron( polyhedron, nodes );
+        }
+        else if( type.isQuadrilateral() )
+        {
+          auto geo = Dune::GeometryType;
+          geo.makeCube();
+          auto polyhedron = make_polygon( geo );
+          return Polyhedron( polyhedron, nodes );
+        }
+
+      }
+
       /**
        * \brief volume of truncated upwind polygon
        */
-      inline ctype truncVolume ( const Polygon_& upwind, const Reconstruction& halfSpace ) const
+       template < class P >
+      inline ctype truncVolume ( const P& upwind, const Reconstruction& halfSpace ) const
       {
-        Polygon_ intersection = intersect( std::cref( upwind ), std::cref( halfSpace ) );
+        P intersection = intersect( std::cref( upwind ), std::cref( halfSpace ) );
         return intersection.volume();
       }
 
