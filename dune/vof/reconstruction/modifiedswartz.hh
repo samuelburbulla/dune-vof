@@ -95,18 +95,20 @@ namespace Dune
       template< class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, ReconstructionSet &reconstructions ) const
       {
+        using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon< Coordinate >, Polyhedron< Coordinate > >::type;
+
         std::size_t iterations = 0;
         Reconstruction &reconstruction = reconstructions[ entity ];
         Coordinate newNormal, normal = reconstruction.innerNormal();
 
         const auto geoEn = entity.geometry();
         const auto& stencilEn = stencil( entity );
-        auto polygonEn = make_polygon( geoEn );
+        Polytope polygonEn ( geoEn );
 
         do
         {
           auto it1 = intersect( std::cref( polygonEn ), reconstruction.boundary() );
-          auto lineEn = std::static_cast< typename decltype( it1 )::Result > ( it1 );
+          auto lineEn = static_cast< typename decltype( it1 )::Result > ( it1 );
 
           newNormal = Coordinate( 0 );
           for( const auto &neighbor : stencilEn )
@@ -122,9 +124,9 @@ namespace Dune
             if ( reconstructions[ neighbor ].innerNormal() == Coordinate( 0 ) )
               continue;
 
-            const auto& polygonNb = make_polygon( neighbor.geometry() );
+            const Polytope& polygonNb ( neighbor.geometry() );
             auto it2 = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
-            auto lineNb = std::static_cast< typename decltype( it2 )::Result > ( it2 );
+            auto lineNb = static_cast< typename decltype( it2 )::Result > ( it2 );
 
             Coordinate direction = lineNb.centroid() - lineEn.centroid();
             Coordinate centerNormal = normal;

@@ -221,7 +221,7 @@ try {
 
       // Write reconstruction to vtu file
       // --------------------------------
-      using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
+      using Polygon = OutputPolygon< typename ReconstructionSet::Reconstruction::Coordinate >;
       using RecOutputType = ReconstructionWriter< GridPartType, ReconstructionSet, Polygon >;
       RecOutputType recOutput ( gridPart, level );
 

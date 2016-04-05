@@ -2,9 +2,11 @@
 #define DUNE_VOF_EVOLUTION_HH
 
 #include <functional>
+#include <type_traits>
 
 //- dune-common includes
 #include <dune/common/fvector.hh>
+#include <dune/geometry/referenceelements.hh>
 
 //- local includes
 #include <dune/vof/geometry/intersect.hh>
@@ -40,7 +42,7 @@ namespace Dune
       using Entity = typename ReconstructionSet::Entity;
 
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
-      using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon, Polyhedron >::type;
+      using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon< Coordinate >, Polyhedron< Coordinate > >::type;
 
       using ctype = typename ColorFunction::ctype;
     public:
@@ -139,7 +141,7 @@ namespace Dune
        */
       template< class IntersectionGeometry >
       inline auto upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v ) const
-        -> typename std::enable_if< std::is_same< Polygon, Polytope >::value, Polygon >::type
+        -> typename std::enable_if< std::is_same< Polygon< Coordinate >, Polytope >::value, Polygon< Coordinate > >::type
       {
         if ( ( generalizedCrossProduct( iGeometry.corner( 1 ) - iGeometry.corner( 0 ) ) * v ) < 0.0 )
           return Polygon_( { iGeometry.corner( 0 ), iGeometry.corner( 1 ), iGeometry.corner( 1 ) - v, iGeometry.corner( 0 ) - v } );
@@ -150,7 +152,7 @@ namespace Dune
 
       template< class IntersectionGeometry >
       inline auto upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v ) const
-        -> typename std::enable_if< std::is_same< Polyhedron, Polytope >::value, Polyhedron >::type
+        -> typename std::enable_if< std::is_same< Polyhedron< Coordinate >, Polytope >::value, Polyhedron< Coordinate > >::type
       {
         std::vector< Coordinate > nodes;
 
@@ -175,17 +177,19 @@ namespace Dune
         auto type = iGeometry.type();
         if( type.isTriangle() )
         {
-          auto geo = Dune::GeometryType;
-          geo.makePrism();
-          auto polyhedron = make_polygon( geo );
-          return Polyhedron( polyhedron, nodes );
+          Dune::GeometryType geoType;
+          geoType.makePrism();
+          auto refElement = Dune::ReferenceElements< typename Coordinate::ctype, Coordinate::dimension >::general( geoType );
+          Polyhedron< Coordinate > polyhedron ( refElement );
+          return Polyhedron< Coordinate >( polyhedron, nodes );
         }
         else if( type.isQuadrilateral() )
         {
-          auto geo = Dune::GeometryType;
-          geo.makeCube();
-          auto polyhedron = make_polygon( geo );
-          return Polyhedron( polyhedron, nodes );
+          Dune::GeometryType geoType;
+          geoType.makeCube( 3 );
+          auto refElement = Dune::ReferenceElements< typename Coordinate::ctype, Coordinate::dimension >::general( geoType );
+          Polyhedron< Coordinate > polyhedron ( refElement );
+          return Polyhedron< Coordinate >( polyhedron, nodes );
         }
 
       }

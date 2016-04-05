@@ -10,6 +10,7 @@
 #include <dune/common/exceptions.hh>
 
 #include <dune/vof/geometry/2d/polygon.hh>
+#include <dune/vof/geometry/3d/polyhedron.hh>
 #include <dune/vof/geometry/intersect.hh>
 
 // local includes
@@ -20,30 +21,34 @@
 // ReconstructionWriter
 // --------------------
 
-template < class GridView, class ReconstructionSet, class Polygon >
+template < class GridView, class ReconstructionSet, class OutputPolygon >
 struct ReconstructionWriter
 {
   ReconstructionWriter ( const GridView& gridView, const std::size_t level ) : gridView_( gridView ), level_ ( level ) {};
 
   void write( const ReconstructionSet &reconstructionSet )
   {
-    using Dune::VoF::make_polygon;
     using Dune::VoF::intersect;
+    using Coordinate = typename ReconstructionSet::Reconstruction::Coordinate;
+    using Polytope = typename std::conditional< Coordinate::dimension == 2, Dune::VoF::Polygon< Coordinate >, Dune::VoF::Polyhedron< Coordinate > >::type;
 
-    std::vector< Polygon > io;
+    std::vector< OutputPolygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
-      Dune::VoF::Line< typename Polygon::Position > intersection = intersect( make_polygon( entity.geometry() ), reconstructionSet[ entity ].boundary() );
+      Polytope polytope ( entity.geometry() );
+      auto it = intersect( polytope, reconstructionSet[ entity ].boundary() );
+      auto intersection = static_cast< typename decltype( it )::Result > ( it );
 
-      std::vector< typename Polygon::Position > is;
+      std::vector< typename OutputPolygon::Position > is;
       for( int i = 0; i < intersection.size(); ++i )
         is.push_back( intersection.vertex( i ) );
 
+
       if ( !is.empty() )
-        io.push_back( Polygon ( is, reconstructionSet[ entity ].innerNormal() ) );
+        io.push_back( OutputPolygon ( is, reconstructionSet[ entity ].innerNormal() ) );
     }
 
-    VTUWriter< std::vector< Polygon > > vtuwriter( io );
+    VTUWriter< std::vector< OutputPolygon > > vtuwriter( io );
 
     std::stringstream path;
     path << "./data/";
@@ -110,7 +115,7 @@ private:
   const GridView gridView_;
   const std::size_t level_;
   std::size_t count_ = 0;
-  mutable std::vector< Polygon > io;
+  mutable std::vector< OutputPolygon > io;
 
 };
 

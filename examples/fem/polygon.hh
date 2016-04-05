@@ -1,10 +1,10 @@
-#ifndef POLYGON_HH
-#define POLYGON_HH
+#ifndef OUTPUTPOLYGON_HH
+#define OUTPUTPOLYGON_HH
 
 #include <initializer_list>
 
 template< class PointType >
-class Polygon
+class OutputPolygon
 {
   typedef std::vector< PointType > Container;
 public:
@@ -12,9 +12,9 @@ public:
   typedef typename Container::iterator iterator;
   typedef typename Container::const_iterator const_iterator;
 
-  Polygon () {}
+  OutputPolygon () {}
 
-  Polygon ( std::vector< PointType > const &l, const PointType &normal ) : data_( l.begin(), l.end() ), normal_( normal ) {}
+  OutputPolygon ( std::vector< PointType > const &l, const PointType &normal ) : data_( l.begin(), l.end() ), normal_( normal ) {}
 
   Position &operator[] ( std::size_t i ) { return data_[ i ]; }
   const Position &operator[] ( std::size_t i ) const { return data_[ i ]; }
@@ -32,8 +32,8 @@ public:
 
   std::size_t size () const { return data_.size(); }
 
-  bool operator== ( const Polygon &other ) { return data_ == other.data_; }
-  bool operator!= ( const Polygon &other ) { return data_ != other.data_; }
+  bool operator== ( const OutputPolygon &other ) { return data_ == other.data_; }
+  bool operator!= ( const OutputPolygon &other ) { return data_ != other.data_; }
 
 private:
   Container data_;

@@ -35,6 +35,14 @@ namespace Dune {
       return intersection.volume() / polygon.volume();
     }
 
+    template< class Coord >
+    double getVolumeFraction ( const Polyhedron< Coord > &polyhedron, const HalfSpace< Coord > &halfSpace )
+    {
+      Polyhedron< Coord > intersection = intersect( std::cref( polyhedron ), std::cref( halfSpace ) );
+
+      return intersection.volume() / polyhedron.volume();
+    }
+
 
     // locateHalfSpace
     // ---------------
@@ -105,7 +113,7 @@ namespace Dune {
       Coord normal ( n );
       normal /= normal.two_norm();
 
-      double givenVolume = fraction * polyhedron.volume();
+      double givenVolume = fraction * cell.volume();
 
       const Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( normal, cell ) );
 

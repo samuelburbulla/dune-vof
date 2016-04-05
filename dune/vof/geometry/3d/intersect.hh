@@ -36,7 +36,7 @@ namespace Dune {
         if ( !halfSpace )
           return Polyhedron< Coord >();
 
-        using Coordinate = typename Hyperplane::Coordinate;
+        using Coordinate = Coord;
         using Face = typename std::vector< size_t >;
         using Edge = typename std::array< size_t, 2 >;
 
@@ -54,7 +54,7 @@ namespace Dune {
         std::vector< std::size_t > p;
 
         for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
-          if ( halfSpace.levelSet( polyhedron.node( i ) >= eps )
+          if ( halfSpace.levelSet( polyhedron.node( i ) ) >= eps )
           {
             isInner[ i ] = true;
             p.push_back( n );
@@ -221,10 +221,24 @@ namespace Dune {
         if ( !plane )
           return Polygon< Coord >();
 
+        using Coordinate = Coord;
+        using Face = typename std::vector< size_t >;
+        using Edge = typename std::array< size_t, 2 >;
+
+        const double eps = 1e-8;
+
+        std::vector< Edge > edges;
+
+        std::vector< bool > isInner ( polyhedron.nodes().size(), false );
+        std::vector< Coord > newNodes;
+        Face intersectionFace;
+
         std::size_t n = 0;
+        std::vector< std::size_t > p;
+
 
         for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
-          if ( plane.levelSet( polyhedron.node( i ) >= eps )
+          if ( plane.levelSet( polyhedron.node( i ) ) >= eps )
           {
             isInner[ i ] = true;
             p.push_back( n );
@@ -333,13 +347,21 @@ namespace Dune {
           std::swap( intersectionFace[ i+1 ], *pos );
         }
 
-        if ( intersectionFace.nodeIds().size() < 2 )
+        std::vector< Coordinate > nodes;
+        for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
+          if ( isInner[ i ] )
+            nodes.push_back( polyhedron.node( i ) );
+
+        nodes.insert( nodes.end(), newNodes.begin(), newNodes.end() );
+
+
+        if ( intersectionFace.size() < 2 )
           return Line< Coord >();
         else
         {
           std::vector< Coordinate > polygonNodes;
-          for ( std::size_t i = 0; i < intersectionFace.nodeIds().size(); ++i )
-            polygonNodes.push_back( intersectionFace.node( i ) );
+          for ( std::size_t i = 0; i < intersectionFace.size(); ++i )
+            polygonNodes.push_back( nodes[ edges[ intersectionFace[ i ] ][ 0 ] ] );
 
           return make_polygon( polygonNodes );
         }
