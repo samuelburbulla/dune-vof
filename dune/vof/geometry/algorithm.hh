@@ -11,6 +11,9 @@
 #include <dune/vof/geometry/halfspace.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/2d/polygon.hh>
+#include <dune/vof/geometry/3d/polyhedron.hh>
+#include <dune/vof/geometry/3d/polygonwithdirections.hh>
+#include <dune/vof/geometry/3d/rotation.hh>
 
 
 namespace Dune {
@@ -89,6 +92,107 @@ namespace Dune {
                                                             HalfSpace< Coord > hs( normal, p );
                                                             return ( getVolumeFraction( polygon, hs ) - fraction );
                                                           }, pMin, pMax, 1e-12 ) );
+    }
+
+
+
+
+
+
+    template< class Coord >
+    auto locateHalfSpace ( const Polyhedron< Coord >& cell, const Coord& n, double fraction ) -> HalfSpace< Coord >
+    {
+      Coord normal ( n );
+      normal /= normal.two_norm();
+
+      double givenVolume = fraction * polyhedron.volume();
+
+      const Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( normal, cell ) );
+
+      // Compute and sort plane constants
+      // --------------------------------
+      const std::size_t N = polyhedron.nodes().size();
+      std::vector< double > d ( N );
+      std::vector< std::size_t > sortedNodesIds ( N );
+
+      for ( std::size_t i = 0; i < N; ++i )
+      {
+        d[ i ] = polyhedron.node( i )[ 2 ];
+        sortedNodesIds[ i ] = i;
+      }
+
+      std::sort( sortedNodesIds.begin(), sortedNodesIds.end(), [ &d ]( const std::size_t i, const std::size_t j ) { return d[ i ] < d[ j ]; } );
+      std::sort( d.begin(), d.end() );
+
+      std::vector< double > dUnique ( d );
+      auto it = std::unique( dUnique.begin(), dUnique.end() );
+      dUnique.resize( std::distance( dUnique.begin(), it ) );
+
+
+      PolygonWithDirections< Polyhedron< Coord > > polygon ( polyhedron );
+      polygon.initialize( sortedNodesIds, d );
+
+
+      // Bracketing
+      // ----------
+      double Vd_k = 0, Vd_k1;
+      for ( std::size_t k = 0; k < dUnique.size() - 1; ++k )
+      {
+
+        // Compute cooefficients
+        const std::size_t Nn = polygon.nodes().size();
+        double A = 0.0;
+        for ( std::size_t n = 0; n < Nn; ++n )
+        {
+          assert ( polygon.directions( n ).size() > 0 );
+          const std::size_t epsn = polygon.directions( n ).size() - 1;
+
+          Coord v1 = polygon.directionVector( n, epsn );
+          Coord v2 = polygon.directionVector( (n+1) % Nn, 0 );
+          A -= ( v1[0] * v2[1] - v1[1] * v2[0] ) / ( v1[2] * v2[2] );
+
+          for ( std::size_t l = 0; l < epsn; ++l )
+          {
+            Coord w1 = polygon.directionVector( n, l );
+            Coord w2 = polygon.directionVector( n, l+1 );
+            A -= ( w1[0] * w2[1] - w1[1] * w2[0] ) / ( w1[2] * w2[2] );
+          }
+        }
+
+        double B = 0.0;
+        for ( std::size_t i = 0; i < polygon.edges().size(); ++i )
+        {
+          Coord normal = polygon.correspondingFace( i ).outerNormal();
+          double norm = project( normal ).two_norm();
+
+          if ( norm > 0 )
+            B -= polygon.edge( i ).volume() * normal[2] / norm;
+        }
+
+        double C = polygon.volume();
+
+        double h = dUnique[ k+1 ] - dUnique[ k ];
+        auto V = [ A, B, C ] ( const double h ) { return C * h + B * h * h / 2.0 + A * h * h * h / 6.0; };
+        Vd_k1 = Vd_k + V( h );
+
+        if ( std::abs( Vd_k1 - givenVolume ) < std::numeric_limits< double >::epsilon() )
+          return HalfSpace< Coord > ( normal, dUnique[ k+1 ] );
+
+        else if ( Vd_k1 > givenVolume )
+        {
+          const auto& Vh_V = [ &V, givenVolume, Vd_k ] ( const double h ) { return V( h ) - ( givenVolume - Vd_k ); };
+          double distance = dUnique[ k ] + Dune::VoF::brentsMethod ( Vh_V, 0.0, h, 1e-14 );
+          return HalfSpace< Coord > ( normal, distance );
+        }
+
+        else
+          polygon.evolveToNextPolygon( k, h, dUnique );
+
+        Vd_k = Vd_k1;
+      }
+
+      // Error
+      return HalfSpace< Coord > ();
     }
 
 
