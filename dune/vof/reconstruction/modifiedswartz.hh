@@ -105,7 +105,8 @@ namespace Dune
 
         do
         {
-          Line< Coordinate > lineEn = intersect( std::cref( polygonEn ), reconstruction.boundary() );
+          auto it1 = intersect( std::cref( polygonEn ), reconstruction.boundary() );
+          auto lineEn = std::static_cast< typename decltype( it1 )::Result > ( it1 );
 
           newNormal = Coordinate( 0 );
           for( const auto &neighbor : stencilEn )
@@ -122,7 +123,8 @@ namespace Dune
               continue;
 
             const auto& polygonNb = make_polygon( neighbor.geometry() );
-            Line< Coordinate > lineNb = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
+            auto it2 = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
+            auto lineNb = std::static_cast< typename decltype( it2 )::Result > ( it2 );
 
             Coordinate direction = lineNb.centroid() - lineEn.centroid();
             Coordinate centerNormal = normal;
