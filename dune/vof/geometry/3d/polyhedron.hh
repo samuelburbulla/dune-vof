@@ -6,6 +6,8 @@
 #include <tuple>
 #include <vector>
 
+/* dune includes */
+#include "../utility.hh"
 
 namespace Dune {
 
@@ -58,6 +60,8 @@ namespace Dune {
         const Coordinate v1 = node( 1 ) - node( 0 );
         const Coordinate& v2 = planeNormal;
 
+        //normal = generalizedCrossProduct( node( 1 ) - node( 0 ), planeNormal );
+
         Coordinate normal;
         normal[ 0 ] = v1[ 1 ] * v2[ 2 ] - v1[ 2 ] * v2[ 1 ];
         normal[ 1 ] = v1[ 2 ] * v2[ 0 ] - v1[ 0 ] * v2[ 2 ];
@@ -83,8 +87,6 @@ namespace Dune {
       template < class Hyperplane >
       const Coordinate intersection ( const Hyperplane& hyperplane ) const
       {
-        assert( ( hyperplane.normal() * node(0) - hyperplane.distance() <= 0 ) ^  ( hyperplane.normal() * node(1) - hyperplane.distance() <= 0 ) );
-
         Coordinate p = node(0);
         p -= node(1);
         p *= ( ( hyperplane.normal() * node(0) ) - hyperplane.distance() ) / ( hyperplane.normal() * p * -1.0 );
@@ -166,6 +168,8 @@ namespace Dune {
       const Coordinate outerNormal () const
       {
         assert ( nodeIds().size() >= 3 );
+
+        //normal = generalizedCrossProduct( node( 0 ) - node( 1 ), node( 2 ) - node( 1 ) );
 
         const auto& v1 = node( 0 ) - node( 1 );
         const auto& v2 = node( 2 ) - node( 1 );
@@ -343,6 +347,22 @@ namespace Dune {
 
         const std::vector< std::vector< std::size_t > > faces {
           {{ 0, 8, 14, 16 }}, {{ 5, 3, 21, 13 }}, {{ 6, 1, 22, 12 }}, {{ 19, 2, 11, 15 }}, {{ 4, 7, 17, 18 }}, {{ 10, 9, 23, 20 }}
+        };
+        return Dune::VoF::Polyhedron< DomainVector > ( faces, edges, nodes );
+      }
+      else if ( type.isPrism() )
+      {
+        const std::vector< DomainVector > nodes;
+        for ( std::size_t i = 0; i < 6; ++i )
+         nodes.push_back( geometry.corner( i ) );
+
+        const std::vector< std::array< std::size_t, 2 > > edges {
+          {{ 0, 3 }}, {{ 1, 4 }}, {{ 2, 5 }}, {{ 0, 1 }}, {{ 0, 2 }}, {{ 1, 2 }}, {{ 3, 4 }}, {{ 3, 5 }}, {{ 4, 5 }},
+          {{ 3, 0 }}, {{ 4, 1 }}, {{ 5, 2 }}, {{ 1, 0 }}, {{ 2, 0 }}, {{ 2, 1 }}, {{ 4, 3 }}, {{ 5, 3 }}, {{ 5, 4 }}
+        };
+
+        const std::vector< std::vector< std::size_t > > faces {
+          {{ 9, 3, 1, 15 }}, {{ 0, 7, 11, 13 }}, {{ 5, 2, 17, 10 }}, {{ 4, 14, 12 }}, {{ 6, 8, 16 }}
         };
         return Dune::VoF::Polyhedron< DomainVector > ( faces, edges, nodes );
       }
