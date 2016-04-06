@@ -90,7 +90,7 @@ namespace Dune {
         {
           Coordinate p = node(0);
           p -= node(1);
-          p *= ( ( hyperplane.normal() * node(0) ) - hyperplane.distance() ) / ( hyperplane.normal() * p * -1.0 );
+          p *= ( ( hyperplane.normal() * node(0) ) + hyperplane.distance() ) / ( hyperplane.normal() * p * -1.0 );
           p += node(0);
           return p;
         }

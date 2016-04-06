@@ -12,7 +12,7 @@ namespace Dune {
     template < class Coord >
     struct Face
     {
-      Face () = default;
+      Face () : nodes_ ( { Coord ( 0.0 ) } ) {};
 
       Face ( const std::vector< Coord >& nodes ) : nodes_ ( nodes ) {}
 

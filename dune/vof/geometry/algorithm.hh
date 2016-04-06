@@ -111,7 +111,7 @@ namespace Dune {
     auto locateHalfSpace ( const Polyhedron< Coord >& cell, const Coord& n, double fraction ) -> HalfSpace< Coord >
     {
       Coord normal ( n );
-      normal /= normal.two_norm();
+      normal /= - normal.two_norm();
 
       double givenVolume = fraction * cell.volume();
 
@@ -184,13 +184,13 @@ namespace Dune {
         Vd_k1 = Vd_k + V( h );
 
         if ( std::abs( Vd_k1 - givenVolume ) < std::numeric_limits< double >::epsilon() )
-          return HalfSpace< Coord > ( normal, dUnique[ k+1 ] );
+          return HalfSpace< Coord > ( normal, -dUnique[ k+1 ] );
 
         else if ( Vd_k1 > givenVolume )
         {
           const auto& Vh_V = [ &V, givenVolume, Vd_k ] ( const double h ) { return V( h ) - ( givenVolume - Vd_k ); };
           double distance = dUnique[ k ] + Dune::VoF::brentsMethod ( Vh_V, 0.0, h, 1e-14 );
-          return HalfSpace< Coord > ( normal, distance );
+          return HalfSpace< Coord > ( normal, -distance );
         }
 
         else

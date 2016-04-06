@@ -30,16 +30,16 @@ struct ReconstructionWriter
   void write( const ReconstructionSet &reconstructionSet )
   {
     using Dune::VoF::intersect;
-    using Coordinate = typename ReconstructionSet::Reconstruction::Coordinate;
 
     std::vector< OutputPolygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
-      auto it = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
+      auto polytope = Dune::VoF::makePolytope( entity.geometry() );
+      auto it = intersect( polytope, reconstructionSet[ entity ].boundary() );
       auto intersection = static_cast< typename decltype( it )::Result > ( it );
 
       std::vector< typename OutputPolygon::Position > is;
-      for( int i = 0; i < intersection.size(); ++i )
+      for( std::size_t i = 0; i < intersection.size(); ++i )
         is.push_back( intersection.vertex( i ) );
 
 

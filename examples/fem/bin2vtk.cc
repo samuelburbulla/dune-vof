@@ -190,7 +190,7 @@ try {
       using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
       ReconstructionSet reconstructions( gridPart );
 
-      using Stencils = Dune::VoF::EdgeNeighborsStencil< GridPartType >;
+      using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
       Stencils stencils( gridPart );
 
       const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );

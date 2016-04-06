@@ -200,7 +200,8 @@ namespace Dune
           };
           return Polyhedron< Coordinate >( faces, edges, nodes );
         }
-
+        else
+          DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
       }
 
       /**
