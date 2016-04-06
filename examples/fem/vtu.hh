@@ -59,7 +59,7 @@ struct VTUDataType< std::uint8_t >
   static std::string toString ( const std::uint8_t &value ) { return std::to_string( value ); }
 };
 
-template< >
+template<>
 struct VTUDataType< Dune::FieldVector< double, 2 > >
 {
   typedef VTUDataType< double > VTUDouble;
@@ -70,6 +70,20 @@ struct VTUDataType< Dune::FieldVector< double, 2 > >
   static std::string toString ( const Dune::FieldVector< double, 2 > &value )
   {
     return VTUDouble::toString( value[ 0 ] ) + " " + VTUDouble::toString( value[ 1 ] ) + " " + VTUDouble::toString( double( 0 ) );
+  }
+};
+
+template<>
+struct VTUDataType< Dune::FieldVector< double, 3 > >
+{
+  typedef VTUDataType< double > VTUDouble;
+
+  static std::string type () { return VTUDouble::type(); }
+  static int components () { return 3; }
+
+  static std::string toString ( const Dune::FieldVector< double, 3 > &value )
+  {
+    return VTUDouble::toString( value[ 0 ] ) + " " + VTUDouble::toString( value[ 1 ] ) + " " + VTUDouble::toString( value[ 2 ] );
   }
 };
 

@@ -12,6 +12,7 @@
 #include <dune/vof/geometry/2d/polygon.hh>
 #include <dune/vof/geometry/3d/polyhedron.hh>
 #include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/geometry/utility.hh>
 
 // local includes
 #include "vtu.hh"
@@ -30,13 +31,11 @@ struct ReconstructionWriter
   {
     using Dune::VoF::intersect;
     using Coordinate = typename ReconstructionSet::Reconstruction::Coordinate;
-    using Polytope = typename std::conditional< Coordinate::dimension == 2, Dune::VoF::Polygon< Coordinate >, Dune::VoF::Polyhedron< Coordinate > >::type;
 
     std::vector< OutputPolygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
-      Polytope polytope ( entity.geometry() );
-      auto it = intersect( polytope, reconstructionSet[ entity ].boundary() );
+      auto it = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
       auto intersection = static_cast< typename decltype( it )::Result > ( it );
 
       std::vector< typename OutputPolygon::Position > is;
