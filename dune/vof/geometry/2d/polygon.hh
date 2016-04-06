@@ -28,7 +28,7 @@ namespace Dune {
     class Polygon
     {
       using This = Polygon< Coord >;
-      static_assert(Coord::dimension == 2, "Dimension must be == 2." );
+      //static_assert(Coord::dimension == 2, "Dimension must be == 2." );
 
     public:
       using Coordinate = Coord;
@@ -106,7 +106,7 @@ namespace Dune {
     class Line
     {
       using This = Line< Coord >;
-      static_assert(Coord::dimension == 2, "Dimension must be == 2." );
+      //static_assert(Coord::dimension == 2, "Dimension must be == 2." );
 
     public:
       using Coordinate = Coord;
@@ -172,7 +172,7 @@ namespace Dune {
      * \tparam  Coord  global coordinate type
      */
     template< class Coord >
-    static inline auto make_polygon( std::vector< Coord > vertices ) -> Polygon< Coord >
+    static inline auto makePolygon( std::vector< Coord > vertices ) -> Polygon< Coord >
     {
       return Polygon< Coord >( std::move( vertices) );
     }
@@ -184,15 +184,15 @@ namespace Dune {
      * \param geometry dune geometry
      */
     template< class Geometry >
-    static inline auto make_polygon( const Geometry& geometry ) -> Polygon< typename Geometry::GlobalCoordinate >
+    static inline auto makePolygon( const Geometry& geometry ) -> Polygon< typename Geometry::GlobalCoordinate >
     {
       using Container = std::vector< typename Geometry::GlobalCoordinate >;
       auto type = geometry.type();
 
       if( type.isTriangle() )
-        return make_polygon( Container{ geometry.corner( 0 ), geometry.corner( 1 ), geometry.corner( 2 ) } );
+        return makePolygon( Container{ geometry.corner( 0 ), geometry.corner( 1 ), geometry.corner( 2 ) } );
       else if ( type.isQuadrilateral() )
-        return make_polygon( Container{ geometry.corner( 0 ), geometry.corner( 1 ), geometry.corner( 3 ), geometry.corner( 2 ) } );
+        return makePolygon( Container{ geometry.corner( 0 ), geometry.corner( 1 ), geometry.corner( 3 ), geometry.corner( 2 ) } );
       else
         DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
     }

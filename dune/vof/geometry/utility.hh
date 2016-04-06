@@ -7,6 +7,9 @@
 #include <dune/common/deprecated.hh>
 #include <dune/common/typetraits.hh>
 
+#include "dune/vof/geometry/2d/polygon.hh"
+#include "dune/vof/geometry/3d/polyhedron.hh"
+
 namespace Dune
 {
   namespace VoF
@@ -133,6 +136,23 @@ namespace Dune
     auto normalize ( Coord &v ) -> void_t< decltype( std::declval< Coord >().two_norm() ) >
     {
       v /= v.two_norm();
+    }
+
+
+    // makePolytope
+    // ------------
+    template < class Geometry >
+    static inline auto makePolytope ( const Geometry& geometry )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2, Polygon< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makePolygon ( geometry );
+    }
+
+    template < class Geometry >
+    static inline auto makePolytope ( const Geometry& geometry )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 3, Polyhedron< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makePolyhedron( geometry );
     }
 
 

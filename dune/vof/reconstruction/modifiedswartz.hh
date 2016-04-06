@@ -95,7 +95,6 @@ namespace Dune
       template< class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, ReconstructionSet &reconstructions ) const
       {
-        using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon< Coordinate >, Polyhedron< Coordinate > >::type;
 
         std::size_t iterations = 0;
         Reconstruction &reconstruction = reconstructions[ entity ];
@@ -103,7 +102,7 @@ namespace Dune
 
         const auto geoEn = entity.geometry();
         const auto& stencilEn = stencil( entity );
-        Polytope polygonEn ( geoEn );
+        auto polygonEn = makePolytope( geoEn );
 
         do
         {
@@ -124,7 +123,7 @@ namespace Dune
             if ( reconstructions[ neighbor ].innerNormal() == Coordinate( 0 ) )
               continue;
 
-            const Polytope& polygonNb ( neighbor.geometry() );
+            const auto& polygonNb = makePolytope( neighbor.geometry() );
             auto it2 = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
             auto lineNb = static_cast< typename decltype( it2 )::Result > ( it2 );
 

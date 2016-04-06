@@ -114,7 +114,7 @@ namespace Dune
         }
 
         normalize( normal );
-        reconstruction = locateHalfSpace( make_polygon( geometry ), normal, colorEn );
+        reconstruction = locateHalfSpace( makePolytope( geometry ), normal, colorEn );
       }
 
       Matrix outerProduct ( const Vector &a, const Vector &b ) const

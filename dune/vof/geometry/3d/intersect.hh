@@ -356,14 +356,14 @@ namespace Dune {
 
 
         if ( intersectionFace.size() < 2 )
-          return Line< Coord >();
+          return Polygon< Coord >();
         else
         {
           std::vector< Coordinate > polygonNodes;
           for ( std::size_t i = 0; i < intersectionFace.size(); ++i )
             polygonNodes.push_back( nodes[ edges[ intersectionFace[ i ] ][ 0 ] ] );
 
-          return make_polygon( polygonNodes );
+          return makePolygon( polygonNodes );
         }
       }
 

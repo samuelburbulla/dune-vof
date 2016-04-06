@@ -218,6 +218,8 @@ namespace Dune {
       using E = Edge< Polyhedron >;
       static_assert(Coord::dimension == 3, "Dimension must be == 3." );
 
+      Polyhedron () = default;
+
       Polyhedron (
         const std::vector< std::vector< std::size_t > >& faces,
         const std::vector< std::array< size_t, 2 > >& edges,
@@ -248,62 +250,6 @@ namespace Dune {
         for ( const E& edge : other.edges() )
           edges_.emplace_back( E ( edge, this ) );
       }
-
-      template< class Geometry >
-      Polyhedron ( const Geometry& geometry )
-      {
-        using Container = std::vector< Coord >;
-        auto type = geometry.type();
-
-        if ( type.isSimplex() )
-        {
-          const Container nodes { geometry.corner( 0 ), geometry.corner( 1 ), geometry.corner( 2 ), geometry.corner( 3 ) };
-
-          const std::vector< std::array< std::size_t, 2 > > edges {
-            {{ 0, 1 }}, {{ 1, 0 }}, {{ 0, 2 }}, {{ 2, 0 }}, {{ 1, 2 }}, {{ 2, 1 }}, {{ 0, 3 }}, {{ 3, 0 }}, {{ 1, 3 }}, {{ 3, 1 }}, {{ 3, 2 }}, {{ 2, 3 }}
-          };
-
-          const std::vector< std::vector< std::size_t > > faces { {{ 2, 5, 1 }}, {{ 0, 8, 7 }}, {{ 6, 10, 3 }}, {{ 4, 11, 9 }} };
-
-          Polyhedron( faces, edges, nodes );
-        }
-        else if ( type.isQube() )
-        {
-          const Container nodes;
-          for ( std::size_t i = 0; i < 8; ++i )
-           nodes.push_back( geometry.corner( i ) );
-
-          const std::vector< std::array< std::size_t, 2 > > edges {
-            {{ 0, 4 }}, {{ 1, 5 }}, {{ 2, 6 }}, {{ 3, 7 }}, {{ 0, 2 }}, {{ 1, 3 }}, {{ 0, 1 }}, {{ 2, 3 }}, {{ 4, 6 }}, {{ 5, 7 }},
-            {{ 4, 5 }}, {{ 6, 7 }}, {{ 4, 0 }}, {{ 5, 1 }}, {{ 6, 2 }}, {{ 7, 3 }}, {{ 2, 0 }}, {{ 3, 1 }}, {{ 1, 0 }}, {{ 3, 2 }},
-            {{ 6, 4 }}, {{ 7, 5 }}, {{ 5, 4 }}, {{ 7, 6 }}
-          };
-
-          const std::vector< std::vector< std::size_t > > faces {
-            {{ 0, 8, 14, 16 }}, {{ 5, 3, 21, 13 }}, {{ 6, 1, 22, 12 }}, {{ 19, 2, 11, 15 }}, {{ 4, 7, 17, 18 }}, {{ 10, 9, 23, 20 }}
-          };
-          Polyhedron( faces, edges, nodes );
-        }
-        else if ( type.isPrism() )
-        {
-          const Container nodes;
-          for ( std::size_t i = 0; i < 6; ++i )
-           nodes.push_back( geometry.corner( i ) );
-
-          const std::vector< std::array< std::size_t, 2 > > edges {
-            {{ 0, 3 }}, {{ 1, 4 }}, {{ 2, 5 }}, {{ 0, 1 }}, {{ 0, 2 }}, {{ 1, 2 }}, {{ 3, 4 }}, {{ 3, 5 }}, {{ 4, 5 }},
-            {{ 3, 0 }}, {{ 4, 1 }}, {{ 5, 2 }}, {{ 1, 0 }}, {{ 2, 0 }}, {{ 2, 1 }}, {{ 4, 3 }}, {{ 5, 3 }}, {{ 5, 4 }}
-          };
-
-          const std::vector< std::vector< std::size_t > > faces {
-            {{ 9, 3, 1, 15 }}, {{ 0, 7, 11, 13 }}, {{ 5, 2, 17, 10 }}, {{ 4, 14, 12 }}, {{ 6, 8, 16 }}
-          };
-          Polyhedron( faces, edges, nodes );
-        }
-        else
-          DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
-      }
-
 
       bool operator== ( const Polyhedron& other ) const
       {
@@ -372,6 +318,47 @@ namespace Dune {
     };
 
 
+
+    // makePolyhedron
+    // --------------
+    template< class Geometry >
+    static inline auto makePolyhedron ( const Geometry& geometry ) -> Polyhedron< typename Geometry::GlobalCoordinate >
+    {
+      using Container = std::vector< typename Geometry::GlobalCoordinate >;
+      auto type = geometry.type();
+
+      if ( type.isSimplex() )
+      {
+        const Container nodes { geometry.corner( 0 ), geometry.corner( 1 ), geometry.corner( 2 ), geometry.corner( 3 ) };
+
+        const std::vector< std::array< std::size_t, 2 > > edges {
+          {{ 0, 1 }}, {{ 1, 0 }}, {{ 0, 2 }}, {{ 2, 0 }}, {{ 1, 2 }}, {{ 2, 1 }}, {{ 0, 3 }}, {{ 3, 0 }}, {{ 1, 3 }}, {{ 3, 1 }}, {{ 3, 2 }}, {{ 2, 3 }}
+        };
+
+        const std::vector< std::vector< std::size_t > > faces { {{ 2, 5, 1 }}, {{ 0, 8, 7 }}, {{ 6, 10, 3 }}, {{ 4, 11, 9 }} };
+
+        return Polyhedron< typename Geometry::GlobalCoordinate > ( faces, edges, nodes );
+      }
+      else if ( type.isCube() )
+      {
+        Container nodes;
+        for ( std::size_t i = 0; i < 8; ++i )
+         nodes.push_back( geometry.corner( i ) );
+
+        const std::vector< std::array< std::size_t, 2 > > edges {
+          {{ 0, 4 }}, {{ 1, 5 }}, {{ 2, 6 }}, {{ 3, 7 }}, {{ 0, 2 }}, {{ 1, 3 }}, {{ 0, 1 }}, {{ 2, 3 }}, {{ 4, 6 }}, {{ 5, 7 }},
+          {{ 4, 5 }}, {{ 6, 7 }}, {{ 4, 0 }}, {{ 5, 1 }}, {{ 6, 2 }}, {{ 7, 3 }}, {{ 2, 0 }}, {{ 3, 1 }}, {{ 1, 0 }}, {{ 3, 2 }},
+          {{ 6, 4 }}, {{ 7, 5 }}, {{ 5, 4 }}, {{ 7, 6 }}
+        };
+
+        const std::vector< std::vector< std::size_t > > faces {
+          {{ 0, 8, 14, 16 }}, {{ 5, 3, 21, 13 }}, {{ 6, 1, 22, 12 }}, {{ 19, 2, 11, 15 }}, {{ 4, 7, 17, 18 }}, {{ 10, 9, 23, 20 }}
+        };
+        return Polyhedron< typename Geometry::GlobalCoordinate >( faces, edges, nodes );
+      }
+      else
+        DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
+    }
 
 
 
