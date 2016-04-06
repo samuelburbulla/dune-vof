@@ -10,8 +10,9 @@
 #include <vector>
 
 #include <dune/vof/geometry/halfspace.hh>
-#include <dune/vof/geometry/3d/polyhedron.hh>
 #include <dune/vof/geometry/2d/polygon.hh>
+#include <dune/vof/geometry/3d/polyhedron.hh>
+#include <dune/vof/geometry/3d/face.hh>
 
 namespace Dune {
 
@@ -216,13 +217,13 @@ namespace Dune {
        * \return the intersection line
        */
       template< class Coord >
-      auto intersect ( const Polyhedron< Coord >& polyhedron, const HyperPlane< Coord >& plane ) -> Polygon< Coord >
+      auto intersect ( const Polyhedron< Coord >& polyhedron, const HyperPlane< Coord >& plane ) -> Dune::VoF::Face< Coord >
       {
         if ( !plane )
-          return Polygon< Coord >();
+          return Dune::VoF::Face< Coord >();
 
         using Coordinate = Coord;
-        using Face = typename std::vector< size_t >;
+        using F = typename std::vector< size_t >;
         using Edge = typename std::array< size_t, 2 >;
 
         const double eps = 1e-8;
@@ -231,7 +232,7 @@ namespace Dune {
 
         std::vector< bool > isInner ( polyhedron.nodes().size(), false );
         std::vector< Coord > newNodes;
-        Face intersectionFace;
+        F intersectionFace;
 
         std::size_t n = 0;
         std::vector< std::size_t > p;
@@ -356,14 +357,14 @@ namespace Dune {
 
 
         if ( intersectionFace.size() < 2 )
-          return Polygon< Coord >();
+          return typename Dune::VoF::Face< Coordinate >();
         else
         {
           std::vector< Coordinate > polygonNodes;
           for ( std::size_t i = 0; i < intersectionFace.size(); ++i )
             polygonNodes.push_back( nodes[ edges[ intersectionFace[ i ] ][ 0 ] ] );
 
-          return makePolygon( polygonNodes );
+          return typename Dune::VoF::Face< Coordinate >( polygonNodes );
         }
       }
 

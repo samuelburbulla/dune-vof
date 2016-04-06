@@ -13,200 +13,202 @@ namespace Dune {
 
   namespace VoF {
 
+    namespace __impl {
 
-    template < class Polyhedron >
-    struct Edge
-    {
-      using Coordinate = typename Polyhedron::Coordinate;
-
-      Edge ( const Polyhedron *parent, const std::array< std::size_t, 2 >& nodeIds )
-       : parent_ ( parent ), nodeIds_ ( nodeIds )
+      template < class Polyhedron >
+      struct Edge
       {
-        assert ( nodeIds.size() == 2 );
-      };
+        using Coordinate = typename Polyhedron::Coordinate;
 
-      Edge ( const Edge& other, const Polyhedron *parent )
-       : parent_ ( parent ), nodeIds_ ( other.nodeIds() ) {}
-
-
-      const bool operator== ( const Edge& other ) const
-      {
-        return nodeIds_ == other.nodeIds(); // && &parent_ == &other.parent()
-      }
-
-      const Polyhedron *parent () const { return parent_; }
-
-      const std::array< std::size_t, 2 >& nodeIds() const { return nodeIds_; }
-
-      const std::size_t& nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
-
-      const Coordinate& node ( const std::size_t index ) const { return parent_->node( nodeIds_[ index ] ); }
-
-      const Coordinate outerNormal () const
-      {
-        Coordinate diff = node( 1 );
-        diff -= node( 0 );
-
-        Coordinate normal;
-        normal[ 0 ] = diff[ 1 ];
-        normal[ 1 ] = - diff[ 0 ];
-
-        normal /= normal.two_norm();
-        return normal;
-      }
-
-      const Coordinate outerNormal ( const Coordinate& planeNormal ) const
-      {
-        const Coordinate v1 = node( 1 ) - node( 0 );
-        const Coordinate& v2 = planeNormal;
-
-        //normal = generalizedCrossProduct( node( 1 ) - node( 0 ), planeNormal );
-
-        Coordinate normal;
-        normal[ 0 ] = v1[ 1 ] * v2[ 2 ] - v1[ 2 ] * v2[ 1 ];
-        normal[ 1 ] = v1[ 2 ] * v2[ 0 ] - v1[ 0 ] * v2[ 2 ];
-        normal[ 2 ] = v1[ 0 ] * v2[ 1 ] - v1[ 1 ] * v2[ 0 ];
-
-        normal /= normal.two_norm();
-        return normal;
-      }
-
-      const Coordinate center () const
-      {
-        Coordinate center = node( 0 );
-        center += node( 1 );
-        center *= 0.5;
-        return center;
-      }
-
-      const double volume () const
-      {
-        return ( node( 1 ) - node( 0 ) ).two_norm();
-      }
-
-      template < class Hyperplane >
-      const Coordinate intersection ( const Hyperplane& hyperplane ) const
-      {
-        Coordinate p = node(0);
-        p -= node(1);
-        p *= ( ( hyperplane.normal() * node(0) ) - hyperplane.distance() ) / ( hyperplane.normal() * p * -1.0 );
-        p += node(0);
-        return p;
-      }
-
-    private:
-      const Polyhedron *parent_;
-      std::array< std::size_t, 2 > nodeIds_;
-    };
-
-
-
-
-    template < typename Polyhedron >
-    struct Face
-    {
-      using Coordinate = typename Polyhedron::Coordinate;
-      using Edge = typename Polyhedron::E;
-
-      Face ( const Polyhedron *parent, const std::vector< Edge >& edges )
-       : parent_ ( parent ), edges_( edges )
-      {
-        for ( const auto& edge : edges )
-          nodeIds_.push_back( edge.nodeId( 0 ) );
-      };
-
-      Face ( const Face& other, const Polyhedron *parent )
-       : parent_ ( parent ), nodeIds_ ( other.nodeIds() )
-      {
-        for ( const auto& edge : other.edges() )
-          edges_.emplace_back( Edge ( edge, parent ) );
-      }
-
-
-      const Polyhedron *parent () const { return parent_; }
-
-      const std::vector< Edge >& edges () const { return edges_; }
-
-      const Edge& edge ( const std::size_t index ) const { return edges_[ index ]; }
-
-      const std::vector< std::size_t >& nodeIds () const { return nodeIds_; }
-
-      const std::size_t& nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
-
-      const Coordinate& node ( const std::size_t index ) const { return parent_->node( nodeIds_[ index ] ); }
-
-
-      const bool operator== ( const Face& other ) const
-      {
-        if ( &parent() != &other.parent() )
-          return false;
-
-        for ( const auto id : nodeIds() )
+        Edge ( const Polyhedron *parent, const std::array< std::size_t, 2 >& nodeIds )
+         : parent_ ( parent ), nodeIds_ ( nodeIds )
         {
-          bool found = false;
-          for ( const auto id2 : other.nodeIds() )
-            if( id == id2 ) found = true;
+          assert ( nodeIds.size() == 2 );
+        };
 
-          if ( !found )
-            return false;
+        Edge ( const Edge& other, const Polyhedron *parent )
+         : parent_ ( parent ), nodeIds_ ( other.nodeIds() ) {}
+
+
+        const bool operator== ( const Edge& other ) const
+        {
+          return nodeIds_ == other.nodeIds(); // && &parent_ == &other.parent()
         }
 
-        for ( const auto& edge : edges() )
-        {
-          bool found = false;
-          for ( const auto& edge2 : other.edges() )
-            if( edge == edge2 )
-              found = true;
+        const Polyhedron *parent () const { return parent_; }
 
-          if ( !found )
-            return false;
+        const std::array< std::size_t, 2 >& nodeIds() const { return nodeIds_; }
+
+        const std::size_t& nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
+
+        const Coordinate& node ( const std::size_t index ) const { return parent_->node( nodeIds_[ index ] ); }
+
+        const Coordinate outerNormal () const
+        {
+          Coordinate diff = node( 1 );
+          diff -= node( 0 );
+
+          Coordinate normal;
+          normal[ 0 ] = diff[ 1 ];
+          normal[ 1 ] = - diff[ 0 ];
+
+          normal /= normal.two_norm();
+          return normal;
         }
 
-        return true;
-      }
+        const Coordinate outerNormal ( const Coordinate& planeNormal ) const
+        {
+          const Coordinate v1 = node( 1 ) - node( 0 );
+          const Coordinate& v2 = planeNormal;
 
-      const Coordinate outerNormal () const
+          //normal = generalizedCrossProduct( node( 1 ) - node( 0 ), planeNormal );
+
+          Coordinate normal;
+          normal[ 0 ] = v1[ 1 ] * v2[ 2 ] - v1[ 2 ] * v2[ 1 ];
+          normal[ 1 ] = v1[ 2 ] * v2[ 0 ] - v1[ 0 ] * v2[ 2 ];
+          normal[ 2 ] = v1[ 0 ] * v2[ 1 ] - v1[ 1 ] * v2[ 0 ];
+
+          normal /= normal.two_norm();
+          return normal;
+        }
+
+        const Coordinate center () const
+        {
+          Coordinate center = node( 0 );
+          center += node( 1 );
+          center *= 0.5;
+          return center;
+        }
+
+        const double volume () const
+        {
+          return ( node( 1 ) - node( 0 ) ).two_norm();
+        }
+
+        template < class Hyperplane >
+        const Coordinate intersection ( const Hyperplane& hyperplane ) const
+        {
+          Coordinate p = node(0);
+          p -= node(1);
+          p *= ( ( hyperplane.normal() * node(0) ) - hyperplane.distance() ) / ( hyperplane.normal() * p * -1.0 );
+          p += node(0);
+          return p;
+        }
+
+      private:
+        const Polyhedron *parent_;
+        std::array< std::size_t, 2 > nodeIds_;
+      };
+
+
+
+
+      template < typename Polyhedron >
+      struct Face
       {
-        assert ( nodeIds().size() >= 3 );
+        using Coordinate = typename Polyhedron::Coordinate;
+        using Edge = typename Polyhedron::E;
 
-        //normal = generalizedCrossProduct( node( 0 ) - node( 1 ), node( 2 ) - node( 1 ) );
+        Face ( const Polyhedron *parent, const std::vector< Edge >& edges )
+         : parent_ ( parent ), edges_( edges )
+        {
+          for ( const auto& edge : edges )
+            nodeIds_.push_back( edge.nodeId( 0 ) );
+        };
 
-        const auto& v1 = node( 0 ) - node( 1 );
-        const auto& v2 = node( 2 ) - node( 1 );
+        Face ( const Face& other, const Polyhedron *parent )
+         : parent_ ( parent ), nodeIds_ ( other.nodeIds() )
+        {
+          for ( const auto& edge : other.edges() )
+            edges_.emplace_back( Edge ( edge, parent ) );
+        }
 
-        Coordinate normal;
-        normal[ 0 ] = v1[ 1 ] * v2[ 2 ] - v1[ 2 ] * v2[ 1 ];
-        normal[ 1 ] = v1[ 2 ] * v2[ 0 ] - v1[ 0 ] * v2[ 2 ];
-        normal[ 2 ] = v1[ 0 ] * v2[ 1 ] - v1[ 1 ] * v2[ 0 ];
 
-        normal /= -1.0 * normal.two_norm();
+        const Polyhedron *parent () const { return parent_; }
 
-        return normal;
-      }
+        const std::vector< Edge >& edges () const { return edges_; }
 
-      const Coordinate center () const
-      {
-        Coordinate center ( 0.0 );
-        for ( std::size_t i = 0; i < nodeIds_.size(); ++i )
-          center += node( i );
-        center *= 1.0 / nodeIds_.size();
-        return center;
-      }
+        const Edge& edge ( const std::size_t index ) const { return edges_[ index ]; }
 
-      const double volume () const
-      {
-        double vol = 0;
-        for ( const auto& edge : edges() )
-          vol += edge.center() * edge.outerNormal( outerNormal() ) * edge.volume();
-        return std::abs( vol / 2.0 );
-      }
+        const std::vector< std::size_t >& nodeIds () const { return nodeIds_; }
 
-    private:
-      const Polyhedron *parent_;
-      std::vector< std::size_t > nodeIds_;
-      std::vector< Edge > edges_;
-    };
+        const std::size_t& nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
 
+        const Coordinate& node ( const std::size_t index ) const { return parent_->node( nodeIds_[ index ] ); }
+
+
+        const bool operator== ( const Face& other ) const
+        {
+          if ( &parent() != &other.parent() )
+            return false;
+
+          for ( const auto id : nodeIds() )
+          {
+            bool found = false;
+            for ( const auto id2 : other.nodeIds() )
+              if( id == id2 ) found = true;
+
+            if ( !found )
+              return false;
+          }
+
+          for ( const auto& edge : edges() )
+          {
+            bool found = false;
+            for ( const auto& edge2 : other.edges() )
+              if( edge == edge2 )
+                found = true;
+
+            if ( !found )
+              return false;
+          }
+
+          return true;
+        }
+
+        const Coordinate outerNormal () const
+        {
+          assert ( nodeIds().size() >= 3 );
+
+          //normal = generalizedCrossProduct( node( 0 ) - node( 1 ), node( 2 ) - node( 1 ) );
+
+          const auto& v1 = node( 0 ) - node( 1 );
+          const auto& v2 = node( 2 ) - node( 1 );
+
+          Coordinate normal;
+          normal[ 0 ] = v1[ 1 ] * v2[ 2 ] - v1[ 2 ] * v2[ 1 ];
+          normal[ 1 ] = v1[ 2 ] * v2[ 0 ] - v1[ 0 ] * v2[ 2 ];
+          normal[ 2 ] = v1[ 0 ] * v2[ 1 ] - v1[ 1 ] * v2[ 0 ];
+
+          normal /= -1.0 * normal.two_norm();
+
+          return normal;
+        }
+
+        const Coordinate center () const
+        {
+          Coordinate center ( 0.0 );
+          for ( std::size_t i = 0; i < nodeIds_.size(); ++i )
+            center += node( i );
+          center *= 1.0 / nodeIds_.size();
+          return center;
+        }
+
+        const double volume () const
+        {
+          double vol = 0;
+          for ( const auto& edge : edges() )
+            vol += edge.center() * edge.outerNormal( outerNormal() ) * edge.volume();
+          return std::abs( vol / 2.0 );
+        }
+
+      private:
+        const Polyhedron *parent_;
+        std::vector< std::size_t > nodeIds_;
+        std::vector< Edge > edges_;
+      };
+
+    } // namespace __impl
 
 
 
@@ -214,8 +216,9 @@ namespace Dune {
     struct Polyhedron
     {
       using Coordinate = Coord;
-      using F = Face< Polyhedron >;
-      using E = Edge< Polyhedron >;
+      using F = typename __impl::Face< Polyhedron >;
+      using E = typename __impl::Edge< Polyhedron >;
+
       static_assert(Coord::dimension == 3, "Dimension must be == 3." );
 
       Polyhedron () = default;

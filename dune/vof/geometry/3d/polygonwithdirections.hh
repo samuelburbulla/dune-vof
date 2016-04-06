@@ -28,7 +28,7 @@ namespace Dune {
     {
     public:
       using Coordinate = typename Dune::FieldVector< double, 2 >;
-      using E = Edge< PolygonWithDirections > ;
+      using E = typename Dune::VoF::__impl::Edge< PolygonWithDirections > ;
       using Coordinate3D = typename Polyhedron::Coordinate;
       using Direction = typename Polyhedron::E;
       using Face = typename Polyhedron::F;
