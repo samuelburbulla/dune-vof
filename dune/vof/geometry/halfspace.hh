@@ -1,4 +1,4 @@
-#ifndef DUNE_VOF_GEOMETRY_HALFSPACE_HH
+  #ifndef DUNE_VOF_GEOMETRY_HALFSPACE_HH
 #define DUNE_VOF_GEOMETRY_HALFSPACE_HH
 
 #include <cassert>
@@ -113,6 +113,16 @@ namespace Dune
       HyperPlane ( const Coordinate& normal, const ctype& dist )
        : normal_( normal ), distanceToOrigin_( dist )
       {}
+
+      /**
+       * \brief normal
+       */
+      const Coordinate& normal () const { return normal_; }
+
+      /**
+       * \brief distance to origin
+       */
+      ctype distance () const { return distanceToOrigin_; }
 
       /**
        * \brief level set
