@@ -68,7 +68,7 @@ namespace Dune
       {
         update.clear();
 
-        for( const auto &entity : elements( color.gridView() ) )
+        for( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
           if( !flags.isMixed( entity ) && !flags.isActive( entity ) && !flags.isFullAndMixed( entity ) )
             continue;
@@ -127,6 +127,7 @@ namespace Dune
             else if ( color[ neighbor ] >= (1 -eps_) )
               flux = -upwind.volume();
           }
+          assert( flux == flux );
 
           update[ entity ] -= flux / geoEn.volume();
         }
@@ -144,9 +145,9 @@ namespace Dune
         -> typename std::enable_if< std::is_same< Polygon< typename IntersectionGeometry::GlobalCoordinate >, Polytope >::value, Polygon< typename IntersectionGeometry::GlobalCoordinate > >::type
       {
         if ( ( generalizedCrossProduct( iGeometry.corner( 1 ) - iGeometry.corner( 0 ) ) * v ) < 0.0 )
-          return Polygon_( { iGeometry.corner( 0 ), iGeometry.corner( 1 ), iGeometry.corner( 1 ) - v, iGeometry.corner( 0 ) - v } );
+          return Polytope( { iGeometry.corner( 0 ), iGeometry.corner( 1 ), iGeometry.corner( 1 ) - v, iGeometry.corner( 0 ) - v } );
         else
-          return Polygon_( { iGeometry.corner( 1 ), iGeometry.corner( 0 ), iGeometry.corner( 0 ) - v, iGeometry.corner( 1 ) - v } );
+          return Polytope( { iGeometry.corner( 1 ), iGeometry.corner( 0 ), iGeometry.corner( 0 ) - v, iGeometry.corner( 1 ) - v } );
       }
 
 

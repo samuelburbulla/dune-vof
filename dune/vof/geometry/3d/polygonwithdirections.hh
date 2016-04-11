@@ -187,13 +187,13 @@ namespace Dune {
           {
             const Direction& direction = directions( n )[ i ];
 
-            if ( std::abs( direction.node( 1 )[ 2 ] - dUnique[ k+1 ] ) < std::numeric_limits< double >::epsilon() )
+            if ( std::abs( direction.node( 1 )[ 2 ] - dUnique[ k+1 ] ) < 1e-10 )
             {
               const std::size_t nodeId = direction.nodeId( 1 );
 
               // If multiple edges converge to the same node, only store one of them
               // ===================================================================
-              if ( n > 0 )
+              if ( newNodeIds.size() > 0 )
               {
                 if ( nodeId == newNodeIds[ newNodeIds.size()-1 ] )
                 {
@@ -218,7 +218,7 @@ namespace Dune {
 
               correspondingFaces_.push_back( parent_.attachedFaceToEdge( direction ) );
             }
-            else
+            else if ( direction.node( 1 )[ 2 ] > dUnique[ k+1 ] )
             {
               // Add new built node and attached information
               // ===========================================
@@ -281,9 +281,12 @@ namespace Dune {
             }
           }
 
+        assert( !directions_[ 0 ].empty() );
+
         nodes_ = newNodes;
         nodeIds_ = newNodeIds;
         directions_ = newDirections;
+
 
       };
 

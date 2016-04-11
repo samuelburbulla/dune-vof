@@ -56,7 +56,7 @@ namespace Dune
       {
         std::vector < std::vector < int > > cellsNextToThisVertex( gridView().indexSet().size( dim ) );
 
-        for( const auto &entity : elements( gridView() ) )
+        for( const auto &entity : elements( gridView(), Partitions::all ) )
         {
           int entityID = mapper().index( entity );
           seeds_[ entityID ] = entity.seed();
@@ -68,7 +68,7 @@ namespace Dune
           }
         }
 
-        for( const auto &entity : elements( gridView() ) )
+        for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           int entityID = mapper().index( entity );
 

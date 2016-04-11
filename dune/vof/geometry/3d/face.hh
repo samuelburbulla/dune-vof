@@ -12,7 +12,7 @@ namespace Dune {
     template < class Coord >
     struct Face
     {
-      Face () : nodes_ ( { Coord ( 0.0 ) } ) {};
+      Face () {};
 
       Face ( const std::vector< Coord >& nodes ) : nodes_ ( nodes ) {}
 
@@ -25,7 +25,7 @@ namespace Dune {
         Coord center ( 0.0 );
         for ( std::size_t i = 0; i < nodes_.size(); ++i )
           center += nodes_[ i ];
-        center *= 1.0 / nodes_.size();
+        center *= 1.0 / ( nodes_.size() );
         return center;
       }
 

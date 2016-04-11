@@ -57,9 +57,21 @@ struct Problem : public Base
   using FunctionSpaceType = FunctionSpace;
 };
 
+template < class GridPart >
+double shortestEdge( const GridPart& gridPart )
+{
+  double min = std::numeric_limits< double >::max();
+  for ( const auto& edge : edges( gridPart, Dune::Partitions::all ) )
+  {
+    double l = edge.geometry().volume();
+    min = ( l < min ) ? l : min;
+  }
+  return min;
+}
 
 
-// algorithm
+
+// Algorithm
 // ---------
 
 template< class Grid, class DF, class P >
@@ -95,7 +107,7 @@ const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, i
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
 
-  double timeStep = std::pow( 2, - ( 3 + level ) );
+  double timeStep = shortestEdge( gridPart );
   timeStep *= cfl;
   timeStep /= ProblemType::maxVelocity();
   TimeProviderType timeProvider( start, timeStep, gridPart.comm() );
@@ -257,7 +269,7 @@ try {
     if( Dune::Fem::MPIManager::rank() == 0 )
     {
       const double l1eoc = log( oldL1Error / newL1Error ) / M_LN2;
-      std::cout << "L1 Error: " << std::setw( 16 ) << newL1Error << "   Duration: " << elapsedTime << "s" << std::endl;
+      std::cout << "L1 Error: " << std::setw( 16 ) << newL1Error << "   Duration: " << elapsedTime / Dune::Fem::MPIManager::size() << "s" << std::endl;
 
       if ( step > level )
         std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;

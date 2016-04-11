@@ -108,14 +108,17 @@ namespace Dune {
 
 
     template< class Coord >
-    auto locateHalfSpace ( const Polyhedron< Coord >& cell, const Coord& n, double fraction ) -> HalfSpace< Coord >
+    auto locateHalfSpace ( const Polyhedron< Coord >& cell, const Coord& innerNormal, double fraction ) -> HalfSpace< Coord >
     {
-      Coord normal ( n );
-      normal /= - normal.two_norm();
+      Coord outerNormal ( innerNormal );
+      outerNormal /= - outerNormal.two_norm();
+
+      fraction = ( fraction > 1.0 ) ? 1.0 : fraction;
+      fraction = ( fraction < 0.0 ) ? 0.0 : fraction;
 
       double givenVolume = fraction * cell.volume();
 
-      const Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( normal, cell ) );
+      const Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( outerNormal, cell ) );
 
       // Compute and sort plane constants
       // --------------------------------
@@ -133,7 +136,7 @@ namespace Dune {
       std::sort( d.begin(), d.end() );
 
       std::vector< double > dUnique ( d );
-      auto it = std::unique( dUnique.begin(), dUnique.end() );
+      auto it = std::unique( dUnique.begin(), dUnique.end(), []( const double x, const double y ) { return std::abs( x - y ) < 1e-10; } );
       dUnique.resize( std::distance( dUnique.begin(), it ) );
 
 
@@ -152,7 +155,8 @@ namespace Dune {
         double A = 0.0;
         for ( std::size_t n = 0; n < Nn; ++n )
         {
-          assert ( polygon.directions( n ).size() > 0 );
+          assert ( !polygon.directions( n ).empty() );
+
           const std::size_t epsn = polygon.directions( n ).size() - 1;
 
           Coord v1 = polygon.directionVector( n, epsn );
@@ -166,31 +170,34 @@ namespace Dune {
             A -= ( w1[0] * w2[1] - w1[1] * w2[0] ) / ( w1[2] * w2[2] );
           }
         }
+        assert ( A == A );
 
         double B = 0.0;
         for ( std::size_t i = 0; i < polygon.edges().size(); ++i )
         {
-          Coord normal = polygon.correspondingFace( i ).outerNormal();
-          double norm = project( normal ).two_norm();
+          Coord outerNormal = polygon.correspondingFace( i ).outerNormal();
+          double norm = project( outerNormal ).two_norm();
 
           if ( norm > 0 )
-            B -= polygon.edge( i ).volume() * normal[2] / norm;
+            B -= polygon.edge( i ).volume() * outerNormal[2] / norm;
         }
+        assert ( B == B );
 
         double C = polygon.volume();
+        assert ( C == C );
 
         double h = dUnique[ k+1 ] - dUnique[ k ];
         auto V = [ A, B, C ] ( const double h ) { return C * h + B * h * h / 2.0 + A * h * h * h / 6.0; };
         Vd_k1 = Vd_k + V( h );
 
-        if ( std::abs( Vd_k1 - givenVolume ) < std::numeric_limits< double >::epsilon() )
-          return HalfSpace< Coord > ( normal, -dUnique[ k+1 ] );
+        if ( std::abs( Vd_k1 - givenVolume ) < 1e-14 )
+          return HalfSpace< Coord > ( innerNormal, dUnique[ k+1 ] );
 
         else if ( Vd_k1 > givenVolume )
         {
           const auto& Vh_V = [ &V, givenVolume, Vd_k ] ( const double h ) { return V( h ) - ( givenVolume - Vd_k ); };
           double distance = dUnique[ k ] + Dune::VoF::brentsMethod ( Vh_V, 0.0, h, 1e-14 );
-          return HalfSpace< Coord > ( normal, -distance );
+          return HalfSpace< Coord > ( innerNormal, distance );
         }
 
         else
@@ -199,8 +206,8 @@ namespace Dune {
         Vd_k = Vd_k1;
       }
 
-      // Error
-      return HalfSpace< Coord > ();
+      assert( false );
+      return HalfSpace< Coord > ( innerNormal, dUnique[ dUnique.size() - 1 ] - 1e-6 );
     }
 
 

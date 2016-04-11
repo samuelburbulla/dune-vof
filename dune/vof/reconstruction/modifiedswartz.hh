@@ -49,11 +49,11 @@ namespace Dune
 
     public:
       ModifiedSwartzReconstruction ( StencilSet &stencils, InitialReconstruction initializer,
-                                     const std::size_t maxIterations = 30 )
+                                     const std::size_t maxIterations = 50 )
        : stencils_( stencils ), initializer_( initializer ), maxIterations_( maxIterations )
       {}
 
-      explicit ModifiedSwartzReconstruction ( StencilSet &stencils, const std::size_t maxIterations = 30 )
+      explicit ModifiedSwartzReconstruction ( StencilSet &stencils, const std::size_t maxIterations = 50 )
        : stencils_( stencils ), initializer_( stencils ), maxIterations_( maxIterations )
       {}
 
@@ -115,15 +115,11 @@ namespace Dune
             if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
               continue;
 
-            // disregard opposite interface
-            if ( ( reconstructions[ neighbor ].innerNormal() * normal ) <= 0.0 )
-              continue;
-
             // disregard empty neighbors
             if ( reconstructions[ neighbor ].innerNormal() == Coordinate( 0 ) )
               continue;
 
-            const auto& polygonNb = makePolytope( neighbor.geometry() );
+            auto polygonNb = makePolytope( neighbor.geometry() );
             auto it2 = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
             auto lineNb = static_cast< typename decltype( it2 )::Result > ( it2 );
 
@@ -140,6 +136,7 @@ namespace Dune
 
             // if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
             //   continue;
+
 
             newNormal += centerNormal;
           }

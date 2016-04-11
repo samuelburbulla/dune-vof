@@ -94,6 +94,7 @@ namespace Dune
         Coordinate normal;
         const Coordinate center = geometry.center();
         const auto colorEn = color[ entity ];
+        assert( colorEn == colorEn );
 
         Matrix AtA( 0.0 );
         Vector Atb( 0.0 );
@@ -103,6 +104,7 @@ namespace Dune
           const ctype wk = 1.0 / d.two_norm2();
           d *= wk;
           AtA += outerProduct( d, d );
+          assert( color[ neighbor ] == color[ neighbor ] );
           Atb.axpy( wk * ( color[ neighbor ] - colorEn ), d );
         }
         AtA.solve( normal, Atb );
@@ -114,7 +116,9 @@ namespace Dune
         }
 
         normalize( normal );
-        reconstruction = locateHalfSpace( makePolytope( geometry ), normal, colorEn );
+
+        auto polytope = makePolytope( geometry );
+        reconstruction = locateHalfSpace( polytope, normal, colorEn );
       }
 
       Matrix outerProduct ( const Vector &a, const Vector &b ) const

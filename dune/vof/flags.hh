@@ -33,7 +33,8 @@ namespace Dune
         full        = 2,
         mixedfull   = 3,
         activeempty = 4,
-        activefull  = 5
+        activefull  = 5,
+        nan         = 6
       };
 
       using Mapper = MCMGMapper< GridView, MCMGElementLayout >;
@@ -89,14 +90,19 @@ namespace Dune
             flag = Flag::mixed;
           else
           {
-            flag = Flag::full;
+            if ( colorEn != colorEn )
+              flag = Flag::nan;
+            else
+            {
+              flag = Flag::full;
 
-            for ( const auto &intersection : intersections( gridView(), entity ) )
-              if ( intersection.neighbor() && color[ intersection.outside() ] < eps )
-              {
-                flag = Flag::mixedfull;
-                break;
-              }
+              for ( const auto &intersection : intersections( gridView(), entity ) )
+                if ( intersection.neighbor() && color[ intersection.outside() ] < eps )
+                {
+                  flag = Flag::mixedfull;
+                  break;
+                }
+            }
           }
         }
 

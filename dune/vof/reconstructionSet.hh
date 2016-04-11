@@ -49,8 +49,8 @@ namespace Dune
        : mapper_( gridView ), reconstructionSet_( mapper().size() )
        {}
 
-      const Reconstruction& operator[] ( const Entity &entity ) const DUNE_DEPRECATED_MSG( "Use access via index instead." ) { return reconstructionSet_[ mapper().index( entity ) ]; }
-      Reconstruction& operator[] ( const Entity &entity ) DUNE_DEPRECATED_MSG( "Use access via index instead." ) { return reconstructionSet_[ mapper().index( entity ) ]; }
+      const Reconstruction& operator[] ( const Entity &entity ) const /*DUNE_DEPRECATED_MSG( "Use access via index instead." )*/ { return reconstructionSet_[ mapper().index( entity ) ]; }
+      Reconstruction& operator[] ( const Entity &entity ) /*DUNE_DEPRECATED_MSG( "Use access via index instead." )*/ { return reconstructionSet_[ mapper().index( entity ) ]; }
 
       const Reconstruction& operator[] ( const Index &index ) const { return reconstructionSet_[ index ]; }
       Reconstruction& operator[] ( const Index &index ) { return reconstructionSet_[ index ]; }

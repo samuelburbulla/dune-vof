@@ -11,7 +11,7 @@ fem.io.savestep: 0.1
 start: 0.0
 end: 10
 
-level: 2
+level: 0
 repeats: 0
 
 cfl: 0.5

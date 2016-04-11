@@ -202,7 +202,7 @@ try {
       flags.reflag( cuh, eps );
       reconstruction( cuh, reconstructions, flags );
 
-      for ( auto& entity : elements( gridPart ) )
+      for ( const auto& entity : elements( gridPart ) )
         dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
 
 

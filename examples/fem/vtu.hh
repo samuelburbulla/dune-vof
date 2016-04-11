@@ -188,7 +188,7 @@ private:
 
   void writeTypes ( std::ostream &vtu ) const
   {
-    std::vector< std::uint8_t > types( v_.size(), 4 );
+    std::vector< std::uint8_t > types( v_.size(), 7 );
     writeDataArray( vtu, "types", types );
   }
 

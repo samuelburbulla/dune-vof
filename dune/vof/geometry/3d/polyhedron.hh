@@ -5,9 +5,10 @@
 #include <array>
 #include <tuple>
 #include <vector>
+#include <cmath>
 
 /* dune includes */
-#include "../utility.hh"
+#include <dune/vof/geometry/utility.hh>
 
 namespace Dune {
 
@@ -68,6 +69,7 @@ namespace Dune {
           normal[ 1 ] = v1[ 2 ] * v2[ 0 ] - v1[ 0 ] * v2[ 2 ];
           normal[ 2 ] = v1[ 0 ] * v2[ 1 ] - v1[ 1 ] * v2[ 0 ];
 
+          assert ( normal.two_norm() != 0 );
           normal /= normal.two_norm();
           return normal;
         }
@@ -226,10 +228,9 @@ namespace Dune {
       Polyhedron (
         const std::vector< std::vector< std::size_t > >& faces,
         const std::vector< std::array< size_t, 2 > >& edges,
-        const std::vector< Coordinate >& nodes
-      ) : nodes_ ( nodes )
+        std::vector< Coordinate > nodes
+      ) : nodes_ ( std::move( nodes ) )
       {
-
         for ( const auto& edgeData : edges )
           edges_.emplace_back( E ( this, edgeData ) );
 
@@ -242,8 +243,32 @@ namespace Dune {
 
           faces_.emplace_back( F ( this, faceEdges ) );
         }
-
       };
+
+    private:
+      Polyhedron ( std::vector< F > faces, std::vector< E > edges, std::vector< Coordinate > nodes )
+        : nodes_ ( std::move( nodes ) ), faces_ ( std::move( faces ) ), edges_ ( std::move( edges ) )
+      {
+        for ( auto& edge : edges_ )
+          edge = E ( edge, this );
+
+        for ( auto& face : faces_ )
+          face = F ( face, this );
+      };
+
+    public:
+
+      Polyhedron ( const Polyhedron& other )
+        : Polyhedron( other.faces_, other.edges_, other.nodes_ )
+      {}
+
+      Polyhedron ( Polyhedron&& other )
+        : Polyhedron( std::move( other.faces_ ), std::move( other.edges_ ), std::move( other.nodes_ ) )
+      {}
+
+      Polyhedron& operator= ( Polyhedron&& ) = delete;
+      Polyhedron& operator= ( const Polyhedron& ) = delete;
+
 
       Polyhedron ( const Polyhedron& other, const std::vector< Coord >& newNodes )
        : nodes_ ( newNodes )
@@ -278,6 +303,7 @@ namespace Dune {
         double vol = 0.0;
         for ( const auto& face : faces() )
           vol += face.center() * face.outerNormal() * face.volume();
+        assert( !isnan( vol ) );
         return std::abs( vol / 3.0 );
       }
 
@@ -297,8 +323,7 @@ namespace Dune {
             if ( edge == e )
               return face;
 
-        //Dune::Exception( "Warning: (attachedFaceToEdge) Edge was not found in any face." );
-        std::cerr << "Edge was not found in any face." << std::endl;
+        DUNE_THROW( InvalidStateException, "Edge was not found in any face." );
         return face( 0 );
       }
 

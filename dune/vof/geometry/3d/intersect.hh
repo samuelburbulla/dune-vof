@@ -55,7 +55,7 @@ namespace Dune {
         std::vector< std::size_t > p;
 
         for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
-          if ( halfSpace.levelSet( polyhedron.node( i ) ) <= eps )
+          if ( halfSpace.levelSet( polyhedron.node( i ) ) >= -eps )
           {
             isInner[ i ] = true;
             p.push_back( n );
@@ -64,7 +64,15 @@ namespace Dune {
           else
             p.push_back( -1 );
 
+        // Handle trivial cases
+        if ( n == 0 )
+          return Polyhedron< Coord >();
+        else if ( n == 1 )
+          return Polyhedron< Coord >( {}, std::vector< std::array< std::size_t, 2 > > {}, { polyhedron.node( p[0] ) } );
+        else if ( n == 2 )
+          return Polyhedron< Coord >( {}, std::vector< std::array< std::size_t, 2 > > { {{ 0, 1 }}, {{ 1, 0 }} }, { polyhedron.node( p[0] ), polyhedron.node( p[1] ) } );
 
+        // Non-trivial case
         for ( const auto& face : polyhedron.faces() )
         {
           Face newFace;
@@ -86,7 +94,7 @@ namespace Dune {
               // Intersection point is corner 0
               if ( ( isNode - edge.node(0) ).two_norm() <= eps )
               {
-                if ( lastIntersectionPointId != std::size_t(-1) )
+                if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != p[ edge.nodeId(0) ] )
                 {
                   edges.push_back( {{ p[ edge.nodeId(0) ], lastIntersectionPointId }} );
                   newFace.emplace_back( edges.size() - 1 );
@@ -99,7 +107,7 @@ namespace Dune {
               // Intersection point is corner 1
               else if ( ( isNode - edge.node(1) ).two_norm() <= eps )
               {
-                if ( lastIntersectionPointId != std::size_t(-1) )
+                if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != p[ edge.nodeId(1) ] )
                 {
                   edges.push_back( {{ lastIntersectionPointId, p[ edge.nodeId(1) ] }} );
                   newFace.emplace_back( edges.size() - 1 );
@@ -111,7 +119,7 @@ namespace Dune {
               }
               else
               {
-              // Intersection point is new point
+                // Intersection point is new point
                 std::size_t isNodeId;
                 const auto pos = std::find_if( newNodes.begin(), newNodes.end(),
                   [ isNode, eps ]( const auto& other ) -> bool { return (isNode - other).two_norm() < eps; }
@@ -161,11 +169,8 @@ namespace Dune {
             faces.push_back( newFace );
         }
 
-
-
         // sort subentities and nodes of intersection face
         // ===============================================
-
 
         // Erase null-edges
         for ( std::size_t i = 0; i < intersectionFace.size(); ++i )
@@ -174,6 +179,13 @@ namespace Dune {
           if ( edge[ 0 ] == edge[ 1 ] )
             intersectionFace.erase( intersectionFace.begin() + i );
         }
+        for ( auto& face : faces )
+          for ( std::size_t i = 0; i < face.size(); ++i )
+          {
+            const Edge& edge = edges[ face[ i ] ];
+            if ( edge[ 0 ] == edge[ 1 ] )
+              face.erase( face.begin() + i );
+          }
 
 
         // Sort edges of intersection face
@@ -204,8 +216,9 @@ namespace Dune {
 
         nodes.insert( nodes.end(), newNodes.begin(), newNodes.end() );
 
-
-        return Polyhedron< Coord > ( { faces, edges, nodes } );
+        auto intersection = Polyhedron< Coord > ( { faces, edges, nodes } );
+        assert ( !isnan( intersection.volume() ) );
+        return intersection;
       }
 
 
@@ -243,7 +256,7 @@ namespace Dune {
         if ( n == 0 || n == polyhedron.nodes().size() )
         {
           for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
-            if ( plane.levelSet( polyhedron.node( i ) ) < eps )
+            if ( plane.levelSet( polyhedron.node( i ) ) >= -eps )
               return Dune::VoF::Face< Coord > ( { polyhedron.node( i ) } );
           return Dune::VoF::Face< Coord >();
         }
@@ -294,7 +307,6 @@ namespace Dune {
         std::vector< Coordinate > nodes;
         for ( std::size_t i = 0; i < edges.size(); ++i )
           nodes.push_back( edges[ i ][ 0 ] );
-        nodes.push_back( edges[ 0 ][ 0 ] );
 
         assert( nodes.size() > 0 );
 
