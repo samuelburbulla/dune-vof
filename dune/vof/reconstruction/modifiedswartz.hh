@@ -66,9 +66,10 @@ namespace Dune
        * \param   flags           set of flags
        */
       template< class Flags >
-      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
+      double operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
       {
-        initializer()( color, reconstructions, flags );
+        double elapsedTime = initializer()( color, reconstructions, flags );
+        elapsedTime = - MPI_Wtime();
 
         for ( const auto &entity : elements( color.gridView() ) )
         {
@@ -77,9 +78,12 @@ namespace Dune
 
           applyLocal( entity, flags, color, reconstructions );
         }
+        elapsedTime += MPI_Wtime();
 
         auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
         color.gridView().communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
+
+        return elapsedTime;
       }
 
     private:

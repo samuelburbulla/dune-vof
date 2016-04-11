@@ -63,9 +63,11 @@ namespace Dune
        * \param   flags           set of flags
        */
       template< class Velocity, class Flags >
-      void operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, const double dt,
+      double operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, const double dt,
                         ColorFunction &update, const Flags &flags ) const
       {
+        double elapsedTime = - MPI_Wtime();
+
         update.clear();
 
         for( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
@@ -75,6 +77,9 @@ namespace Dune
 
           applyLocal( entity, flags, dt, color, reconstructions, velocity, update);
         }
+
+        elapsedTime += MPI_Wtime();
+        return elapsedTime;
       }
 
     private:

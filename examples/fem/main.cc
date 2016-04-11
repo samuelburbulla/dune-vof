@@ -75,7 +75,7 @@ double shortestEdge( const GridPart& gridPart )
 // ---------
 
 template< class Grid, class DF, class P >
-const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
+const std::tuple< double, double, double, double, double > algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
 {
   using GridType = Grid;
   using ProblemType = P;
@@ -120,6 +120,10 @@ const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, i
 
   // Time Iteration
   // ==============
+  double maxElapsedTimeTimestep = std::numeric_limits< double >::min();
+  double minElapsedTimeTimestep = std::numeric_limits< double >::max();
+  double avgElapsedTimeTimestep = 0.0;
+
   comm.barrier();
   double elapsedTime = - MPI_Wtime();
 
@@ -131,21 +135,30 @@ const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, i
 
   for( ; timeProvider.time() <= end; )
   {
+
     if( Dune::Fem::Parameter::verbose() )
       std::cerr << "time step = " << timeProvider.timeStep() << ", "
                 << "time = " << timeProvider.time() << ", "
                 << "dt = " << timeProvider.deltaT() << std::endl;
 
-    flags.reflag( cuh, eps );
-    reconstruction( cuh, reconstructions, flags );
+    double elapsedTimeTimestep = 0.0;
 
-    evolution( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
+    elapsedTimeTimestep += flags.reflag( cuh, eps );
+    elapsedTimeTimestep += reconstruction( cuh, reconstructions, flags );
+    elapsedTimeTimestep += evolution( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
+
     update.communicate();
     uh.axpy( 1.0, update );
 
     timeProvider.next();
     if ( writeData )
       dataOutput.write( grid, uh, timeProvider );
+
+    avgElapsedTimeTimestep += elapsedTimeTimestep;
+    if ( elapsedTimeTimestep > maxElapsedTimeTimestep )
+      maxElapsedTimeTimestep = elapsedTimeTimestep;
+    if ( elapsedTimeTimestep < minElapsedTimeTimestep )
+      minElapsedTimeTimestep = elapsedTimeTimestep;
   }
 
   if ( writeData )
@@ -155,7 +168,9 @@ const std::tuple< double, double > algorithm ( Grid &grid, DF& uh, P& problem, i
   elapsedTime += MPI_Wtime();
   auto totalElapsedTime = comm.sum( elapsedTime );
 
-  return std::make_tuple ( timeProvider.time(), totalElapsedTime );
+  avgElapsedTimeTimestep /= timeProvider.timeStep();
+
+  return std::make_tuple ( timeProvider.time(), totalElapsedTime, maxElapsedTimeTimestep, minElapsedTimeTimestep, avgElapsedTimeTimestep );
 }
 
 
@@ -258,6 +273,10 @@ try {
 
     const double actualEndTime = std::get<0> ( results );
     const double elapsedTime = std::get<1> ( results );
+    const double maxElapsedTimeTimestep = std::get<2> ( results );
+    const double minElapsedTimeTimestep = std::get<3> ( results );
+    const double avgElapsedTimeTimestep = std::get<4> ( results );
+
 
     // Calculate Error
     // ===============
@@ -269,10 +288,37 @@ try {
     if( Dune::Fem::MPIManager::rank() == 0 )
     {
       const double l1eoc = log( oldL1Error / newL1Error ) / M_LN2;
-      std::cout << "L1 Error: " << std::setw( 16 ) << newL1Error << "   Duration: " << elapsedTime / Dune::Fem::MPIManager::size() << "s" << std::endl;
+      std::cout << "L1-Error =" << std::setw( 16 ) << newL1Error
+                << "   averaged Duration = " << elapsedTime / Dune::Fem::MPIManager::size() << "s"
+                << std::endl;
 
       if ( step > level )
         std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
+    }
+
+    double balance = maxElapsedTimeTimestep / minElapsedTimeTimestep;
+
+    std::cout << "Core " << Dune::Fem::MPIManager::rank() << ": " << std::endl
+              << " Timestep duration:" << std::endl
+              << "   max=" << maxElapsedTimeTimestep << "s" << std::endl
+              << "   min=" << minElapsedTimeTimestep << "s" << std::endl
+              << "   avg=" << avgElapsedTimeTimestep << "s" << std::endl
+              << " balance=" << maxElapsedTimeTimestep / minElapsedTimeTimestep << std::endl
+              << std::endl;
+
+    const auto& comm = Dune::Fem::MPIManager::comm();
+    double maxBalance = comm.max( balance );
+    double minBalance = comm.min( balance );
+    double avgBalance = comm.sum( balance );
+    avgBalance /= Dune::Fem::MPIManager::size();
+
+    if( Dune::Fem::MPIManager::rank() == 0 )
+    {
+      std::cout << "Overall Balance:" << std::endl
+                << "   max=" << maxBalance << std::endl
+                << "   min=" << minBalance << std::endl
+                << "   avg=" << avgBalance << std::endl
+                << std::endl;
     }
 
     Dune::Fem::GlobalRefine::apply( grid, refineStepsForHalf );
