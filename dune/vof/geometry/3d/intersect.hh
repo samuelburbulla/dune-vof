@@ -51,7 +51,7 @@ namespace Dune {
         std::vector< Coordinate > newNodes;
         Face intersectionFace;
 
-        std::size_t n = 0;
+        std::size_t n = 0, onBoundary = 0;
         std::vector< std::size_t > p;
 
         for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
@@ -60,6 +60,8 @@ namespace Dune {
             isInner[ i ] = true;
             p.push_back( n );
             n++;
+            if ( std::abs( halfSpace.levelSet( polyhedron.node( i ) ) ) <= eps )
+              onBoundary++;
           }
           else
             p.push_back( -1 );
@@ -67,9 +69,9 @@ namespace Dune {
         // Handle trivial cases
         if ( n == 0 )
           return Polyhedron< Coord >();
-        else if ( n == 1 )
+        if ( n == 1 && onBoundary == 1 )
           return Polyhedron< Coord >( {}, std::vector< std::array< std::size_t, 2 > > {}, { polyhedron.node( p[0] ) } );
-        else if ( n == 2 )
+        if ( n == 2 && onBoundary == 2 )
           return Polyhedron< Coord >( {}, std::vector< std::array< std::size_t, 2 > > { {{ 0, 1 }}, {{ 1, 0 }} }, { polyhedron.node( p[0] ), polyhedron.node( p[1] ) } );
 
         // Non-trivial case

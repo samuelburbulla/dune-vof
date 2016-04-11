@@ -32,6 +32,14 @@ namespace Dune
                                            ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                          >( stencils );
     }
+    /*
+    template< class GridView, class Stencils, class ColorFunction >
+    static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
+     -> ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
+    {
+      return ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
+    }
+    */
 
   } // namespace VoF
 
