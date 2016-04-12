@@ -261,6 +261,7 @@ try {
         binaryStream >> timestamp;
         startTime = timestamp;
         uh.read( binaryStream );
+        std::cout << "Restarted in file " << filename << std::endl;
       }
     }
 
