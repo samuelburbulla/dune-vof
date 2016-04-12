@@ -141,7 +141,7 @@ namespace Dune {
                   edges.push_back( {{ p[ edge.nodeId(0) ], isNodeId }} );
                   newFace.emplace_back( edges.size() - 1 );
 
-                  if ( lastIntersectionPointId != std::size_t(-1) )
+                  if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != isNodeId )
                   {
                     edges.push_back( {{ isNodeId, lastIntersectionPointId }} );
                     newFace.emplace_back( edges.size() - 1 );
@@ -152,7 +152,7 @@ namespace Dune {
                 }
                 else
                 {
-                  if ( lastIntersectionPointId != std::size_t(-1) )
+                  if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != isNodeId )
                   {
                     edges.push_back( {{ lastIntersectionPointId, isNodeId }} );
                     newFace.emplace_back( edges.size() - 1 );
@@ -171,7 +171,7 @@ namespace Dune {
             faces.push_back( newFace );
         }
 
-        // sort subentities and nodes of intersection face
+        // Sort subentities and nodes of intersection face
         // ===============================================
 
         // Erase null-edges
@@ -181,14 +181,6 @@ namespace Dune {
           if ( edge[ 0 ] == edge[ 1 ] )
             intersectionFace.erase( intersectionFace.begin() + i );
         }
-        for ( auto& face : faces )
-          for ( std::size_t i = 0; i < face.size(); ++i )
-          {
-            const Edge& edge = edges[ face[ i ] ];
-            if ( edge[ 0 ] == edge[ 1 ] )
-              face.erase( face.begin() + i );
-          }
-
 
         // Sort edges of intersection face
         for ( std::size_t i = 0; i + 1 < intersectionFace.size(); ++i )
