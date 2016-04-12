@@ -116,6 +116,15 @@ namespace Dune {
       fraction = ( fraction > 1.0 ) ? 1.0 : fraction;
       fraction = ( fraction < 0.0 ) ? 0.0 : fraction;
 
+      bool inverseMode = false;
+      if ( fraction > 0.5 )
+      {
+        fraction = 1.0 - fraction;
+        outerNormal *= -1.0;
+        inverseMode = true;
+      }
+
+
       double givenVolume = fraction * cell.volume();
 
       const Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( outerNormal, cell ) );
@@ -175,11 +184,11 @@ namespace Dune {
         double B = 0.0;
         for ( std::size_t i = 0; i < polygon.edges().size(); ++i )
         {
-          Coord outerNormal = polygon.correspondingFace( i ).outerNormal();
-          double norm = project( outerNormal ).two_norm();
+          Coord normal = polygon.correspondingFace( i ).outerNormal();
+          double norm = project( normal ).two_norm();
 
           if ( norm > 0 )
-            B -= polygon.edge( i ).volume() * outerNormal[2] / norm;
+            B -= polygon.edge( i ).volume() * normal[2] / norm;
         }
         assert ( B == B );
 
@@ -191,12 +200,16 @@ namespace Dune {
         Vd_k1 = Vd_k + V( h );
 
         if ( std::abs( Vd_k1 - givenVolume ) < 1e-14 )
-          return HalfSpace< Coord > ( innerNormal, dUnique[ k+1 ] );
+        {
+          double distance = inverseMode ? -dUnique[ k+1 ] : dUnique[ k+1 ];
+          return HalfSpace< Coord > ( innerNormal, distance );
+        }
 
         else if ( Vd_k1 > givenVolume )
         {
           const auto& Vh_V = [ &V, givenVolume, Vd_k ] ( const double h ) { return V( h ) - ( givenVolume - Vd_k ); };
           double distance = dUnique[ k ] + Dune::VoF::brentsMethod ( Vh_V, 0.0, h, 1e-14 );
+          distance = inverseMode ? -distance : distance;
           return HalfSpace< Coord > ( innerNormal, distance );
         }
 
@@ -207,7 +220,7 @@ namespace Dune {
       }
 
       assert( false );
-      return HalfSpace< Coord > ( innerNormal, dUnique[ dUnique.size() - 1 ] - 1e-6 );
+      return HalfSpace< Coord > ( innerNormal, inverseMode ? -dUnique[ dUnique.size() - 1 ] : dUnique[ dUnique.size() - 1 ] );
     }
 
 
