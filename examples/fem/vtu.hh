@@ -179,8 +179,9 @@ private:
 
   void writeNormals( std::ostream &vtu ) const
   {
-    std::vector< Position > normals( overallSize_ );
-    for( std::size_t i = 0; i < overallSize_; ++i  )
+    const std::size_t size = v_.size();
+    std::vector< Position > normals( size );
+    for( std::size_t i = 0; i < size; ++i  )
       normals[ i ] = v_[ i ].normal();
 
     writeDataArray( vtu, "normals", normals );
@@ -188,7 +189,7 @@ private:
 
   void writeTypes ( std::ostream &vtu ) const
   {
-    std::vector< std::uint8_t > types( v_.size(), 7 );
+    std::vector< std::uint8_t > types( v_.size(), ( Position::dimension == 3 ) ? 7 : 4 );
     writeDataArray( vtu, "types", types );
   }
 

@@ -155,7 +155,7 @@ namespace Dune {
 
       // Implementation defined
 
-      int size ( int codim = 1 ) const { return ( codim == 0 ) ? 1 : 2; }
+      std::size_t size ( int codim = 1 ) const { return ( codim == 0 ) ? 1 : 2; }
 
     private:
       const Container& vertices ()  const { return vertices_; }
