@@ -26,7 +26,6 @@ namespace Dune
       using GridView = GV;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
 
-    private:
       enum class Flag {
         empty       = 0,
         mixed       = 1,
@@ -36,6 +35,7 @@ namespace Dune
         activefull  = 5,
         nan         = 6
       };
+    private:
 
       using Mapper = MCMGMapper< GridView, MCMGElementLayout >;
 
