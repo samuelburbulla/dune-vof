@@ -129,7 +129,7 @@ namespace Dune {
       : vertices_{ v0, v1 }
       {}
 
-      const Coordinate& vertex ( int i ) const
+      const Coordinate& vertex ( std::size_t i ) const
       {
         assert( i < size( 1 ) );
         return vertices()[ i ];
