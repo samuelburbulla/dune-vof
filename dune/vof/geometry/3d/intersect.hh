@@ -41,7 +41,7 @@ namespace Dune {
         using Face = typename std::vector< size_t >;
         using Edge = typename std::array< size_t, 2 >;
 
-        const double eps = 1e-8;
+        const double eps = 1e-10;
 
         std::vector< Coordinate > nodes;
         std::vector< Edge > edges;
@@ -55,12 +55,12 @@ namespace Dune {
         std::vector< std::size_t > p;
 
         for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
-          if ( halfSpace.levelSet( polyhedron.node( i ) ) >= -eps )
+          if ( halfSpace.levelSet( polyhedron.node( i ) ) > -eps )
           {
             isInner[ i ] = true;
             p.push_back( n );
             n++;
-            if ( std::abs( halfSpace.levelSet( polyhedron.node( i ) ) ) <= eps )
+            if ( std::abs( halfSpace.levelSet( polyhedron.node( i ) ) ) < eps )
               onBoundary++;
           }
           else
@@ -94,7 +94,7 @@ namespace Dune {
               const Coordinate isNode = edge.intersection( halfSpace.boundary() );
 
               // Intersection point is corner 0
-              if ( ( isNode - edge.node(0) ).two_norm() <= eps )
+              if ( ( isNode - edge.node(0) ).two_norm() < eps )
               {
                 if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != p[ edge.nodeId(0) ] )
                 {
@@ -107,7 +107,7 @@ namespace Dune {
                 lastIntersectionPointId = p[ edge.nodeId(0) ];
               }
               // Intersection point is corner 1
-              else if ( ( isNode - edge.node(1) ).two_norm() <= eps )
+              else if ( ( isNode - edge.node(1) ).two_norm() < eps )
               {
                 if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != p[ edge.nodeId(1) ] )
                 {
