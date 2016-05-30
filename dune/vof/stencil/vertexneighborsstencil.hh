@@ -28,10 +28,11 @@ namespace Dune
 
     private:
       using Mapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
+      using VertexMapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGVertexLayout >;
 
     public:
       explicit VertexNeighborsStencil ( const GridView& gridView )
-       : gridView_( gridView ), mapper_( gridView_ ), stencils_( mapper_.size() )
+       : gridView_( gridView ), mapper_( gridView_ ), vmapper_( gridView_ ), stencils_( mapper_.size() )
       {
         initialize();
       }
@@ -44,6 +45,7 @@ namespace Dune
     private:
       const GridView& gridView() const { return gridView_; }
       const Mapper& mapper() const { return mapper_; }
+      const VertexMapper& vmapper() const { return vmapper_; }
 
       void initialize()
       {
@@ -58,7 +60,7 @@ namespace Dune
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            std::size_t vId = mapper().subIndex( entity, k, dim );
+            std::size_t vId = vmapper().subIndex( entity, k, dim );
             cellsNextToThisVertex[ vId ].push_back( id );
           }
         }
@@ -69,7 +71,7 @@ namespace Dune
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            std::size_t vId = mapper().subIndex( entity, k, dim );
+            std::size_t vId = vmapper().subIndex( entity, k, dim );
 
             for( std::size_t index : cellsNextToThisVertex[ vId ] )
               if( index != id )
@@ -91,6 +93,7 @@ namespace Dune
 
       GridView gridView_;
       Mapper mapper_;
+      VertexMapper vmapper_;
       std::vector< Stencil > stencils_;
     };
 
