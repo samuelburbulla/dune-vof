@@ -23,77 +23,75 @@ namespace Dune
     {
       using GridView = GV;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
-      using EntitySeed = typename Entity::EntitySeed;
       using Stencil = std::vector< Entity >;
-
       static constexpr int dim = GridView::dimension;
 
     private:
-      using Mapper =
-        Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
+      using Mapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
 
     public:
-      explicit VertexNeighborsStencil ( const GridView &gridView )
-       : gridView_( gridView ), mapper_( gridView_ ), cellsInDomain_( mapper_.size() ), seeds_( mapper_.size() )
+      explicit VertexNeighborsStencil ( const GridView& gridView )
+       : gridView_( gridView ), mapper_( gridView_ ), stencils_( mapper_.size() )
       {
-        getCellsInDomain();
+        initialize();
       }
 
-      Stencil operator[] ( const Entity &entity ) const
+      const Stencil& operator[] ( const Entity& entity ) const
       {
-        Stencil stencil;
-        for ( const auto& index : cellsInDomain_[ mapper().index( entity ) ] )
-          stencil.push_back( gridView().grid().entity( seeds_[ index ] ) );
-
-        return stencil;
+        return stencils_[ mapper().index( entity ) ];
       }
 
     private:
-      const GridView &gridView () const { return gridView_; }
-      const Mapper &mapper () const { return mapper_; }
+      const GridView& gridView() const { return gridView_; }
+      const Mapper& mapper() const { return mapper_; }
 
-      void getCellsInDomain()
+      void initialize()
       {
-        std::vector < std::vector < int > > cellsNextToThisVertex( gridView().indexSet().size( dim ) );
+        std::vector< std::vector< std::size_t > > cellsNextToThisVertex( gridView().indexSet().size( dim ) );
+        std::vector< std::vector< std::size_t > > cellsInDomain_( mapper_.size() );
+        std::vector< Entity > entities_( mapper_.size() );
 
-        for( const auto &entity : elements( gridView(), Partitions::all ) )
+        for( const Entity& entity : elements( gridView(), Partitions::all ) )
         {
-          int entityID = mapper().index( entity );
-          seeds_[ entityID ] = entity.seed();
+          std::size_t id = mapper().index( entity );
+          entities_[ id ] = entity;
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            int vertexID = gridView().indexSet().subIndex( entity, k, dim );  //mapper?
-            cellsNextToThisVertex[ vertexID ].push_back( entityID );
+            std::size_t vId = mapper().subIndex( entity, k, dim );
+            cellsNextToThisVertex[ vId ].push_back( id );
           }
         }
 
-        for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
+        for( const Entity& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
-          int entityID = mapper().index( entity );
+          std::size_t id = mapper().index( entity );
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            int vertexIndex = gridView().indexSet().subIndex( entity, k, dim );  //mapper?
+            std::size_t vId = mapper().subIndex( entity, k, dim );
 
-            for( auto index : cellsNextToThisVertex[ vertexIndex ] )
-              if( index != entityID )
-                cellsInDomain_[ entityID ].push_back( index );
+            for( std::size_t index : cellsNextToThisVertex[ vId ] )
+              if( index != id )
+                cellsInDomain_[ id ].push_back( index );
           }
 
 
-          // erase duplicate elements
-          std::sort( cellsInDomain_[ entityID ].begin(), cellsInDomain_[ entityID ].end() );
-          auto last = std::unique( cellsInDomain_[ entityID ].begin(), cellsInDomain_[ entityID ].end() );
-          cellsInDomain_[ entityID ].erase( last, cellsInDomain_[ entityID ].end() );
+          // Erase duplicate elements
+          std::sort( cellsInDomain_[ id ].begin(), cellsInDomain_[ id ].end() );
+          auto last = std::unique( cellsInDomain_[ id ].begin(), cellsInDomain_[ id ].end() );
+          cellsInDomain_[ id ].erase( last, cellsInDomain_[ id ].end() );
+
+          // Create stencil object
+          Stencil& stencil = stencils_[ id ];
+          for ( const std::size_t index : cellsInDomain_[ id ] )
+            stencil.push_back( entities_[ index ] );
         }
       }
 
       GridView gridView_;
       Mapper mapper_;
-
-      std::vector< std::vector< int > > cellsInDomain_;
-      std::vector< EntitySeed > seeds_;
+      std::vector< Stencil > stencils_;
     };
 
   } // namespace VoF
