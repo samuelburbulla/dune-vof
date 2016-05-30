@@ -48,12 +48,12 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:
-      ModifiedSwartzReconstruction ( StencilSet &stencils, InitialReconstruction initializer,
+      ModifiedSwartzReconstruction ( const StencilSet &stencils, InitialReconstruction initializer,
                                      const std::size_t maxIterations = 50 )
        : stencils_( stencils ), initializer_( initializer ), maxIterations_( maxIterations )
       {}
 
-      explicit ModifiedSwartzReconstruction ( StencilSet &stencils, const std::size_t maxIterations = 50 )
+      explicit ModifiedSwartzReconstruction ( const StencilSet &stencils, const std::size_t maxIterations = 50 )
        : stencils_( stencils ), initializer_( stencils ), maxIterations_( maxIterations )
       {}
 
@@ -161,7 +161,7 @@ namespace Dune
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencil
       const InitialReconstruction &initializer () const { return initializer_; }
 
-      StencilSet &stencils_;
+      const StencilSet &stencils_;
       InitialReconstruction initializer_;
       const std::size_t maxIterations_;
     };

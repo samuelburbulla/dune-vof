@@ -48,7 +48,7 @@ namespace Dune
       using Vector = Coordinate;
 
     public:
-      explicit ModifiedYoungsReconstruction ( StencilSet &stencils )
+      explicit ModifiedYoungsReconstruction ( const StencilSet &stencils )
        : stencils_( stencils )
       {}
 
@@ -137,7 +137,7 @@ namespace Dune
 
       Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencils
 
-      StencilSet &stencils_;
+      const StencilSet &stencils_;
     };
 
   }       // end of namespace VoF
