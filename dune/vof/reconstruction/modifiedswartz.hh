@@ -158,7 +158,7 @@ namespace Dune
         while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
       }
 
-      Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencil
+      const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
       const InitialReconstruction &initializer () const { return initializer_; }
 
       const StencilSet &stencils_;

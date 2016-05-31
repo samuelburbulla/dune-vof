@@ -135,7 +135,7 @@ namespace Dune
         return m;
       }
 
-      Stencil stencil ( const Entity &entity ) const { return stencils_[ entity ]; } // rework stencils
+      const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
 
       const StencilSet &stencils_;
     };
