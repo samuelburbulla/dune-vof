@@ -8,6 +8,7 @@
 #include <limits>
 #include <utility>
 #include <vector>
+#include <map>
 
 #include <dune/vof/geometry/halfspace.hh>
 #include <dune/vof/geometry/2d/polygon.hh>
@@ -41,27 +42,35 @@ namespace Dune {
         using Face = typename std::vector< size_t >;
         using Edge = typename std::array< size_t, 2 >;
 
-        const double eps = 1e-10;
+        const double eps = std::numeric_limits< double >::epsilon();
 
         std::vector< Coordinate > nodes;
         std::vector< Edge > edges;
         std::vector< Face > faces;
 
         std::vector< bool > isInner ( polyhedron.nodes().size(), false );
+        std::vector< bool > isBoundary ( polyhedron.nodes().size(), false );
         std::vector< Coordinate > newNodes;
         Face intersectionFace;
+
+        using ReverseEdge = typename std::pair< std::size_t, std::size_t >;
+        using MapValueType = typename std::pair< ReverseEdge, std::size_t >;
+        std::map< ReverseEdge, std::size_t > newNodesMap;
 
         std::size_t n = 0, onBoundary = 0;
         std::vector< std::size_t > p;
 
         for ( std::size_t i = 0; i < polyhedron.nodes().size(); ++i )
-          if ( halfSpace.levelSet( polyhedron.node( i ) ) > -eps )
+          if ( halfSpace.levelSet( polyhedron.node( i ) ) > - eps )
           {
             isInner[ i ] = true;
             p.push_back( n );
             n++;
             if ( std::abs( halfSpace.levelSet( polyhedron.node( i ) ) ) < eps )
+            {
+              isBoundary[ i ] = true;
               onBoundary++;
+            }
           }
           else
             p.push_back( -1 );
@@ -78,7 +87,7 @@ namespace Dune {
         for ( const auto& face : polyhedron.faces() )
         {
           Face newFace;
-          std::size_t lastIntersectionPointId = -1;
+          std::size_t lastIsId = -1;
 
           for ( const auto& edge : face.edges() )
           {
@@ -91,49 +100,50 @@ namespace Dune {
             // Edge is intersected by halfspace boundary
             else if ( isInner[ edge.nodeId(0) ] ^ isInner[ edge.nodeId(1) ] )
             {
-              const Coordinate isNode = edge.intersection( halfSpace.boundary() );
 
               // Intersection point is corner 0
-              if ( ( isNode - edge.node(0) ).two_norm() < eps )
+              if ( isBoundary[ edge.nodeId(0) ] )
               {
-                if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != p[ edge.nodeId(0) ] )
+                if ( lastIsId != std::size_t(-1) && lastIsId != p[ edge.nodeId(0) ] )
                 {
-                  edges.push_back( {{ p[ edge.nodeId(0) ], lastIntersectionPointId }} );
+                  edges.push_back( {{ p[ edge.nodeId(0) ], lastIsId }} );
                   newFace.emplace_back( edges.size() - 1 );
 
-                  edges.push_back( {{ lastIntersectionPointId, p[ edge.nodeId(0) ] }} );
+                  edges.push_back( {{ lastIsId, p[ edge.nodeId(0) ] }} );
                   intersectionFace.emplace_back( edges.size() - 1 );
                 }
-                lastIntersectionPointId = p[ edge.nodeId(0) ];
+                lastIsId = p[ edge.nodeId(0) ];
               }
               // Intersection point is corner 1
-              else if ( ( isNode - edge.node(1) ).two_norm() < eps )
+              else if ( isBoundary[ edge.nodeId(1) ] )
               {
-                if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != p[ edge.nodeId(1) ] )
+                if ( lastIsId != std::size_t(-1) && lastIsId != p[ edge.nodeId(1) ] )
                 {
-                  edges.push_back( {{ lastIntersectionPointId, p[ edge.nodeId(1) ] }} );
+                  edges.push_back( {{ lastIsId, p[ edge.nodeId(1) ] }} );
                   newFace.emplace_back( edges.size() - 1 );
 
-                  edges.push_back( {{ p[ edge.nodeId(1) ], lastIntersectionPointId }});
+                  edges.push_back( {{ p[ edge.nodeId(1) ], lastIsId }});
                   intersectionFace.emplace_back( edges.size() - 1 );
                 }
-                lastIntersectionPointId = p[ edge.nodeId(1) ];
+                lastIsId = p[ edge.nodeId(1) ];
               }
               else
               {
                 // Intersection point is new point
                 std::size_t isNodeId;
-                const auto pos = std::find_if( newNodes.begin(), newNodes.end(),
-                  [ isNode, eps ]( const auto& other ) -> bool { return (isNode - other).two_norm() < eps; }
-                );
 
-                if ( pos == newNodes.end() )
+                ReverseEdge revEdge ( edge.nodeId(1), edge.nodeId(0) );
+                auto it = newNodesMap.find( revEdge );
+
+                if ( it == newNodesMap.end() )
                 {
+                  const Coordinate isNode = edge.intersection( halfSpace.boundary() );
                   newNodes.push_back( isNode );
-                  isNodeId = n + newNodes.size() - 1;
+                  isNodeId = n - 1 + newNodes.size();
+                  newNodesMap.insert( MapValueType( { edge.nodeId(0), edge.nodeId(1) }, isNodeId ) );
                 }
                 else
-                  isNodeId = n + pos - newNodes.begin();
+                  isNodeId = it->second;
 
 
                 if ( isInner[ edge.nodeId(0) ] )
@@ -141,29 +151,29 @@ namespace Dune {
                   edges.push_back( {{ p[ edge.nodeId(0) ], isNodeId }} );
                   newFace.emplace_back( edges.size() - 1 );
 
-                  if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != isNodeId )
+                  if ( lastIsId != std::size_t(-1) && lastIsId != isNodeId )
                   {
-                    edges.push_back( {{ isNodeId, lastIntersectionPointId }} );
+                    edges.push_back( {{ isNodeId, lastIsId }} );
                     newFace.emplace_back( edges.size() - 1 );
 
-                    edges.push_back( {{ lastIntersectionPointId, isNodeId }} );
+                    edges.push_back( {{ lastIsId, isNodeId }} );
                     intersectionFace.emplace_back( edges.size() - 1 );
                   }
                 }
                 else
                 {
-                  if ( lastIntersectionPointId != std::size_t(-1) && lastIntersectionPointId != isNodeId )
+                  if ( lastIsId != std::size_t(-1) && lastIsId != isNodeId )
                   {
-                    edges.push_back( {{ lastIntersectionPointId, isNodeId }} );
+                    edges.push_back( {{ lastIsId, isNodeId }} );
                     newFace.emplace_back( edges.size() - 1 );
 
-                    edges.push_back( {{ isNodeId, lastIntersectionPointId }} );
+                    edges.push_back( {{ isNodeId, lastIsId }} );
                     intersectionFace.emplace_back( edges.size() - 1 );
                   }
                   edges.push_back( {{ isNodeId, p[ edge.nodeId(1) ] }} );
                   newFace.emplace_back( edges.size() - 1 );
                 }
-                lastIntersectionPointId = isNodeId;
+                lastIsId = isNodeId;
               }
             }
           }
@@ -196,7 +206,8 @@ namespace Dune {
           );
 
           assert ( pos != intersectionFace.end() );
-          std::swap( intersectionFace[ i+1 ], *pos );
+          if ( pos != intersectionFace.end() )
+            std::swap( intersectionFace[ i+1 ], *pos );
         }
 
         if ( intersectionFace.size() > 2 )
