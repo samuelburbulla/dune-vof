@@ -2,6 +2,7 @@
 #define DUNE_VOF_FLAGS_HH
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 //- dune-grid includes
@@ -92,7 +93,7 @@ namespace Dune
             flag = Flag::mixed;
           else
           {
-            if ( colorEn != colorEn )
+            if ( std::isnan( colorEn ) )
               flag = Flag::nan;
             else
             {
