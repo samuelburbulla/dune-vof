@@ -25,40 +25,37 @@ namespace Dune
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Stencil = std::vector< Entity >;
     private:
-      using Mapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
-
+      using IndexSet = decltype( std::declval< GridView >().indexSet() );
+      using Index = decltype( std::declval< IndexSet >().index( std::declval< Entity >() ) );
     public:
       explicit EdgeNeighborsStencil ( const GridView& gridView )
-       : gridView_( gridView ), mapper_( gridView_ ), stencils_( mapper().size() )
+       : gridView_( gridView ), stencils_( indexSet().size( 0 ) )
       {
         initialize();
       }
 
       const Stencil& operator[] ( const Entity& entity ) const
       {
-        return stencils_[ mapper().index( entity ) ];
+        return stencils_[ indexSet().index( entity ) ];
       }
 
     private:
       const GridView& gridView () const { return gridView_; }
-      const Mapper& mapper() const { return mapper_; }
+      const IndexSet& indexSet() const { return gridView().indexSet(); }
 
       void initialize()
       {
-        for ( const auto& entity : elements( gridView() ) )
+        for ( const auto& entity : elements( gridView(), Partitions::all ) )
         {
-          Stencil& stencil = stencils_[ mapper().index( entity ) ];
+          Stencil& stencil = stencils_[ indexSet().index( entity ) ];
           for ( const auto& intersection : intersections( gridView(), entity ) )
             if ( intersection.neighbor() )
-            {
-              const auto &neighbor = intersection.outside();
-              stencil.push_back( neighbor );
-            }
+              stencil.push_back( intersection.outside() );
+
         }
       }
 
       GridView gridView_;
-      Mapper mapper_;
       std::vector< Stencil > stencils_;
     };
 

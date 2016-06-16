@@ -27,53 +27,52 @@ namespace Dune
       static constexpr int dim = GridView::dimension;
 
     private:
-      using Mapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
-      using VertexMapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGVertexLayout >;
+      using IndexSet = decltype( std::declval< GridView >().indexSet() );
+      using Index = decltype( std::declval< IndexSet >().index( std::declval< Entity >() ) );
 
     public:
       explicit VertexNeighborsStencil ( const GridView& gridView )
-       : gridView_( gridView ), mapper_( gridView_ ), vmapper_( gridView_ ), stencils_( mapper_.size() )
+       : gridView_( gridView ), stencils_( indexSet().size( 0 ) )
       {
         initialize();
       }
 
       const Stencil& operator[] ( const Entity& entity ) const
       {
-        return stencils_[ mapper().index( entity ) ];
+        return stencils_[ indexSet().index( entity ) ];
       }
 
     private:
       const GridView& gridView() const { return gridView_; }
-      const Mapper& mapper() const { return mapper_; }
-      const VertexMapper& vmapper() const { return vmapper_; }
+      const IndexSet& indexSet() const { return gridView().indexSet(); }
 
       void initialize()
       {
-        std::vector< std::vector< std::size_t > > cellsNextToThisVertex( gridView().indexSet().size( dim ) );
-        std::vector< std::vector< std::size_t > > cellsInDomain_( mapper_.size() );
-        std::vector< Entity > entities_( mapper_.size() );
+        std::vector< std::vector< Index > > cellsNextToThisVertex( indexSet().size( dim ) );
+        std::vector< std::vector< Index > > cellsInDomain_( indexSet().size( 0 ) );
+        std::vector< Entity > entities_( indexSet().size( 0 ) );
 
         for( const Entity& entity : elements( gridView(), Partitions::all ) )
         {
-          std::size_t id = mapper().index( entity );
+          Index id = indexSet().index( entity );
           entities_[ id ] = entity;
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            std::size_t vId = vmapper().subIndex( entity, k, dim );
+            Index vId = indexSet().subIndex( entity, k, dim );
             cellsNextToThisVertex[ vId ].push_back( id );
           }
         }
 
         for( const Entity& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
-          std::size_t id = mapper().index( entity );
+          Index id = indexSet().index( entity );
 
           for( int k = 0; k < entity.geometry().corners(); k++ )
           {
-            std::size_t vId = vmapper().subIndex( entity, k, dim );
+            Index vId = indexSet().subIndex( entity, k, dim );
 
-            for( std::size_t index : cellsNextToThisVertex[ vId ] )
+            for( Index index : cellsNextToThisVertex[ vId ] )
               if( index != id )
                 cellsInDomain_[ id ].push_back( index );
           }
@@ -86,14 +85,12 @@ namespace Dune
 
           // Create stencil object
           Stencil& stencil = stencils_[ id ];
-          for ( const std::size_t index : cellsInDomain_[ id ] )
+          for ( Index index : cellsInDomain_[ id ] )
             stencil.push_back( entities_[ index ] );
         }
       }
 
       GridView gridView_;
-      Mapper mapper_;
-      VertexMapper vmapper_;
       std::vector< Stencil > stencils_;
     };
 

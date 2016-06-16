@@ -30,7 +30,7 @@ namespace Dune
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
 
     private:
-      using Mapper = Dune::VoF::MCMGMapper< GridView, Dune::MCMGElementLayout >;
+      using IndexSet = decltype( std::declval< GridView >().indexSet() );
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:
@@ -38,7 +38,7 @@ namespace Dune
 
       using iterator = typename std::vector< Reconstruction >::iterator;
       using const_iterator = typename std::vector< Reconstruction >::const_iterator;
-      using Index = typename Mapper::Index;
+      using Index = decltype( std::declval< IndexSet >().index( std::declval< Entity >() ) );
 
       /**
        * \brief MPI communication handler
@@ -46,11 +46,12 @@ namespace Dune
       struct Exchange;
 
       explicit ReconstructionSet ( const GridView &gridView )
-       : mapper_( gridView ), reconstructionSet_( mapper().size() )
+        : gridView_( gridView ),
+          reconstructionSet_( indexSet().size( 0 ) )
        {}
 
-      const Reconstruction& operator[] ( const Entity &entity ) const /*DUNE_DEPRECATED_MSG( "Use access via index instead." )*/ { return reconstructionSet_[ mapper().index( entity ) ]; }
-      Reconstruction& operator[] ( const Entity &entity ) /*DUNE_DEPRECATED_MSG( "Use access via index instead." )*/ { return reconstructionSet_[ mapper().index( entity ) ]; }
+      const Reconstruction& operator[] ( const Entity &entity ) const /*DUNE_DEPRECATED_MSG( "Use access via index instead." )*/ { return reconstructionSet_[ indexSet().index( entity ) ]; }
+      Reconstruction& operator[] ( const Entity &entity ) /*DUNE_DEPRECATED_MSG( "Use access via index instead." )*/ { return reconstructionSet_[ indexSet().index( entity ) ]; }
 
       const Reconstruction& operator[] ( const Index &index ) const { return reconstructionSet_[ index ]; }
       Reconstruction& operator[] ( const Index &index ) { return reconstructionSet_[ index ]; }
@@ -64,9 +65,9 @@ namespace Dune
       void clear() { std::fill( reconstructionSet_.begin(), reconstructionSet_.end(), Reconstruction() ); }
 
     private:
-      const Mapper &mapper () const { return mapper_; }
+      const IndexSet &indexSet () const { return gridView_.indexSet(); }
 
-      Mapper mapper_;
+      const GridView& gridView_;
       std::vector< Reconstruction > reconstructionSet_;
     };
 

@@ -37,11 +37,9 @@ namespace Dune
         nan         = 6
       };
     private:
+      using IndexSet = decltype( std::declval< GridView >().indexSet() );
+      using Index = decltype( std::declval< IndexSet >().index( std::declval< Entity >() ) );
 
-      using Mapper = MCMGMapper< GridView, MCMGElementLayout >;
-
-
-    private:
       /**
        * \brief MPI communication handler
        *
@@ -52,7 +50,7 @@ namespace Dune
 
     public:
       explicit Flags ( const GridView &gridView )
-       : gridView_ ( gridView ), mapper_( gridView ), flags_( mapper_.size(), Flag::empty )
+       : gridView_ ( gridView ), flags_( size(), Flag::empty )
       {}
 
       const bool isMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixed; }
@@ -67,7 +65,7 @@ namespace Dune
       const Flag& operator[] ( const Entity& entity ) const { return flags_[ index( entity ) ]; }
       Flag& operator[] ( const Entity& entity ) { return flags_[ index( entity ) ]; }
 
-      const std::size_t size() const { return mapper_.size(); }
+      const std::size_t size() const { return indexSet().size( 0 ); }
 
       /**
        * \brief update set of flags
@@ -143,14 +141,10 @@ namespace Dune
       Exchange< Reduce > makeExchange ( Reduce reduce ) { return Exchange< Reduce >( *this, std::move( reduce ) ); }
 
       const GridView &gridView () const { return gridView_; }
-
-      auto index ( const Entity &entity ) const -> decltype( std::declval< Mapper >().index( entity ) )
-      {
-        return mapper_.index( entity );
-      }
+      const IndexSet& indexSet () const { return gridView().indexSet(); }
+      Index index ( const Entity &entity ) const { return indexSet().index( entity ); }
 
       GridView gridView_;
-      Mapper mapper_;
       std::vector< Flag > flags_;
     };
 
