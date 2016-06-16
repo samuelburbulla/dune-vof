@@ -115,10 +115,7 @@ namespace Dune
         AtA.solve( normal, Atb );
 
         if( normal.two_norm2() < std::numeric_limits< ctype >::epsilon() )
-        {
-          reconstruction = Reconstruction();
           return;
-        }
 
         normalize( normal );
 
