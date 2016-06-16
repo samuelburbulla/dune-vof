@@ -86,12 +86,14 @@ namespace Dune {
         std::size_t j = 0u;
         for( int i = 0; i < polygon.size( 1 ); ++i )
         {
+          if( j == 2 ) break;
+
           auto edge = polygon.edge( i );
 
           auto l0 = plane.levelSet( edge.vertex( 0 ) );
           auto l1 = plane.levelSet( edge.vertex( 1 ) );
 
-          if ( ( l0 > 0.0 ) ^ ( l1 > 0.0 ) )
+          if ( ( l0 > 0.0 && l1 < 0.0 ) || ( l0 < 0.0 && l1 > 0.0 ) )
           {
             Coord point;
             point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
@@ -103,10 +105,12 @@ namespace Dune {
             container[ j++ ] = edge.vertex( 0 );
         }
 
-        if ( j < 2 )
+        if ( j == 0 )
           return Line< Coord >();
-        else
-          return Line< Coord >( std::move( container ) );
+        else if ( j == 1 )
+          container[ 1 ] == container[ 0 ];
+
+        return Line< Coord >( std::move( container ) );
       }
 
     } // namespace __impl
