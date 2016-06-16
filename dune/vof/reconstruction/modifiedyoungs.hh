@@ -66,7 +66,7 @@ namespace Dune
         double elapsedTime = - MPI_Wtime();
 
         reconstructions.clear();
-        for ( const auto &entity : elements( color.gridView() ) )
+        for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
           if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
             continue;
