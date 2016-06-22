@@ -75,7 +75,7 @@ double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const F
 
       const auto geoIs = intersection.geometry();
       auto v = velocity( geoIs.center() );
-      dtMin = std::min( geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v );
+      dtMin = std::min( dtMin, geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v ) );
     }
   }
   return dtMin;
@@ -307,13 +307,14 @@ try {
 
     double balance = maxElapsedTimeTimestep / minElapsedTimeTimestep;
 
-    std::cout << "Core " << Dune::Fem::MPIManager::rank() << ": " << std::endl
-              << " Timestep duration:" << std::endl
-              << "   max=" << maxElapsedTimeTimestep << "s" << std::endl
-              << "   min=" << minElapsedTimeTimestep << "s" << std::endl
-              << "   avg=" << avgElapsedTimeTimestep << "s" << std::endl
-              << " balance=" << maxElapsedTimeTimestep / minElapsedTimeTimestep << std::endl
-              << std::endl;
+    if( Dune::Fem::Parameter::verbose() )
+      std::cout << "Core " << Dune::Fem::MPIManager::rank() << ": " << std::endl
+                << " Timestep duration:" << std::endl
+                << "   max=" << maxElapsedTimeTimestep << "s" << std::endl
+                << "   min=" << minElapsedTimeTimestep << "s" << std::endl
+                << "   avg=" << avgElapsedTimeTimestep << "s" << std::endl
+                << " balance=" << maxElapsedTimeTimestep / minElapsedTimeTimestep << std::endl
+                << std::endl;
 
     const auto& comm = Dune::Fem::MPIManager::comm();
     double maxBalance = comm.max( balance );
@@ -321,14 +322,13 @@ try {
     double avgBalance = comm.sum( balance );
     avgBalance /= Dune::Fem::MPIManager::size();
 
-    if( Dune::Fem::MPIManager::rank() == 0 )
-    {
-      std::cout << "Overall Balance:" << std::endl
-                << "   max=" << maxBalance << std::endl
-                << "   min=" << minBalance << std::endl
-                << "   avg=" << avgBalance << std::endl
-                << std::endl;
-    }
+    if( Dune::Fem::Parameter::verbose() )
+      if( Dune::Fem::MPIManager::rank() == 0 )
+        std::cout << "Overall Balance:" << std::endl
+                  << "   max=" << maxBalance << std::endl
+                  << "   min=" << minBalance << std::endl
+                  << "   avg=" << avgBalance << std::endl
+                  << std::endl;
 
     Dune::Fem::GlobalRefine::apply( grid, refineStepsForHalf );
     oldL1Error = newL1Error;
