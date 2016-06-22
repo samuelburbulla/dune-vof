@@ -108,7 +108,7 @@ namespace Dune {
         if ( j == 0 )
           return Line< Coord >();
         else if ( j == 1 )
-          container[ 1 ] == container[ 0 ];
+          container[ 1 ] = container[ 0 ];
 
         return Line< Coord >( std::move( container ) );
       }

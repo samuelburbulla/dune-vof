@@ -284,7 +284,7 @@ namespace Dune {
         return nodes_ == other.nodes() && faces_ == other.faces() && edges_ == other.edges();
       }
 
-      std::size_t size() { return nodes.size(); }
+      std::size_t size() const { return nodes().size(); }
 
       const std::vector< Coordinate >& nodes () const { return nodes_; }
 
