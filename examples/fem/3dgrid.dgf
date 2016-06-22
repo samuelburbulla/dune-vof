@@ -2,7 +2,7 @@ DGF
 Interval
 0    0    0     #p0
 1    1    1     #p1
-32   32   32    #nx ny
+8    8    8     #nx ny
 #DGF
 
 BOUNDARYDOMAIN

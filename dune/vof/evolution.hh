@@ -59,12 +59,12 @@ namespace Dune
        * \param   color           discrete function
        * \param   reconstructions set of reconstructions
        * \param   velocity        velocity field
-       * \param   dt              time step
+       * \param   timeProvider    time provider
        * \param   update          discrete function of flow
        * \param   flags           set of flags
        */
-      template< class Velocity, class Flags >
-      double operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, const double dt,
+      template< class Velocity, class Flags, class TimeProvider >
+      double operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, TimeProvider &timeProvider,
                         ColorFunction &update, const Flags &flags ) const
       {
         double elapsedTime = - MPI_Wtime();
@@ -76,7 +76,7 @@ namespace Dune
           if( !flags.isMixed( entity ) && !flags.isActive( entity ) && !flags.isFullAndMixed( entity ) )
             continue;
 
-          applyLocal( entity, flags, dt, color, reconstructions, velocity, update);
+          applyLocal( entity, flags, timeProvider, color, reconstructions, velocity, update);
         }
 
         elapsedTime += MPI_Wtime();
@@ -91,14 +91,14 @@ namespace Dune
        * \tparam  Flags
        * \param   entity          current element
        * \param   flags           set of flags
-       * \param   dt              time step
+       * \param   timeProvider    time provider
        * \param   color           discrete function
        * \param   reconstructions set of reconstructions
        * \param   velocity        velocity field
        * \param   update          discrete function of flow
        */
-      template< class Velocity, class Flags >
-      void applyLocal ( const Entity &entity, const Flags &flags, const double dt, const ColorFunction &color, const ReconstructionSet &reconstructions,
+      template< class Velocity, class Flags, class TimeProvider >
+      void applyLocal ( const Entity &entity, const Flags &flags, TimeProvider &timeProvider, const ColorFunction &color, const ReconstructionSet &reconstructions,
                         const Velocity& velocity, ColorFunction &update ) const
       {
         const auto geoEn = entity.geometry();
@@ -112,7 +112,11 @@ namespace Dune
 
           const Coordinate outerNormal = intersection.centerUnitOuterNormal();
           Coordinate v = velocity( geoIs.center() );
-          v *= dt;
+
+          double dtEst = geoEn.volume() / ( geoIs.volume() * v.two_norm() );
+          timeProvider.provideTimeStepEstimate( dtEst );
+
+          v *= timeProvider.deltaT();
 
           const auto &neighbor = intersection.outside();
 

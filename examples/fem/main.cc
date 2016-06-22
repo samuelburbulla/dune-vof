@@ -57,16 +57,28 @@ struct Problem : public Base
   using FunctionSpaceType = FunctionSpace;
 };
 
-template < class GridPart >
-double shortestEdge( const GridPart& gridPart )
+template < class GridPart, class Velocity, class Flags >
+double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const Flags &flags )
 {
-  double min = std::numeric_limits< double >::max();
-  for ( const auto& edge : edges( gridPart, Dune::Partitions::all ) )
+  double dtMin = std::numeric_limits< double >::max();
+  for( const auto &entity : elements( gridPart ) )
   {
-    double l = edge.geometry().volume();
-    min = ( l < min ) ? l : min;
+    if( !flags.isMixed( entity ) && !flags.isActive( entity ) && !flags.isFullAndMixed( entity ) )
+    continue;
+
+    const auto geoEn = entity.geometry();
+
+    for ( const auto &intersection : intersections( gridPart, entity ) )
+    {
+      if ( !intersection.neighbor() )
+        continue;
+
+      const auto geoIs = intersection.geometry();
+      auto v = velocity( geoIs.center() );
+      dtMin = std::min( dtMin, geoEn.volume() / ( geoIs.volume() * v.two_norm() ) );
+    }
   }
-  return min;
+  return dtMin;
 }
 
 
@@ -78,7 +90,6 @@ template< class Grid, class DF, class P >
 const std::tuple< double, double, double, double, double > algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
 {
   using GridType = Grid;
-  using ProblemType = P;
   using GridPartType = Dune::Fem::LeafGridPart< GridType >;
 
   using DomainType = typename Dune::FieldVector < double, GridType::dimensionworld >;
@@ -87,7 +98,7 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
   using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
   using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
-  using TimeProviderType = Dune::Fem::FixedStepTimeProvider< typename GridType::CollectiveCommunication >;
+  using TimeProviderType = Dune::Fem::TimeProvider< typename GridType::CollectiveCommunication >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
   using DataOutputType = BinaryWriter;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
@@ -107,14 +118,22 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
 
-  double timeStep = shortestEdge( gridPart );
-  timeStep *= cfl;
-  timeStep /= ProblemType::maxVelocity();
-  TimeProviderType timeProvider( start, timeStep, gridPart.comm() );
+  // Calculate initial data
+  flags.reflag( cuh, eps );
+  reconstruction( cuh, reconstructions, flags );
 
-  DataOutputType dataOutput( level, timeProvider );
+  // Initialize time provider
+  auto v0 = [ &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, 0.0, u ); return u; };
+  double dtInit = initTimeStep( gridPart, v0, flags );
+  TimeProviderType timeProvider( start, cfl, gridPart.comm() );
+  timeProvider.init( dtInit );
 
   auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
+
+  // Write inital data
+  DataOutputType dataOutput( level, timeProvider );
+  if ( writeData )
+    dataOutput.write( grid, uh, timeProvider );
 
   const auto& comm = Dune::Fem::MPIManager::comm();
 
@@ -126,12 +145,6 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
 
   comm.barrier();
   double elapsedTime = - MPI_Wtime();
-
-  flags.reflag( cuh, eps );
-  reconstruction( cuh, reconstructions, flags );
-
-  if ( writeData )
-    dataOutput.write( grid, uh, timeProvider );
 
   for( ; timeProvider.time() <= end; )
   {
@@ -145,7 +158,7 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
 
     elapsedTimeTimestep += flags.reflag( cuh, eps );
     elapsedTimeTimestep += reconstruction( cuh, reconstructions, flags );
-    elapsedTimeTimestep += evolution( cuh, reconstructions, velocity, timeProvider.deltaT(), cupdate, flags );
+    elapsedTimeTimestep += evolution( cuh, reconstructions, velocity, timeProvider, cupdate, flags );
 
     update.communicate();
     uh.axpy( 1.0, update );
@@ -160,9 +173,6 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
     if ( elapsedTimeTimestep < minElapsedTimeTimestep )
       minElapsedTimeTimestep = elapsedTimeTimestep;
   }
-
-  if ( writeData )
-    dataOutput.write( grid, uh, timeProvider, true );
 
   comm.barrier();
   elapsedTime += MPI_Wtime();
