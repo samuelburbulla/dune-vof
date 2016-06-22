@@ -75,7 +75,7 @@ double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const F
 
       const auto geoIs = intersection.geometry();
       auto v = velocity( geoIs.center() );
-      dtMin = std::min( dtMin, geoEn.volume() / ( geoIs.volume() * v.two_norm() ) );
+      dtMin = std::min( geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v );
     }
   }
   return dtMin;
