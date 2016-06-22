@@ -168,10 +168,8 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
       dataOutput.write( grid, uh, timeProvider );
 
     avgElapsedTimeTimestep += elapsedTimeTimestep;
-    if ( elapsedTimeTimestep > maxElapsedTimeTimestep )
-      maxElapsedTimeTimestep = elapsedTimeTimestep;
-    if ( elapsedTimeTimestep < minElapsedTimeTimestep )
-      minElapsedTimeTimestep = elapsedTimeTimestep;
+    maxElapsedTimeTimestep = std::max( maxElapsedTimeTimestep, elapsedTimeTimestep );
+    minElapsedTimeTimestep = std::min( minElapsedTimeTimestep, elapsedTimeTimestep );
   }
 
   comm.barrier();

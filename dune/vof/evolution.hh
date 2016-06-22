@@ -113,7 +113,7 @@ namespace Dune
           const Coordinate outerNormal = intersection.centerUnitOuterNormal();
           Coordinate v = velocity( geoIs.center() );
 
-          double dtEst = geoEn.volume() / ( geoIs.volume() * v.two_norm() );
+          double dtEst = geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v );
           timeProvider.provideTimeStepEstimate( dtEst );
 
           v *= timeProvider.deltaT();
