@@ -127,7 +127,7 @@ namespace Dune {
 
       double givenVolume = fraction * cell.volume();
 
-      const Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( outerNormal, cell ) );
+      Polyhedron< Coord > polyhedron ( rotateToReferenceFrame ( outerNormal, cell ) );
 
       // Compute and sort plane constants
       // --------------------------------

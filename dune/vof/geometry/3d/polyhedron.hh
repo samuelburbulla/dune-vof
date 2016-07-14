@@ -21,13 +21,13 @@ namespace Dune {
       {
         using Coordinate = typename Polyhedron::Coordinate;
 
-        Edge ( const Polyhedron *parent, const std::array< std::size_t, 2 >& nodeIds )
+        Edge ( Polyhedron const *parent, const std::array< std::size_t, 2 >& nodeIds )
          : parent_ ( parent ), nodeIds_ ( nodeIds )
         {
           assert ( nodeIds.size() == 2 );
         };
 
-        Edge ( const Edge& other, const Polyhedron *parent )
+        Edge ( const Edge& other, Polyhedron const *parent )
          : parent_ ( parent ), nodeIds_ ( other.nodeIds() ) {}
 
 
@@ -37,6 +37,8 @@ namespace Dune {
         }
 
         const Polyhedron *parent () const { return parent_; }
+
+        void rebind( Polyhedron const *parent ) { parent_ = parent; }
 
         const std::array< std::size_t, 2 >& nodeIds() const { return nodeIds_; }
 
@@ -98,7 +100,7 @@ namespace Dune {
         }
 
       private:
-        const Polyhedron *parent_;
+        Polyhedron const *parent_;
         std::array< std::size_t, 2 > nodeIds_;
       };
 
@@ -111,14 +113,14 @@ namespace Dune {
         using Coordinate = typename Polyhedron::Coordinate;
         using Edge = typename Polyhedron::E;
 
-        Face ( const Polyhedron *parent, const std::vector< Edge >& edges )
+        Face ( Polyhedron const *parent, const std::vector< Edge >& edges )
          : parent_ ( parent ), edges_( edges )
         {
           for ( const auto& edge : edges )
             nodeIds_.push_back( edge.nodeId( 0 ) );
         };
 
-        Face ( const Face& other, const Polyhedron *parent )
+        Face ( const Face& other, Polyhedron const *parent )
          : parent_ ( parent ), nodeIds_ ( other.nodeIds() )
         {
           for ( const auto& edge : other.edges() )
@@ -127,6 +129,13 @@ namespace Dune {
 
 
         const Polyhedron *parent () const { return parent_; }
+
+        void rebind( Polyhedron const *parent )
+        {
+          parent_ = parent;
+          for ( auto& edge : edges_ )
+            edge.rebind( parent );
+        }
 
         const std::vector< Edge >& edges () const { return edges_; }
 
@@ -205,7 +214,7 @@ namespace Dune {
         }
 
       private:
-        const Polyhedron *parent_;
+        Polyhedron const *parent_;
         std::vector< std::size_t > nodeIds_;
         std::vector< Edge > edges_;
       };
@@ -221,18 +230,18 @@ namespace Dune {
       using F = typename __impl::Face< Polyhedron >;
       using E = typename __impl::Edge< Polyhedron >;
 
-      static_assert(Coord::dimension == 3, "Dimension must be == 3." );
+      static_assert( Coord::dimension == 3, "Dimension must be == 3." );
 
       Polyhedron () = default;
 
       Polyhedron (
         const std::vector< std::vector< std::size_t > >& faces,
         const std::vector< std::array< size_t, 2 > >& edges,
-        std::vector< Coordinate > nodes
+        const std::vector< Coordinate >& nodes
       ) : nodes_ ( std::move( nodes ) )
       {
         for ( const auto& edgeData : edges )
-          edges_.emplace_back( E ( this, edgeData ) );
+          edges_.emplace_back( this, edgeData );
 
         for ( const auto& faceData : faces )
         {
@@ -241,7 +250,7 @@ namespace Dune {
           for ( const std::size_t id : faceData )
             faceEdges.push_back( edges_[ id ] );
 
-          faces_.emplace_back( F ( this, faceEdges ) );
+          faces_.emplace_back( this, faceEdges );
         }
       };
 
@@ -250,14 +259,13 @@ namespace Dune {
         : nodes_ ( std::move( nodes ) ), faces_ ( std::move( faces ) ), edges_ ( std::move( edges ) )
       {
         for ( auto& edge : edges_ )
-          edge = E ( edge, this );
+          edge.rebind( this );
 
         for ( auto& face : faces_ )
-          face = F ( face, this );
+          face.rebind( this );
       };
 
     public:
-
       Polyhedron ( const Polyhedron& other )
         : Polyhedron( other.faces_, other.edges_, other.nodes_ )
       {}
