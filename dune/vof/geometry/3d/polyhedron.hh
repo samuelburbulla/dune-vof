@@ -16,18 +16,20 @@ namespace Dune {
 
     namespace __impl {
 
-      template < class Polyhedron >
+      template < class ParentType >
       struct Edge
       {
-        using Coordinate = typename Polyhedron::Coordinate;
+        using Coordinate = typename ParentType::Coordinate;
+        template< class C > friend class Polyhedron;
+        template< class P > friend class Face;
 
-        Edge ( Polyhedron const *parent, const std::array< std::size_t, 2 >& nodeIds )
+        Edge ( ParentType const *parent, const std::array< std::size_t, 2 >& nodeIds )
          : parent_ ( parent ), nodeIds_ ( nodeIds )
         {
           assert ( nodeIds.size() == 2 );
         };
 
-        Edge ( const Edge& other, Polyhedron const *parent )
+        Edge ( const Edge& other, ParentType const *parent )
          : parent_ ( parent ), nodeIds_ ( other.nodeIds() ) {}
 
 
@@ -36,10 +38,10 @@ namespace Dune {
           return nodeIds_ == other.nodeIds(); // && &parent_ == &other.parent()
         }
 
-        const Polyhedron *parent () const { return parent_; }
-
-        void rebind( Polyhedron const *parent ) { parent_ = parent; }
-
+        const ParentType *parent () const { return parent_; }
+      private:
+        void rebind( ParentType const *parent ) { parent_ = parent; }
+      public:
         const std::array< std::size_t, 2 >& nodeIds() const { return nodeIds_; }
 
         const std::size_t& nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
@@ -100,27 +102,28 @@ namespace Dune {
         }
 
       private:
-        Polyhedron const *parent_;
+        ParentType const *parent_;
         std::array< std::size_t, 2 > nodeIds_;
       };
 
 
 
 
-      template < typename Polyhedron >
+      template < typename ParentType >
       struct Face
       {
-        using Coordinate = typename Polyhedron::Coordinate;
-        using Edge = typename Polyhedron::E;
+        using Coordinate = typename ParentType::Coordinate;
+        using Edge = typename ParentType::E;
+        template< class C > friend class Polyhedron;
 
-        Face ( Polyhedron const *parent, const std::vector< Edge >& edges )
+        Face ( ParentType const *parent, const std::vector< Edge >& edges )
          : parent_ ( parent ), edges_( edges )
         {
           for ( const auto& edge : edges )
             nodeIds_.push_back( edge.nodeId( 0 ) );
         };
 
-        Face ( const Face& other, Polyhedron const *parent )
+        Face ( const Face& other, ParentType const *parent )
          : parent_ ( parent ), nodeIds_ ( other.nodeIds() )
         {
           for ( const auto& edge : other.edges() )
@@ -128,15 +131,15 @@ namespace Dune {
         }
 
 
-        const Polyhedron *parent () const { return parent_; }
-
-        void rebind( Polyhedron const *parent )
+        const ParentType *parent () const { return parent_; }
+      private:
+        void rebind( ParentType const *parent )
         {
           parent_ = parent;
           for ( auto& edge : edges_ )
             edge.rebind( parent );
         }
-
+      public:
         const std::vector< Edge >& edges () const { return edges_; }
 
         const Edge& edge ( const std::size_t index ) const { return edges_[ index ]; }
@@ -214,7 +217,7 @@ namespace Dune {
         }
 
       private:
-        Polyhedron const *parent_;
+        ParentType const *parent_;
         std::vector< std::size_t > nodeIds_;
         std::vector< Edge > edges_;
       };
