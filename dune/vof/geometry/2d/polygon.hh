@@ -83,7 +83,12 @@ namespace Dune {
        */
       Coordinate centroid () const
       {
-        DUNE_THROW( NotImplemented, "Polygon.centroid() not yet implemented." );
+        //DUNE_THROW( NotImplemented, "Polygon.centroid() not yet implemented." );
+        Coordinate c ( 0 );
+        for( int i = 0; i < size(); i++ )
+          c += vertex( i );
+        c /= size();
+        return c;
       }
 
       // Implementation defined
