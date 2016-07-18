@@ -77,6 +77,14 @@ namespace Dune
         return outer;
       }
 
+      /**
+       * \brief flip halfspace (returns a copy)
+       */
+      HalfSpace< Coordinate > flip () const
+      {
+        return HalfSpace< Coordinate > ( outerNormal(), - distanceToOrigin_ );
+      }
+
       explicit operator bool () const
       {
         return innerNormal_.two_norm2() > 0.5;
