@@ -134,6 +134,17 @@ namespace Dune {
       : vertices_{ v0, v1 }
       {}
 
+      bool operator== ( const This &other)
+      {
+        return vertex(0) == other.vertex(0) && vertex(1) == other.vertex(1);
+      }
+
+      Coordinate& vertex ( std::size_t i )
+      {
+        assert( i < size( 1 ) );
+        return vertices_[ i ];
+      }
+
       const Coordinate& vertex ( std::size_t i ) const
       {
         assert( i < size( 1 ) );

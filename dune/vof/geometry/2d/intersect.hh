@@ -113,6 +113,50 @@ namespace Dune {
         return Line< Coord >( std::move( container ) );
       }
 
+      /**
+       * \ingroup geo2d
+       * \brief implementation for an intersection between an edge and a half space
+       *
+       * \tparam  Coord  type of the global coordinate
+       * \return  the intersection edge segment
+       */
+      template< class Coord >
+      auto intersect ( const Line< Coord >& edge, const HalfSpace< Coord >& halfSpace ) -> Line< Coord >
+      {
+        if ( !halfSpace )
+          return Line< Coord >();
+
+        auto container = typename Line< Coord >::Container();
+
+        auto l0 = halfSpace.levelSet( edge.vertex( 0 ) );
+        auto l1 = halfSpace.levelSet( edge.vertex( 1 ) );
+
+        if ( l0 >= 0.0 )
+          container[ 0 ] = edge.vertex( 0 );
+
+        if ( l1 >= 0.0 )
+          container[ 1 ] = edge.vertex( 1 );
+
+        if ( ( l0 >= 0.0 ) ^ ( l1 >= 0.0 ) )
+        {
+          Coord point;
+          point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
+          point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
+
+          if ( l0 >= 0.0 )
+            container[ 1 ] = point;
+          else
+            container[ 0 ] = point;
+        }
+
+        if ( container[ 0 ] == Coord ( 0 ) && container[ 1 ] != Coord( 0 ) )
+          return Line< Coord >( container[ 1 ], container[ 1 ] );
+        else if ( container[ 0 ] != Coord ( 0 ) && container[ 1 ] == Coord( 0 ) )
+          return Line< Coord >( container[ 0 ], container[ 0 ] );
+        else
+          return Line< Coord >( container );
+      }
+
     } // namespace __impl
 
   } // namespace VoF
