@@ -105,9 +105,6 @@ namespace Dune
 
         for ( const auto &intersection : intersections( color.gridView(), entity ) )
         {
-          if ( !intersection.neighbor() )
-            continue;
-
           const auto geoIs = intersection.geometry();
 
           const Coordinate outerNormal = intersection.centerUnitOuterNormal();
@@ -118,8 +115,6 @@ namespace Dune
 
           v *= timeProvider.deltaT();
 
-          const auto &neighbor = intersection.outside();
-
           auto upwind = upwindPolygon( geoIs, v );
 
           ctype flux = 0.0;
@@ -127,14 +122,19 @@ namespace Dune
           {
             if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
               flux = truncVolume( upwind, reconstructions[ entity ] );
-            else if ( color[ entity ] >= (1 -eps_) )
+            else if ( color[ entity ] >= ( 1 - eps_ ) )
               flux = upwind.volume();
           }
           else if ( v * outerNormal < 0 ) // inflow
           {
+            if ( !intersection.neighbor() )
+              continue;
+
+            const auto &neighbor = intersection.outside();
+
             if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
               flux = -truncVolume( upwind, reconstructions[ neighbor ] );
-            else if ( color[ neighbor ] >= (1 -eps_) )
+            else if ( color[ neighbor ] >= ( 1 - eps_ ) )
               flux = -upwind.volume();
           }
           assert( flux == flux );
