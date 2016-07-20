@@ -60,6 +60,11 @@ struct DataOutputParameters
     return s.str();
   }
 
+  virtual std::string path() const
+  {
+    return Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+  }
+
 private:
   int level_, savecount_;
 };
@@ -111,8 +116,10 @@ try {
   // Create filename
   // ---------------
   const std::string name ( "vof-fem" );
-  std::size_t level ( Dune::Fem::Parameter::getValue( "level", 0 ) );
-  std::size_t repeats ( Dune::Fem::Parameter::getValue( "repeats", 0 ) );
+  std::size_t level ( Dune::Fem::Parameter::getValue< std::size_t >( "level", 0 ) );
+  std::size_t repeats ( Dune::Fem::Parameter::getValue< std::size_t >( "repeats", 0 ) );
+  const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+
 
   if ( argc > 1 )
   {
@@ -125,7 +132,7 @@ try {
   {
     std::stringstream seriesName;
     seriesName.fill('0');
-    seriesName << "./data/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-vof-fem-" << level;
+    seriesName << "./" << path << "/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-vof-fem-" << level;
 
     PVDWriter dataPVDWriter ( seriesName.str() + "-data.pvd" );
     PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd" );
@@ -168,7 +175,7 @@ try {
       // ---------------------
       std::stringstream filename;
       filename.fill('0');
-      filename << "./data/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+      filename  << "./" << path << "/"  << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
         << "-" << name << "-" << level << "-" << std::setw(5) << number;
 
       if ( !std::ifstream ( filename.str() + ".bin" ) ) break;

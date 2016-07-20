@@ -21,7 +21,7 @@ public:
   BinaryWriter ( const std::size_t level, const TP& timeProvider ) : level_( level )
   {
     saveTime_ = timeProvider.time();
-    path_ = Dune::Fem::Parameter::getValue< typename std::string >( "fem.io.path", "./data/" );
+    path_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
     saveStep_ = std::max( Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 ), timeProvider.deltaT() );
     Dune::Fem::createDirectory ( path_ );
   }

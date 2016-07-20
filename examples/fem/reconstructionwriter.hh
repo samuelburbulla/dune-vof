@@ -31,6 +31,8 @@ struct ReconstructionWriter
   {
     using Dune::VoF::intersect;
 
+    const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+
     std::vector< OutputPolygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
@@ -49,15 +51,12 @@ struct ReconstructionWriter
 
     VTUWriter< std::vector< OutputPolygon > > vtuwriter( io );
 
-    std::stringstream path;
-    path << "./data/";
-
     std::stringstream name;
     name.fill('0');
     name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) <<  Dune::Fem::MPIManager::rank()
       << "-vof-rec-" << std::to_string( level_ ) << "-" << std::setw(5) << count_ << ".vtu";
 
-    vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+    vtuwriter.write( Dune::concatPaths( path, name.str() ) );
 
     if ( Dune::Fem::MPIManager::rank() == 0 )
       writeRecPVTUFile( path );
@@ -69,7 +68,7 @@ struct ReconstructionWriter
 
 private:
 
-  void writeRecPVTUFile( const std::stringstream& path ) const
+  void writeRecPVTUFile( const std::string& path ) const
   {
     const std::size_t size = Dune::Fem::MPIManager::size();
 
@@ -106,7 +105,7 @@ private:
     )";
 
     std::fstream f;
-    f.open( Dune::concatPaths( path.str(), name.str() ), std::ios::out );
+    f.open( Dune::concatPaths( path, name.str() ), std::ios::out );
     f << content.str();
     f.close();
   }

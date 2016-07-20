@@ -199,7 +199,7 @@ try {
   const double endTime = Dune::Fem::Parameter::getValue< double >( "end", 2.5 );
   const double cfl = Dune::Fem::Parameter::getValue< double >( "cfl", 1.0 );
   const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
-  const std::string path = Dune::Fem::Parameter::getValue< typename std::string >( "fem.io.path", "./data/" );
+  const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
   const int restartStep = Dune::Fem::Parameter::getValue< int >( "restartStep", -1 );
 
   using GridType = Dune::GridSelector::GridType;
