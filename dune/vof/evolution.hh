@@ -44,6 +44,7 @@ namespace Dune
 
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
       using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon< Coordinate >, Polyhedron< Coordinate > >::type;
+      using Quadrature = typename Dune::Fem::CachingQuadrature< GridView, 1 >;
 
       using ctype = typename ColorFunction::ctype;
     public:
@@ -127,15 +128,31 @@ namespace Dune
           }
           else if ( v * outerNormal < 0 ) // inflow
           {
-            if ( !intersection.neighbor() )
-              continue;
+            if ( intersection.neighbor() )
+            {
+              const auto &neighbor = intersection.outside();
 
-            const auto &neighbor = intersection.outside();
+              if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
+                flux = -truncVolume( upwind, reconstructions[ neighbor ] );
+              else if ( color[ neighbor ] >= ( 1 - eps_ ) )
+                flux = -upwind.volume();
+            }
+            // Handle boundary data
+            else
+            {
+              if ( color[ entity ] >= ( 1 - eps_ ) )
+                flux = 1.0;
+              else if ( color[ entity ] <= eps_ )
+                flux = 0.0;
+              else
+              {
+                Line< Coordinate > boundaryPart = intersect( Line< Coordinate > ( geoIs.corner(0), geoIs.corner(1) ), reconstructions[ entity ]);
+                flux = boundaryPart.volume() / geoIs.volume();
+              }
 
-            if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
-              flux = -truncVolume( upwind, reconstructions[ neighbor ] );
-            else if ( color[ neighbor ] >= ( 1 - eps_ ) )
-              flux = -upwind.volume();
+              flux *= -upwind.volume();
+            }
+
           }
           assert( flux == flux );
 
