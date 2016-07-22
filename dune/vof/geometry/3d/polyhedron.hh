@@ -303,7 +303,7 @@ namespace Dune {
         double vol = 0.0;
         for ( const auto& face : faces() )
           vol += face.center() * face.outerNormal() * face.volume();
-        assert( !isnan( vol ) );
+        assert( !std::isnan( vol ) );
         return std::abs( vol / 3.0 );
       }
 
