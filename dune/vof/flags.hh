@@ -50,7 +50,7 @@ namespace Dune
 
     public:
       explicit Flags ( const GridView &gridView )
-       : gridView_ ( gridView ), flags_( size(), Flag::empty )
+       : gridView_ ( gridView ), flags_( size(), Flag::nan )
       {}
 
       const bool isMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixed; }
