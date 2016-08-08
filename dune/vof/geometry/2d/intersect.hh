@@ -126,35 +126,24 @@ namespace Dune {
         if ( !halfSpace )
           return Line< Coord >();
 
-        auto container = typename Line< Coord >::Container();
-
         auto l0 = halfSpace.levelSet( edge.vertex( 0 ) );
         auto l1 = halfSpace.levelSet( edge.vertex( 1 ) );
 
-        if ( l0 >= 0.0 )
-          container[ 0 ] = edge.vertex( 0 );
-
-        if ( l1 >= 0.0 )
-          container[ 1 ] = edge.vertex( 1 );
-
-        if ( ( l0 >= 0.0 ) ^ ( l1 >= 0.0 ) )
+        if ( l0 >= 0.0 && l1 >= 0.0 )
+          return edge;
+        else if ( l0 < 0.0 && l1 < 0.0 )
+          return {};
+        else
         {
           Coord point;
           point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
           point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
 
           if ( l0 >= 0.0 )
-            container[ 1 ] = point;
+            return { edge.vertex( 0 ), point };
           else
-            container[ 0 ] = point;
+            return { point, edge.vertex( 1 ) };
         }
-
-        if ( container[ 0 ] == Coord ( 0 ) && container[ 1 ] != Coord( 0 ) )
-          return Line< Coord >( container[ 1 ], container[ 1 ] );
-        else if ( container[ 0 ] != Coord ( 0 ) && container[ 1 ] == Coord( 0 ) )
-          return Line< Coord >( container[ 0 ], container[ 0 ] );
-        else
-          return Line< Coord >( container );
       }
 
     } // namespace __impl
