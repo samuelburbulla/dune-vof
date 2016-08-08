@@ -131,18 +131,14 @@ namespace Dune
             Coordinate centerNormal = normal;
             centerNormal.axpy( -(normal * direction) / direction.two_norm2(), direction );
 
-            // Coordinate centerNormal = generalizedCrossProduct( lineNb.centroid() - lineEn.centroid() );
-            // assert( centerNormal.two_norm2() > 0.0 );
-            normalize( centerNormal );
+            if( centerNormal.two_norm2() >= std::numeric_limits< decltype( centerNormal.two_norm2() ) >::epsilon() )
+              normalize( centerNormal );
 
             // if ( ( centerNormal * normal ) < 0.0 )
             //   centerNormal *= -1.0;
 
-            // if ( centerNormal * normal < std::cos( M_PI / 3.0 ) )
-            //   continue;
-
-
             newNormal += centerNormal;
+            assert( !std::isnan( newNormal[0] ) );
           }
 
           if ( newNormal == Coordinate( 0 ) )
