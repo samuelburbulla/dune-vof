@@ -123,7 +123,7 @@ namespace Dune {
       static_assert( dimension <= dimensionworld, "dimension larger than dimensionworld." );
 
       Line ()
-      : vertices_{ Coordinate( 0 ), Coordinate( 0 ) }
+        : vertices_{ Coordinate( 0 ), Coordinate( 0 ) }
       {}
 
       Line ( Container vertices )
@@ -134,15 +134,9 @@ namespace Dune {
       : vertices_{ v0, v1 }
       {}
 
-      bool operator== ( const This &other)
+      bool operator== ( const This &other) const
       {
-        return vertex(0) == other.vertex(0) && vertex(1) == other.vertex(1);
-      }
-
-      Coordinate& vertex ( std::size_t i )
-      {
-        assert( i < size( 1 ) );
-        return vertices_[ i ];
+        return vertices_ == other.vertices_;
       }
 
       const Coordinate& vertex ( std::size_t i ) const
