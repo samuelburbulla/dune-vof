@@ -6,13 +6,15 @@ fem.io.path: data
 fem.io.outputformat: vtk-cell
 fem.io.subsamplinglevel: 1
 fem.io.savestep: 0.1
+fem.io.prefix: vof-fem
+fem.io.recprefix: vof-rec
 
 #### Parameters for program ####
 start: 0.0
 end: 10.0
 
 level: 0
-repeats: 5
+repeats: 0
 
 cfl: 0.25
 eps: 1e-6

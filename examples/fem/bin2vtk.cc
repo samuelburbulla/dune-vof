@@ -55,8 +55,40 @@ struct DataOutputParameters
 
   virtual std::string prefix () const
   {
+    std::string prefix = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-fem" );
     std::stringstream s;
-    s << "vof-fem-" << level_ << "-";
+    s << prefix << "-" << level_ << "-";
+    return s.str();
+  }
+
+  virtual std::string path() const
+  {
+    return Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+  }
+
+private:
+  int level_, savecount_;
+};
+
+
+// RecOutputParameters
+// -------------------
+
+struct RecOutputParameters
+: public Dune::Fem::LocalParameter< Dune::Fem::DataOutputParameters, RecOutputParameters >
+{
+  RecOutputParameters ( const int level, const int savecount )
+   : level_ ( level ), savecount_ ( savecount ) {}
+
+  virtual bool willWrite ( bool write ) const { return true; }
+
+  virtual int startcounter () const { return savecount_; }
+
+  virtual std::string prefix () const
+  {
+    std::string prefix = Dune::Fem::Parameter::getValue< std::string >( "fem.io.recprefix", "vof-rec" );
+    std::stringstream s;
+    s << prefix << "-" << level_ << "-";
     return s.str();
   }
 
@@ -155,28 +187,26 @@ try {
 
     // Create discrete function
     // ------------------------
-    using GridPartType =
-      Dune::Fem::LeafGridPart< GridType >;
-    using FunctionSpaceType =
-      Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
-    using DiscreteFunctionSpaceType =
-      Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
-    using DiscreteFunctionType =
-      Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
+    using GridPartType = Dune::Fem::LeafGridPart< GridType >;
+    using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
+    using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
+    using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
     GridPartType gridPart( grid );
     DiscreteFunctionSpaceType space( gridPart );
     DiscreteFunctionType uh( "uh", space );
 
-
     for ( std::size_t number = 0; ; number++ )
     {
+      DataOutputParameters dataOutputParameters ( level, number );
+      RecOutputParameters recOutputParameters ( level, number );
+
       // Open next binary file
       // ---------------------
       std::stringstream filename;
       filename.fill('0');
       filename  << "./" << path << "/"  << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
-        << "-" << name << "-" << level << "-" << std::setw(5) << number;
+        << "-" << dataOutputParameters.prefix() << std::setw(5) << number;
 
       if ( !std::ifstream ( filename.str() + ".bin" ) ) break;
 
@@ -220,7 +250,6 @@ try {
       using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
       DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags );
-      DataOutputParameters dataOutputParameters ( DataOutputParameters( level, number ) );
       DataOutputType dataOutput( grid, dataIOTuple, dataOutputParameters );
       dataOutput.write();
 
@@ -229,13 +258,13 @@ try {
       // Write reconstruction to vtu file
       // --------------------------------
       using Polygon = OutputPolygon< typename ReconstructionSet::Reconstruction::Coordinate >;
-      using RecOutputType = ReconstructionWriter< GridPartType, ReconstructionSet, Polygon >;
-      RecOutputType recOutput ( gridPart, level );
+      using RecOutputType = ReconstructionWriter< GridPartType, ReconstructionSet, RecOutputParameters, Polygon >;
 
-      recOutput.count() = number;
-      recOutput.write ( reconstructions );
+      RecOutputType recOutput ( gridPart, reconstructions, recOutputParameters );
+      //recOutput.count() = number;
+      recOutput.write();
 
-      recPVDWriter.addDataSet( "vof-rec-" + std::to_string( level ) + "-", number, timeValue );
+      recPVDWriter.addDataSet( recOutputParameters.prefix(), number, timeValue );
     }
 
   }

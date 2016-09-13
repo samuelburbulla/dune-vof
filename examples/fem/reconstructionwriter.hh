@@ -22,31 +22,29 @@
 // ReconstructionWriter
 // --------------------
 
-template < class GridView, class ReconstructionSet, class OutputPolygon >
+template < class GridView, class ReconstructionSet, class DataParameters, class OutputPolygon >
 struct ReconstructionWriter
 {
-  ReconstructionWriter ( const GridView& gridView, const std::size_t level ) : gridView_( gridView ), level_ ( level ) {};
+  ReconstructionWriter ( const GridView& gridView, const ReconstructionSet &reconstructionSet, const DataParameters &dataParameters )
+   : gridView_( gridView ), reconstructionSet_( reconstructionSet ), dataParameters_( dataParameters ), count_( dataParameters.startcounter() ) {};
 
-  void write( const ReconstructionSet &reconstructionSet )
+  void write()
   {
     using Dune::VoF::intersect;
-
-    const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
 
     std::vector< OutputPolygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
       auto polytope = Dune::VoF::makePolytope( entity.geometry() );
-      auto it = intersect( polytope, reconstructionSet[ entity ].boundary() );
+      auto it = intersect( polytope, reconstructionSet_[ entity ].boundary() );
       auto intersection = static_cast< typename decltype( it )::Result > ( it );
 
       std::vector< typename OutputPolygon::Position > is;
       for( std::size_t i = 0; i < intersection.size(); ++i )
         is.push_back( intersection.vertex( i ) );
 
-
       if ( !is.empty() )
-        io.push_back( OutputPolygon ( is, reconstructionSet[ entity ].innerNormal() ) );
+        io.push_back( OutputPolygon ( is, reconstructionSet_[ entity ].innerNormal() ) );
     }
 
     VTUWriter< std::vector< OutputPolygon > > vtuwriter( io );
@@ -54,27 +52,24 @@ struct ReconstructionWriter
     std::stringstream name;
     name.fill('0');
     name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) <<  Dune::Fem::MPIManager::rank()
-      << "-vof-rec-" << std::to_string( level_ ) << "-" << std::setw(5) << count_ << ".vtu";
+      << "-" << dataParameters_.prefix() << std::setw(5) << count_ << ".vtu";
 
-    vtuwriter.write( Dune::concatPaths( path, name.str() ) );
+    vtuwriter.write( Dune::concatPaths( dataParameters_.path(), name.str() ) );
 
     if ( Dune::Fem::MPIManager::rank() == 0 )
-      writeRecPVTUFile( path );
+      writeRecPVTUFile();
 
     count_++;
   }
 
-  std::size_t& count () { return count_; }
-
 private:
-
-  void writeRecPVTUFile( const std::string& path ) const
+  void writeRecPVTUFile() const
   {
     const std::size_t size = Dune::Fem::MPIManager::size();
 
     std::stringstream name;
     name.fill('0');
-    name << "s" << std::setw(4) << size << "-vof-rec-" << std::to_string( level_ ) << "-" << std::setw(6) << count_ << ".pvtu";
+    name << "s" << std::setw(4) << size << "-" << dataParameters_.prefix() << std::setw(6) << count_ << ".pvtu";
 
     std::stringstream content;
     content.fill('0');
@@ -96,7 +91,7 @@ private:
 )";
 
     for ( std::size_t i = 0; i < size; ++i )
-      content << "      <Piece  Source=\"s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << i << "-vof-rec-" << level_ << "-"
+      content << "      <Piece  Source=\"s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << i << "-" << dataParameters_.prefix()
         << std::setw(5) << count_ << ".vtu\"/>" << std::endl;
 
     content <<
@@ -105,15 +100,17 @@ private:
     )";
 
     std::fstream f;
-    f.open( Dune::concatPaths( path, name.str() ), std::ios::out );
+    f.open( Dune::concatPaths( dataParameters_.path(), name.str() ), std::ios::out );
     f << content.str();
     f.close();
   }
 
   const GridView gridView_;
-  const std::size_t level_;
+  const ReconstructionSet &reconstructionSet_;
+  const DataParameters dataParameters_;
+
   std::size_t count_ = 0;
-  mutable std::vector< OutputPolygon > io;
+  //mutable std::vector< OutputPolygon > io;
 
 };
 

@@ -22,6 +22,7 @@ public:
   {
     saveTime_ = timeProvider.time();
     path_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+    prefix_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-fem" );
     saveStep_ = std::max( Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 ), timeProvider.deltaT() );
     Dune::Fem::createDirectory ( path_ );
   }
@@ -41,7 +42,7 @@ public:
       std::stringstream name;
       name.fill('0');
       name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
-        << "-vof-fem-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ );
+        << "-" << prefix_ << "-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ );
 
       std::stringstream dfname;
       dfname << name.str() << ".bin";
@@ -49,22 +50,13 @@ public:
       binaryStream << timeProvider.time();
       uh.write( binaryStream );
 
-      /*
-      if ( Dune::Fem::MPIManager::rank() == 0 )
-      {
-        std::stringstream gridname;
-        gridname << name.str() << ".grid";
-        Dune::BackupRestoreFacility< Grid >::backup( grid, Dune::concatPaths( path_, gridname.str() ) );
-      }
-      */
-
       saveTime_ += saveStep_;
       writeStep_++;
     }
   }
 
 private:
-  std::string path_;
+  std::string path_, prefix_;
   const std::size_t level_;
   double saveStep_, saveTime_ ;
   std::size_t writeStep_ = 0;
