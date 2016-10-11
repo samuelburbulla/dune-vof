@@ -23,40 +23,81 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
+#include <dune/vof/geometry/utility.hh>
+#include <dune/vof/geometry/intersect.hh>
 
 //- local includes
 #include "average.hh"
-#include "colorFunction.hh"
+#include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
-#include "polygon.hh"
-#include "../problems/rotatingcircle.hh"
+#include "problem.hh"
 #include "vtu.hh"
 
 // filterReconstruction
 // --------------------
 
-template < class ReconstructionSet, class Polygon >
-void filterReconstruction( const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
+template < class GridView, class ReconstructionSet, class Polygon >
+void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
 {
-  using Coordinate = typename Polygon::Position;
-
   io.clear();
-  for ( auto&& is : reconstructionSet.intersectionsSet() )
+  for ( const auto& entity : elements( gridView ) )
   {
-    if( is.size() != 0 )
+    Polygon is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ] );
+
+    if ( is.size() != 0 )
       io.push_back( Polygon( is ) );
   }
+}
 
-  // io should not be empty
-  if ( io.size() == 0 )  io.push_back( Polygon{ Coordinate ( 0.0 ), Coordinate( 0.0 ) } );
+
+// FixedStepTimeProvider
+// ---------------------
+
+class FixedStepTimeProvider
+{
+ public:
+  FixedStepTimeProvider ( const double dt, const double start = 0.0 )
+   : dt_( dt ), time_( start ) {}
+
+  double time() const { return time_; }
+
+  double deltaT() const { return dt_; }
+
+  void next() {
+    time_ += dt_;
+    step_++;
+  }
+
+  void provideTimeStepEstimate( const double dtEst ) {}
+
+ private:
+  double dt_, time_;
+  int step_ = 0;
+};
+
+
+// initTimeStep
+// ---------------------
+
+template < class GridView, class Velocity >
+double initTimeStep( const GridView& gridView, const Velocity &velocity )
+{
+  double dtMin = std::numeric_limits< double >::max();
+  for( const auto &entity : elements( gridView ) )
+  {
+    const auto geoEn = entity.geometry();
+    auto v = velocity( geoEn.center() );
+    dtMin = std::min( dtMin, geoEn.volume() / v.two_norm() );
+  }
+  return dtMin;
 }
 
 // algorithm
 // ---------
 
 template < class GridView >
-std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
+double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
   using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = ColorFunction< GridView >;
@@ -66,16 +107,17 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
-  using Polygon = Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
+  using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
   // Testproblem
-  using ProblemType =
-    RotatingCircle< double, GridView::dimensionworld >;
+  using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
   ProblemType problem;
 
   // calculate dt
-  int numCells = parameters.get< int >( "grid.numCells" );
-  double dt = parameters.get< double >( "scheme.cflFactor" )  * ( 1.0 / numCells ) / problem.maxVelocity();
+  int level = parameters.get< int >( "grid.level" );
+  double dt = parameters.get< double >( "scheme.cflFactor" )
+    * initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
+  const double startTime = parameters.get< double >( "scheme.start", 0.0 );
   const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
 
@@ -96,7 +138,7 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
 
   // VTK Writer
   std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( numCells );
+  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
@@ -110,37 +152,34 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
 
   // Initial reconstruction
-  average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, u ); return u; } );
+  average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, 0.0, u ); return u; } );
 
   flags.reflag( colorFunction, eps );
   reconstruction(  colorFunction, reconstructionSet, flags );
-  filterReconstruction( reconstructionSet, recIO );
+  filterReconstruction( gridView, reconstructionSet, recIO );
 
   vtkwriter.write( 0 );
   vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
 
-  double t = 0;
-  int k = 0;
+  FixedStepTimeProvider tp ( dt, startTime );
 
-  auto psit = [ &t, &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, t, rot ); return rot; };
+  auto velocity = [ &tp, &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, tp.time(), rot ); return rot; };
 
-  while ( t < endTime )
+  while ( tp.time() < endTime )
   {
-    ++k;
-
     flags.reflag( colorFunction, eps );
 
     reconstruction( colorFunction, reconstructionSet, flags );
-    evolution( colorFunction, reconstructionSet, psit, dt, update, flags );
+    evolution( colorFunction, reconstructionSet, velocity, tp, update, flags );
     colorFunction.axpy( 1.0, update );
 
-    t += dt;
+    tp.next();
 
-    if ( 2.0 * std::abs( t - nextSaveTime ) < dt )
+    if ( 2.0 * std::abs( tp.time() - nextSaveTime ) < tp.deltaT() )
     {
-      vtkwriter.write( t );
+      vtkwriter.write( tp.time() );
 
-      filterReconstruction( reconstructionSet, recIO );
+      filterReconstruction( gridView, reconstructionSet, recIO );
       std::stringstream name_;
       name_.fill('0');
       name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
@@ -151,15 +190,11 @@ std::tuple< double, double > algorithm ( const GridView& gridView, const Dune::P
       ++saveNumber;
     }
 
-    if ( (int)(( t / endTime ) * 100) > (int)(( (t-1) / endTime ) * 100) )
-    	std::cerr << "\r" << numCells << " [" << (int)(( t / endTime ) * 100) << "%]";
-
-    //std::cerr << "s=" << grid.size(0) << " k=" << k << " t=" << t << " dt=" << dt << " saved=" << saveNumber-1 << std::endl
   }
 
-  auto ft = [ &t, &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, t, u ); return u; };
+  auto ft = [ &tp, &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, tp.time(), u ); return u; };
 
-  return std::make_tuple( l1error( colorFunction, ft ), l2error( colorFunction, ft ) );
+  return l1error( colorFunction, ft );
 }
 
 int main(int argc, char** argv)
@@ -173,58 +208,45 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  std::cerr << std::endl << "### Parameters ###" << std::endl;
-  parameters.report( std::cerr );
-  std::cerr << "#################" << std::endl << std::endl;
-
-  std::tuple<double, double> lastErrorTuple;
+  double lastL1Error;
 
   // open errors file
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" );
   createDirectory( path.str() );
-  path << "/eoc.txt";
-  std::ofstream eocFile( path.str(), std::ios_base::out );
 
   //  create grid
   std::stringstream gridFile;
-  gridFile << "cube2d.dgf";
+  gridFile << "2dgrid.dgf";
 
   Dune::GridPtr< GridType > gridPtr( gridFile.str() );
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
 
-  int numCells = parameters.get< int >( "grid.numCells" );
+  int level = parameters.get< int >( "grid.level" );
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
-  grid.globalRefine( refineStepsForHalf * log( numCells ) / log( 2 ) );
+  grid.globalRefine( refineStepsForHalf * level );
 
-  int numRuns = parameters.get<int>( "runs", 1 );
+  int numRuns = parameters.get<int>( "grid.runs", 1 );
 
   for ( int i = 0; i < numRuns; ++i )
   {
-    int numCells = parameters.get< int >( "grid.numCells" );
-
     // start time integration
-    auto errorTuple = algorithm( grid.leafGridView(), parameters );
+    auto L1Error = algorithm( grid.leafGridView(), parameters );
 
       // print errors and eoc
     if ( i > 0 )
     {
-      const double eocL1 = log( std::get< 0 >( lastErrorTuple )  / std::get< 0 >( errorTuple ) ) / M_LN2;
-      const double eocL2 = log( std::get< 1 >( lastErrorTuple )  / std::get< 1 >( errorTuple ) ) / M_LN2;
-
-      eocFile << "             " << eocL1 << "        " << eocL2 << std::endl;
+      const double eoc = log( lastL1Error / L1Error ) / M_LN2;
+      assert( eoc > 1.5 );
+      std::cout << "EOC " << i << ": " << eoc << std::endl;
     }
 
-    eocFile << numCells << "    " << std::get<0> ( errorTuple ) << "       " << std::get<1> ( errorTuple ) << std::endl;
-
-    lastErrorTuple = errorTuple;
+    lastL1Error = L1Error;
 
     // refine
-    parameters[ "grid.numCells" ] = std::to_string( numCells * 2 );
-    std::cout << std::endl;
-
+    parameters[ "grid.level" ] = std::to_string( ++level );
     grid.globalRefine( refineStepsForHalf );
   }
 

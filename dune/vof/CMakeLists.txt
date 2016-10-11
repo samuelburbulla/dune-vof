@@ -1,6 +1,7 @@
 add_subdirectory( geometry )
 add_subdirectory( reconstruction )
 add_subdirectory( stencil )
+add_subdirectory( test )
 
 set( vofdir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof )
 set( vof_HEADERS

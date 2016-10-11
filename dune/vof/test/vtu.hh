@@ -81,7 +81,7 @@ template< class PolygonVector >
 class VTUWriter
 {
   typedef typename PolygonVector::value_type Polygon;
-  typedef typename Polygon::Position Position;
+  typedef typename Polygon::Coordinate Position;
 
 public:
   VTUWriter ( const PolygonVector &v ) : v_( v )
@@ -130,8 +130,8 @@ private:
     std::size_t index = 0;
 
     for( const Polygon &pol : v_ )
-      for( const Position &pos : pol )
-        points[ index++ ] = pos;
+      for( int i = 0; i < pol.size(); ++i )
+        points[ index++ ] = pol.vertex( i );
 
     writeDataArray( vtu, "Coordinates", points );
   }
@@ -148,6 +148,7 @@ private:
   void writeOffsets ( std::ostream &vtu ) const
   {
     const std::size_t size = v_.size();
+    if ( size == 0 ) return;
     std::vector< std::int32_t > offsets( size );
     offsets[ 0 ] = v_[ 0 ].size();
     for( std::size_t i = 1; i < size; ++i )

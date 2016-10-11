@@ -44,7 +44,6 @@ namespace Dune
 
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
       using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon< Coordinate >, Polyhedron< Coordinate > >::type;
-      using Quadrature = typename Dune::Fem::CachingQuadrature< GridView, 1 >;
 
       using ctype = typename ColorFunction::ctype;
     public:
