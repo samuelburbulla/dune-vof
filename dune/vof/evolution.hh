@@ -140,16 +140,11 @@ namespace Dune
             else
             {
               if ( color[ entity ] >= ( 1 - eps_ ) )
-                flux = 1.0;
+                flux = -upwind.volume();
               else if ( color[ entity ] <= eps_ )
                 flux = 0.0;
               else
-              {
-                Line< Coordinate > boundaryPart = intersect( Line< Coordinate > ( geoIs.corner(0), geoIs.corner(1) ), reconstructions[ entity ]);
-                flux = boundaryPart.volume() / geoIs.volume();
-              }
-
-              flux *= -upwind.volume();
+                flux = -truncVolume( upwind, reconstructions[ entity ] );
             }
 
           }

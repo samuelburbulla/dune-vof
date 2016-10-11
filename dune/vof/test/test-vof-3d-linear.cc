@@ -125,8 +125,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   int level = parameters.get< int >( "grid.level" );
   double dt = parameters.get< double >( "scheme.cflFactor" )
     * initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
-  const double startTime = parameters.get< double >( "scheme.start", 0.0 );
-  const double endTime = parameters.get< double >( "scheme.end", 10 );
+  const double startTime = 0.0;
+  const double endTime = 0.5;
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
 
   int saveNumber = 1;
