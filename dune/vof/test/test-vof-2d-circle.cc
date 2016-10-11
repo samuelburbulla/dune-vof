@@ -32,6 +32,7 @@
 #include "errors.hh"
 #include "io.hh"
 #include "problem.hh"
+#include "utility.hh"
 #include "vtu.hh"
 
 // filterReconstruction
@@ -111,15 +112,16 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // Testproblem
   using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
-  ProblemType problem;
+  ProblemType circle;
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
   double dt = parameters.get< double >( "scheme.cflFactor" )
-    * initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
+    * initTimeStep( gridView, [ &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, 0.0, rot ); return rot; } );
   const double startTime = parameters.get< double >( "scheme.start", 0.0 );
   const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
+  const bool writeData = parameters.get< bool >( "io.writeData", 0 );
 
   int saveNumber = 1;
   const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
@@ -136,14 +138,12 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
   auto evolution = Dune::VoF::evolution(  reconstructionSet, colorFunction, eps );
 
-  // VTK Writer
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
-  //vtkwriter.addCellData ( flags, "flags" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
@@ -151,19 +151,23 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   name.fill('0');
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
 
-  // Initial reconstruction
-  average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, 0.0, u ); return u; } );
+  // Initial data
+  Dune::VoF::circleInterpolation( circle.center( startTime ), circle.radius( startTime ), colorFunction );
 
+  // Initial reconstruction
   flags.reflag( colorFunction, eps );
   reconstruction(  colorFunction, reconstructionSet, flags );
-  filterReconstruction( gridView, reconstructionSet, recIO );
 
-  vtkwriter.write( 0 );
-  vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+  if ( writeData )
+  {
+    filterReconstruction( gridView, reconstructionSet, recIO );
+    vtkwriter.write( 0 );
+    vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+  }
 
   FixedStepTimeProvider tp ( dt, startTime );
 
-  auto velocity = [ &tp, &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, tp.time(), rot ); return rot; };
+  auto velocity = [ &tp, &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, tp.time(), rot ); return rot; };
 
   while ( tp.time() < endTime )
   {
@@ -175,7 +179,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
     tp.next();
 
-    if ( 2.0 * std::abs( tp.time() - nextSaveTime ) < tp.deltaT() )
+    if ( writeData && 2.0 * std::abs( tp.time() - nextSaveTime ) < tp.deltaT() )
     {
       vtkwriter.write( tp.time() );
 
@@ -192,9 +196,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   }
 
-  auto ft = [ &tp, &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, tp.time(), u ); return u; };
-
-  return l1error( colorFunction, ft );
+  return Dune::VoF::exactL1Error( colorFunction, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
 }
 
 int main(int argc, char** argv)
@@ -209,11 +211,6 @@ try {
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
   double lastL1Error;
-
-  // open errors file
-  std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" );
-  createDirectory( path.str() );
 
   //  create grid
   std::stringstream gridFile;
