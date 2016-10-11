@@ -28,7 +28,6 @@ namespace Dune {
     class Polygon
     {
       using This = Polygon< Coord >;
-      static_assert(Coord::dimension == 2, "Dimension must be == 2." );
 
     public:
       using Coordinate = Coord;
@@ -111,7 +110,6 @@ namespace Dune {
     class Line
     {
       using This = Line< Coord >;
-      static_assert(Coord::dimension == 2, "Dimension must be == 2." );
 
     public:
       using Coordinate = Coord;

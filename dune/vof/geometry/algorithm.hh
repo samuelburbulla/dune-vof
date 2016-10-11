@@ -116,14 +116,16 @@ namespace Dune {
       fraction = ( fraction > 1.0 ) ? 1.0 : fraction;
       fraction = ( fraction < 0.0 ) ? 0.0 : fraction;
 
+
       bool inverseMode = false;
-      if ( fraction > 0.5 )
+      /*
+      if ( fraction > 0.6 )
       {
         fraction = 1.0 - fraction;
         outerNormal *= -1.0;
         inverseMode = true;
       }
-
+      */
 
       double givenVolume = fraction * cell.volume();
 

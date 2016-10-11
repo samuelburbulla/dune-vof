@@ -72,7 +72,19 @@ struct VTUDataType< Dune::FieldVector< double, 2 > >
   }
 };
 
+template< >
+struct VTUDataType< Dune::FieldVector< double, 3 > >
+{
+  typedef VTUDataType< double > VTUDouble;
 
+  static std::string type () { return VTUDouble::type(); }
+  static int components () { return 3; }
+
+  static std::string toString ( const Dune::FieldVector< double, 3 > &value )
+  {
+    return VTUDouble::toString( value[ 0 ] ) + " " + VTUDouble::toString( value[ 1 ] ) + " " + VTUDouble::toString( value[ 2 ] );
+  }
+};
 
 // VTUWriter
 // ---------
@@ -158,7 +170,7 @@ private:
 
   void writeTypes ( std::ostream &vtu ) const
   {
-    std::vector< std::uint8_t > types( v_.size(), 4 );
+    std::vector< std::uint8_t > types( v_.size(), 7 );
     writeDataArray( vtu, "types", types );
   }
 
