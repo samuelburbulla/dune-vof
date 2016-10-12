@@ -40,6 +40,7 @@
 template < class GridView, class ReconstructionSet, class Polygon >
 void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
 {
+  // TODO: Use VTKWriter for reconstructed interfaces
   using Coord = typename Polygon::Coordinate;
   io.clear();
   for ( const auto& entity : elements( gridView ) )
@@ -56,6 +57,7 @@ void filterReconstruction( const GridView &gridView, const ReconstructionSet &re
     }
   }
 }
+
 
 
 // FixedStepTimeProvider
@@ -117,7 +119,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
   // Testproblem
-  using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
+  using ProblemType = Diagonal< double, GridView::dimensionworld >;
   ProblemType problem;
 
   // calculate dt
@@ -125,7 +127,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   double dt = parameters.get< double >( "scheme.cflFactor" )
     * initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
   const double startTime = 0.0;
-  const double endTime = 0.25;
+  const double endTime = 1.0;
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
 
   int saveNumber = 1;
@@ -141,7 +143,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
   auto reconstruction = Dune::VoF::ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet, Stencils >( stencils );
-  auto evolution = Dune::VoF::evolution( reconstructionSet, colorFunction, eps );
+  auto evolution = Dune::VoF::evolution(  reconstructionSet, colorFunction, eps );
 
   // VTK Writer
   std::stringstream path;
@@ -161,7 +163,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, 0.0, u ); return u; } );
 
   flags.reflag( colorFunction, eps );
-  reconstruction(  colorFunction, reconstructionSet, flags );
+  reconstruction( colorFunction, reconstructionSet, flags );
   filterReconstruction( gridView, reconstructionSet, recIO );
 
   vtkwriter.write( 0 );
@@ -247,7 +249,7 @@ try {
       const double eoc = log( lastL1Error / L1Error ) / M_LN2;
 
       if( eoc < 1.5 )
-        DUNE_THROW( Dune::InvalidStateException, "EOC check of 3d rotating circle problem failed.");
+        DUNE_THROW( Dune::InvalidStateException, "EOC check of 3d diagonal problem failed.");
 
       std::cout << "EOC " << i << ": " << eoc << std::endl;
     }

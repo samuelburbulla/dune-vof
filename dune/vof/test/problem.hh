@@ -102,4 +102,33 @@ private:
 
 };
 
+
+template < class ctype, int dim >
+struct Diagonal
+{
+  using DomainType = Dune::FieldVector< ctype, dim >;
+  using RangeType = Dune::FieldVector< ctype, 1 >;
+
+  enum { dimDomain = dim };
+  enum { dimRange = 1 };
+
+  void evaluate ( const DomainType &x, double t, RangeType &u ) const
+  {
+    double pos = 0.3;
+
+    u = ( x[0] + x[1] < pos + t * speed_ ) ? 1.0 : 0.0;
+  }
+
+  void velocityField ( const DomainType &x, const double t, DomainType &rot ) const
+  {
+    rot[ 0 ] = speed_;
+    rot[ 1 ] = speed_;
+    rot /= std::sqrt( 2 );
+  }
+
+private:
+  double speed_ = 0.05;
+
+};
+
 #endif //#ifndef PROBLEM_HH

@@ -238,7 +238,10 @@ try {
     if ( i > 0 )
     {
       const double eoc = log( lastL1Error / L1Error ) / M_LN2;
-      assert( eoc > 1.5 );
+
+      if( eoc < 1.5 )
+        DUNE_THROW( Dune::InvalidStateException, "EOC check of 2d linear problem failed.");
+
       std::cout << "EOC " << i << ": " << eoc << std::endl;
     }
 
