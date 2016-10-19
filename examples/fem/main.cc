@@ -114,7 +114,7 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
   auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
   auto cupdate = Dune::VoF::discreteFunctionWrapper( update );
 
-  auto evolution = Dune::VoF::evolution( reconstructions, cuh, eps );
+  auto evolution = Dune::VoF::evolution( reconstructions, cuh );
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
 

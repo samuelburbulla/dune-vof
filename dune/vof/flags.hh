@@ -56,6 +56,12 @@ namespace Dune
       const bool isMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixed; }
       const bool isFullAndMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixedfull; }
 
+      const bool isFull ( const Entity& entity ) const
+      {
+        const Flag &flag = flags_[ index( entity ) ];
+        return ( flag == Flag::activefull || flag == Flag::full );
+      }
+
       const bool isActive ( const Entity& entity ) const
       {
         const Flag &flag = flags_[ index( entity ) ];

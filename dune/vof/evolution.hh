@@ -47,9 +47,7 @@ namespace Dune
 
       using ctype = typename ColorFunction::ctype;
     public:
-      explicit Evolution ( double eps )
-       : eps_( eps )
-      {}
+      explicit Evolution () {}
 
       /**
        * \brief (gobal) operator application
@@ -121,9 +119,9 @@ namespace Dune
           if ( v * outerNormal > 0 ) // outflow
           {
             if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
-              flux = truncVolume( upwind, reconstructions[ entity ] );
-            else if ( color[ entity ] >= ( 1 - eps_ ) )
-              flux = upwind.volume();
+              flux = -truncVolume( upwind, reconstructions[ entity ] );
+            else if ( flags.isFull( entity ) )
+              flux = -upwind.volume();
           }
           else if ( v * outerNormal < 0 ) // inflow
           {
@@ -132,29 +130,23 @@ namespace Dune
               const auto &neighbor = intersection.outside();
 
               if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
-                flux = -truncVolume( upwind, reconstructions[ neighbor ] );
-              else if ( color[ neighbor ] >= ( 1 - eps_ ) )
-                flux = -upwind.volume();
+                flux = truncVolume( upwind, reconstructions[ neighbor ] );
+              else if ( flags.isFull( neighbor ) )
+                flux = upwind.volume();
             }
             // Handle boundary data
             else
             {
-              if ( color[ entity ] >= ( 1 - eps_ ) )
-                flux = -upwind.volume();
-              else if ( color[ entity ] <= eps_ )
-                flux = 0.0;
-              else
-                flux = -truncVolume( upwind, reconstructions[ entity ] );
+              if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
+                flux = truncVolume( upwind, reconstructions[ entity ] );
+              else if ( flags.isFull( entity ) )
+                flux = upwind.volume();
             }
-
           }
-          assert( flux == flux );
 
-          update[ entity ] -= flux / geoEn.volume();
+          update[ entity ] += flux / geoEn.volume();
         }
       }
-
-      double eps_;
     };
 
 
@@ -168,13 +160,12 @@ namespace Dune
      * \tparam  ReconstructionSet
      * \tparam  ColorFunction
      * \param   rs                  reconstruction set
-     * \param   eps                 marker tolerance
      * \return [description]
      */
     template< class ReconstructionSet, class ColorFunction >
-    static inline auto evolution ( const ReconstructionSet&, const ColorFunction&, double eps ) -> decltype( Evolution< ReconstructionSet, ColorFunction >( eps ) )
+    static inline auto evolution ( const ReconstructionSet&, const ColorFunction& ) -> decltype( Evolution< ReconstructionSet, ColorFunction >() )
     {
-      return Evolution< ReconstructionSet, ColorFunction >( eps );
+      return Evolution< ReconstructionSet, ColorFunction >();
     }
 
   } // namespace VoF
