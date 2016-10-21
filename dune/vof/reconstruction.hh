@@ -26,21 +26,22 @@ namespace Dune
 
     template< class GridView, class Stencils, class ColorFunction >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
-     -> ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                      ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >
+     -> typename std::enable_if< GridView::dimension == 2,
+                                 ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
+                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > > >::type
     {
       return ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
                                            ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                          >( stencils );
     }
-    /*
+
     template< class GridView, class Stencils, class ColorFunction >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
-     -> ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
+     ->  typename std::enable_if< GridView::dimension == 3,
+                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
     {
       return ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
     }
-    */
 
   } // namespace VoF
 

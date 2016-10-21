@@ -15,7 +15,7 @@ struct RotatingCircle < ctype, 2 >
 
   DomainType center( const double t )
   {
-    DomainType center { 0.5, 0.5 };
+    DomainType center = rotationCenter();
     DomainType offset { 0, 0.25 };
     DomainType normal { 0.25, 0 };
 
@@ -32,11 +32,20 @@ struct RotatingCircle < ctype, 2 >
 
   void velocityField ( const DomainType &x, const double t, DomainType &r )
   {
-    r[ 0 ] = x[ 1 ] - 0.5;
-    r[ 1 ] = 0.5 - x[ 0 ];
+    DomainType center = rotationCenter();
+
+    r[ 0 ] = x[ 1 ] - center[ 1 ];
+    r[ 1 ] = center[ 0 ] - x[ 0 ];
 
     r *= 2 * M_PI / 10;
   }
+
+private:
+  DomainType rotationCenter ()
+  {
+    return DomainType { 0.5, 0.5 };
+  }
+
 };
 
 template < class ctype >
@@ -85,8 +94,8 @@ struct LinearWall
 
   void evaluate ( const DomainType &x, double t, RangeType &u ) const
   {
-    double pos = 0.1;
-    double width = 0.05;
+    double pos = 0.4;
+    double width = 0.3;
 
     u = ( std::abs( x[0] - t * speed_ - pos ) <= width ) ? 1.0 : 0.0;
   }
@@ -98,7 +107,7 @@ struct LinearWall
   }
 
 private:
-  double speed_ = 0.05;
+  double speed_ = 0.02;
 
 };
 

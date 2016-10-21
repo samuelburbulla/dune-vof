@@ -41,31 +41,31 @@ template < class GridView, class ReconstructionSet, class Polygon >
 void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
 {
   using Coord = typename Polygon::Coordinate;
+
   io.clear();
   for ( const auto& entity : elements( gridView ) )
   {
-    Dune::VoF::Face< Coord > is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
+    auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
+    auto intersection = static_cast< typename decltype( is )::Result > ( is );
+
     std::vector< Coord > vertices;
-    for ( std::size_t i = 0; i < is.size(); ++i )
-      vertices.push_back( is.vertex( i ) );
+    for ( std::size_t i = 0; i < intersection.size(); ++i )
+      vertices.push_back( intersection.vertex( i ) );
 
     if ( vertices.size() > 0 )
-    {
-      Polygon polygon ( vertices );
-      io.push_back( Polygon( polygon ) );
-    }
+      io.push_back( Polygon( vertices ) );
   }
 }
 
 
-// FixedStepTimeProvider
-// ---------------------
+// TimeProvider
+// ------------
 
-class FixedStepTimeProvider
+class TimeProvider
 {
  public:
-  FixedStepTimeProvider ( const double dt, const double start = 0.0 )
-   : dt_( dt ), time_( start ) {}
+  TimeProvider ( const double dt, const double start, const double cfl )
+   : cfl_ ( cfl ), dt_( dt * cfl_ ), time_( start ), dtEst_ ( std::numeric_limits< double >::max() ) {}
 
   double time() const { return time_; }
 
@@ -74,12 +74,17 @@ class FixedStepTimeProvider
   void next() {
     time_ += dt_;
     step_++;
+    dt_ = dtEst_;
+    dtEst_ = std::numeric_limits< double >::max();
   }
 
-  void provideTimeStepEstimate( const double dtEst ) {}
+  void provideTimeStepEstimate( const double dtEst )
+  {
+    dtEst_ = std::min( dtEst * cfl_, dtEst_ );
+  }
 
  private:
-  double dt_, time_;
+  double cfl_, dt_, time_, dtEst_;
   int step_ = 0;
 };
 
@@ -117,16 +122,16 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
   // Testproblem
-  using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
+  using ProblemType = PROBLEM < double, GridView::dimensionworld >;
   ProblemType problem;
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
-  double dt = parameters.get< double >( "scheme.cflFactor" )
-    * initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
-  const double startTime = 0.0;
-  const double endTime = 0.25;
+  double dt = initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
+  const double startTime = parameters.get< double >( "scheme.start", 0.0 );
+  const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
+  const bool writeData = parameters.get< bool >( "io.writeData", 0 );
 
   int saveNumber = 1;
   const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
@@ -140,8 +145,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ColorFunction update( gridView );
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
-  auto reconstruction = Dune::VoF::ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet, Stencils >( stencils );
-  auto evolution = Dune::VoF::evolution( reconstructionSet, colorFunction, eps );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
+  auto evolution = Dune::VoF::evolution(  reconstructionSet, colorFunction );
 
   // VTK Writer
   std::stringstream path;
@@ -161,13 +166,16 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, 0.0, u ); return u; } );
 
   flags.reflag( colorFunction, eps );
-  reconstruction(  colorFunction, reconstructionSet, flags );
+  reconstruction( colorFunction, reconstructionSet, flags );
   filterReconstruction( gridView, reconstructionSet, recIO );
 
-  vtkwriter.write( 0 );
-  vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+  if( writeData )
+  {
+    vtkwriter.write( 0 );
+    vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+  }
 
-  FixedStepTimeProvider tp ( dt, startTime );
+  TimeProvider tp ( dt, startTime, parameters.get< double >( "scheme.cflFactor" ) );
 
   auto velocity = [ &tp, &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, tp.time(), rot ); return rot; };
 
@@ -181,9 +189,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
     tp.next();
 
-    if ( 2.0 * std::abs( tp.time() - nextSaveTime ) < tp.deltaT() )
+    if ( writeData && tp.time() > nextSaveTime - 0.5 * tp.deltaT() )
     {
-      vtkwriter.write( tp.time() );
+      vtkwriter.write( saveNumber );
 
       filterReconstruction( gridView, reconstructionSet, recIO );
       std::stringstream name_;
@@ -247,7 +255,7 @@ try {
       const double eoc = log( lastL1Error / L1Error ) / M_LN2;
 
       if( eoc < 1.5 )
-        DUNE_THROW( Dune::InvalidStateException, "EOC check of 3d rotating circle problem failed.");
+        DUNE_THROW( Dune::InvalidStateException, "EOC check of 2d diagonal problem failed.");
 
       std::cout << "EOC " << i << ": " << eoc << std::endl;
     }
