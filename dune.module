@@ -1,11 +1,5 @@
-################################
-# Dune module information file #
-################################
-
-#Name of the module
 Module: dune-vof
 Version: 2015.09
 Maintainer: sambu@posteo.de
-#depending on
-Depends: dune-grid (>= 3.0) dune-geometry (>= 3.0) dune-common (>= 3.0) dune-fem (>= 1.5.0)
-Suggests: dune-alugrid
+Depends: dune-grid (>= 3.0) dune-geometry (>= 3.0) dune-common (>= 3.0) dune-fem (>= 3.0)
+Suggests: dune-alugrid (>= 3.0) dune-spgrid (>= 3.0) dune-corepy (>= 1.0) dune-fempy (>= 2.4)
