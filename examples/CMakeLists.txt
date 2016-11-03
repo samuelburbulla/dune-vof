@@ -1,1 +1,3 @@
-add_subdirectory( fem )
+if( dune-fem_FOUND )
+  add_subdirectory( fem )
+endif()
