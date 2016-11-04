@@ -60,15 +60,32 @@ namespace Dune {
       }
     };
 
+    struct Lazy
+    {};
+
+    struct Eager
+    {};
+
+    namespace {
+      constexpr Lazy lazy = {};
+      constexpr Eager eager = {};
+    }
 
     /**
      * \ingroup Geometry
      * \brief intersect two geometric bodies
      */
     template< class A, class B >
-    auto intersect ( A&& a, B&& b ) -> GeometricIntersection< A, B >
+    auto intersect ( A&& a, B&& b, Lazy = lazy ) -> GeometricIntersection< A, B >
     {
       return GeometricIntersection< A, B >( std::forward< A >( a ), std::forward< B >( b ) );
+    }
+
+    template< class A, class B >
+    auto intersect ( A&& a, B&& b, Eager ) -> typename GeometricIntersection< A, B >::Result
+    {
+      using GI = GeometricIntersection< A, B >;
+      return static_cast< typename GI::Result >( GI( std::forward< A >( a ), std::forward< B >( b ) ) );
     }
 
   } // namespace VoF
