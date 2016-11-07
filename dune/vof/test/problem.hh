@@ -13,7 +13,7 @@ struct RotatingCircle < ctype, 2 >
   using DomainType = Dune::FieldVector< ctype, 2 >;
   using RangeType = Dune::FieldVector< ctype, 1 >;
 
-  DomainType center( const double t )
+  DomainType center( const double t ) const
   {
     DomainType center = rotationCenter();
     DomainType offset { 0, 0.25 };
@@ -25,12 +25,12 @@ struct RotatingCircle < ctype, 2 >
     return center;
   }
 
-  ctype radius( const double t )
+  ctype radius( const double t ) const
   {
     return 0.15;
   }
 
-  void velocityField ( const DomainType &x, const double t, DomainType &r )
+  void velocityField ( const DomainType &x, const double t, DomainType &r ) const
   {
     DomainType center = rotationCenter();
 
@@ -41,7 +41,7 @@ struct RotatingCircle < ctype, 2 >
   }
 
 private:
-  DomainType rotationCenter ()
+  DomainType rotationCenter () const
   {
     return DomainType { 0.5, 0.5 };
   }

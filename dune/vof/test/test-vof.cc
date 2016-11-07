@@ -255,7 +255,7 @@ try {
       const double eoc = log( lastL1Error / L1Error ) / M_LN2;
 
       if( eoc < 1.5 )
-        DUNE_THROW( Dune::InvalidStateException, "EOC check of 2d diagonal problem failed.");
+        DUNE_THROW( Dune::InvalidStateException, "EOC is smaller than 1.5!");
 
       std::cout << "EOC " << i << ": " << eoc << std::endl;
     }

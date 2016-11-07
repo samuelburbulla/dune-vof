@@ -30,8 +30,12 @@ namespace Dune
       {
         Coordinate v ( { n[0] * d, n[1] * d } );
         v /= n.two_norm2();
-        points.push_back( c + v );
-        return 1;
+        if ( ( line.vertex(0) - v ) * ( line.vertex(1) - v ) <= 0.0 )
+        {
+          points.push_back( c + v );
+          return 1;
+        }
+        return 0;
       }
       else
       {
@@ -77,7 +81,7 @@ namespace Dune
           i0 = i;
           break;
         }
-      // otherwise, entity is completely included of circle
+      // otherwise, entity is completely included in circle
       if ( i == polygon.size() )
         return polygon.volume();
 
@@ -87,14 +91,14 @@ namespace Dune
       {
         auto edge = polygon.edge( ( i + i0 ) % polygon.size() );
         std::vector< Coordinate > intersections;
-        circleIntersection ( edge, center, radius, intersections );
+        int iscase = circleIntersection ( edge, center, radius, intersections );
 
         switch ( intersections.size() )
         {
           case 1:
             secPoints.push_back( intersections[ 0 ] );
             polyPoints.push_back( intersections[ 0 ] );
-            inside = !inside;
+            if ( iscase == 2 ) inside = !inside;
             break;
           case 2:
             secPoints.push_back( intersections[ 0 ] );
@@ -125,7 +129,7 @@ namespace Dune
           // Quelle: Wikipedia (Kreissegment)
           Dune::VoF::Line< Coordinate > sec ( secPoints[i], secPoints[ (i+1) % secPoints.size() ] );
           double alpha = 2.0 * std::asin( sec.volume() / ( 2.0 * radius ) );
-            volume += radius * radius / 2.0 * ( alpha - std::sin( alpha ) );
+          volume += radius * radius / 2.0 * ( alpha - std::sin( alpha ) );
         }
       }
 
@@ -158,8 +162,15 @@ namespace Dune
 
       for ( auto entity : elements( uhComp.gridView() ) )
       {
-        if ( !reconstructions[ entity ] )
+        //if ( !reconstructions[ entity ] )
+        //double volume = entity.geometry().volume();
+
+        //double T1 = uhExact[ entity ] * volume;
+        //double T0 = volume - T1;
+
+        //  l1Error += T0 * std::abs( uhComp[ entity ] ) + T1 * std::abs( 1.0 - uhComp[ entity ] );
           l1Error += std::abs( uhExact[ entity ] - uhComp[ entity ] ) * entity.geometry().volume();
+        /*
         else
         {
           auto entityAsPolytope = makePolytope( entity.geometry() );
@@ -168,18 +179,18 @@ namespace Dune
           Dune::VoF::Line< Coord > interface = intersect( entityAsPolytope, reconstructions[ entity ].boundary() );
           int count = circleIntersection ( interface, center, radius, intersections );
 
-          if ( count == 0 || count == 1 || intersections.size() == 0 )
+          if ( count == 0 )
           {
             l1Error += std::abs( uhExact[ entity ] - uhComp[ entity ] ) * entity.geometry().volume();
           }
-          else // intersections.size() == 1 oder == 2
+          else // count == 1 || count == 2
           {
             Dune::VoF::Polygon< Coord > polygon = intersect( entityAsPolytope, reconstructions[ entity ] );
             double cutset = intersectionVolume( polygon, center, radius );
 
             l1Error += ( uhComp[ entity ] + uhExact[ entity ] ) * entity.geometry().volume() - 2 * cutset;
           }
-        }
+        }*/
       }
 
       return l1Error;
