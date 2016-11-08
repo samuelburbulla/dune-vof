@@ -44,8 +44,6 @@ struct RotatingCircle < ctype, 2 >
     rot *= 2 * M_PI / 10;
   }
 
-  static double maxVelocity() { return 2 * M_PI / 10 * sqrt( 2.0 ); };
-
 };
 
 
@@ -87,8 +85,6 @@ struct RotatingCircle < ctype, 3 >
     rot[ 2 ] = - c[ 0 ];
     rot *= 2 * M_PI / 10 / std::sqrt(2);
   }
-
-  static double maxVelocity() { return 2 * M_PI / 10 * sqrt( 2.0 ); };
 
 };
 

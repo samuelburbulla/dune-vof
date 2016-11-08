@@ -128,7 +128,7 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
   TimeProviderType timeProvider( start, cfl, gridPart.comm() );
   timeProvider.init( dtInit );
 
-  auto velocity = [ &timeProvider, &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, timeProvider.time(), u ); return u; };
+  auto velocity = [ &problem ] ( const auto &x, const auto &t ) { DomainType u; problem.velocityField( x, t, u ); return u; };
 
   // Write inital data
   DataOutputType dataOutput( level, timeProvider );
