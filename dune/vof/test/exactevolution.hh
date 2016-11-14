@@ -97,7 +97,7 @@ namespace Dune
           const auto geoIs = intersection.geometry();
 
           const Coordinate outerNormal = intersection.centerUnitOuterNormal();
-          Coordinate v = velocity( geoIs.center() );
+          Coordinate v = velocity( geoIs.center(), timeProvider.time() + 0.5 * timeProvider.deltaT() );
           v *= timeProvider.deltaT();
 
           auto upwind = upwindPolygon( geoIs, v );

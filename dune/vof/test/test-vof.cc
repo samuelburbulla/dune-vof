@@ -177,7 +177,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   TimeProvider tp ( dt, startTime, parameters.get< double >( "scheme.cflFactor" ) );
 
-  auto velocity = [ &tp, &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, tp.time(), rot ); return rot; };
+  auto velocity = [ &problem ] ( const auto &x, const auto &t ) { DomainVector rot; problem.velocityField( x, t, rot ); return rot; };
 
   while ( tp.time() < endTime )
   {

@@ -1,6 +1,10 @@
 #ifndef DUNE_VOF_UTILITY_HH
 #define DUNE_VOF_UTILITY_HH
 
+// dune-fem includes
+#include <dune/fem/quadrature/cachingquadrature.hh>
+#include <dune/fem/gridpart/leafgridpart.hh>
+
 // dune-vof includes
 #include <dune/vof/geometry/2d/polygon.hh>
 #include <dune/vof/geometry/intersect.hh>
@@ -26,13 +30,14 @@ namespace Dune
       double diskr = r * r * n.two_norm2() - d * d;
       if ( diskr < 0 )
         return 0;
-      else if ( std::abs( diskr ) < 1e-14 )
+      else if ( std::abs( diskr ) == 0.0 ) //< std::numeric_limits< double >::epsilon() )
       {
         Coordinate v ( { n[0] * d, n[1] * d } );
         v /= n.two_norm2();
+        v += c;
         if ( ( line.vertex(0) - v ) * ( line.vertex(1) - v ) <= 0.0 )
         {
-          points.push_back( c + v );
+          points.push_back( v );
           return 1;
         }
         return 0;
@@ -152,8 +157,8 @@ namespace Dune
     }
 
 
-    template< class DF, class R, class Coord >
-    static inline double exactL1Error ( const DF &uhComp, const R &reconstructions, const Coord &center, const double radius )
+    template< class DF, class F, class R, class Coord >
+    static inline double exactL1Error ( const DF &uhComp, const F &flags, const R &reconstructions, const Coord &center, const double radius )
     {
       double l1Error = 0.0;
 
@@ -162,35 +167,21 @@ namespace Dune
 
       for ( auto entity : elements( uhComp.gridView() ) )
       {
-        //if ( !reconstructions[ entity ] )
-        //double volume = entity.geometry().volume();
+        double volume = entity.geometry().volume();
 
-        //double T1 = uhExact[ entity ] * volume;
-        //double T0 = volume - T1;
+        double T1 = uhExact[ entity ] * volume;
+        double T0 = volume - T1;
 
-        //  l1Error += T0 * std::abs( uhComp[ entity ] ) + T1 * std::abs( 1.0 - uhComp[ entity ] );
-          l1Error += std::abs( uhExact[ entity ] - uhComp[ entity ] ) * entity.geometry().volume();
-        /*
+        if ( !reconstructions[ entity ] )
+          l1Error += T0 * std::abs( uhComp[ entity ] ) + T1 * std::abs( 1.0 - uhComp[ entity ] );
         else
         {
           auto entityAsPolytope = makePolytope( entity.geometry() );
+          Dune::VoF::Polygon< Coord > calculatedOnePart = intersect( entityAsPolytope, reconstructions[ entity ] );
+          double sharedOneVolume = intersectionVolume( calculatedOnePart, center, radius );
 
-          std::vector< Coord > intersections;
-          Dune::VoF::Line< Coord > interface = intersect( entityAsPolytope, reconstructions[ entity ].boundary() );
-          int count = circleIntersection ( interface, center, radius, intersections );
-
-          if ( count == 0 )
-          {
-            l1Error += std::abs( uhExact[ entity ] - uhComp[ entity ] ) * entity.geometry().volume();
-          }
-          else // count == 1 || count == 2
-          {
-            Dune::VoF::Polygon< Coord > polygon = intersect( entityAsPolytope, reconstructions[ entity ] );
-            double cutset = intersectionVolume( polygon, center, radius );
-
-            l1Error += ( uhComp[ entity ] + uhExact[ entity ] ) * entity.geometry().volume() - 2 * cutset;
-          }
-        }*/
+          l1Error += ( T1 - sharedOneVolume ) + ( uhComp[ entity ] * volume - sharedOneVolume );
+        }
       }
 
       return l1Error;

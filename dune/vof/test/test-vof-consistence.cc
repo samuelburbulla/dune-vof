@@ -158,7 +158,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "uh" );
   vtkwriter.addCellData ( uhExact, "u" );
-  vtkwriter.addCellData ( errorFunction, "localerror" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
@@ -167,7 +166,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), colorFunction );
   Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), uhExact );
 
-  // Initial reconstruction
+  // Initial flagging
   flags.reflag( colorFunction, eps );
 
   if ( writeData )
@@ -175,9 +174,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   TimeProvider tp ( cfl, dt, 0.0 );
 
-  auto velocity = [ &tp, &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, tp.time(), rot ); return rot; };
-
-  flags.reflag( colorFunction, eps );
+  auto velocity = [ &circle ] ( const auto &x, const auto &t ) { DomainVector rot; circle.velocityField( x, t, rot ); return rot; };
 
   exactEvolution( colorFunction, circle, velocity, tp, update, flags );
   colorFunction.axpy( 1.0, update );
@@ -185,19 +182,19 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   Dune::VoF::circleInterpolation( circle.center( tp.time() ), circle.radius( tp.time() ), uhExact );
 
-  for ( auto entity : elements( gridView ) )
-    errorFunction[ entity ] = std::abs( colorFunction[ entity ] - uhExact[ entity ] ) * entity.geometry().volume();
-
-
   if ( writeData )
     vtkwriter.write( 1 );
 
+  ReconstructionSet reconstructionSet( gridView );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
+  flags.reflag( colorFunction, eps );
+  reconstruction( colorFunction, reconstructionSet, flags );
 
   double l1Error = 0.0;
   for ( auto entity : elements( gridView ) )
     l1Error += std::abs( uhExact[ entity ] - colorFunction[ entity ] ) * entity.geometry().volume();
 
-  return l1Error;
+  return Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
 }
 
 int main(int argc, char** argv)
