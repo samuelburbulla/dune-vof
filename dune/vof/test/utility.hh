@@ -144,7 +144,7 @@ namespace Dune
     {
       uh.clear();
 
-      for ( const auto& entity : elements( uh.gridView() ))
+      for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
       {
         const auto& geo = entity.geometry();
         Dune::VoF::Polygon< Coord > polygon = Dune::VoF::makePolytope( geo );
@@ -162,7 +162,7 @@ namespace Dune
       DF uhExact( uhComp );
       circleInterpolation( center, radius, uhExact );
 
-      for ( auto entity : elements( uhComp.gridView(), Partitions::interiorBorder ) )
+      for ( auto entity : elements( uhComp.gridView(), Partitions::interior ) )
       {
         double volume = entity.geometry().volume();
 

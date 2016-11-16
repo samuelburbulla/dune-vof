@@ -78,7 +78,9 @@ class TimeProvider
   void next() {
     time_ += dt_;
     step_++;
-    dt_ = dtEst_;
+
+    const auto& comm = Dune::Fem::MPIManager::comm();
+    dt_ = comm.min( dtEst_ );
     dtEst_ = std::numeric_limits< double >::max();
   }
 
@@ -101,7 +103,7 @@ double initTimeStep( const GridView& gridView, const Velocity &velocity )
 {
   double dtMin = std::numeric_limits< double >::max();
 
-  for( const auto &entity : elements( gridView ) )
+  for( const auto &entity : elements( gridView, Dune::Partitions::interiorBorder ) )
   {
     const auto geoEn = entity.geometry();
     for ( const auto &intersection : intersections( gridView, entity ) )
@@ -136,7 +138,11 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
-  double dt = initTimeStep( gridView, [ &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, 0.0, rot ); return rot; } );
+
+  double dtPart = initTimeStep( gridView, [ &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, 0.0, rot ); return rot; } );
+  const auto& comm = Dune::Fem::MPIManager::comm();
+  double dt = comm.min( dtPart );
+
   const double startTime = parameters.get< double >( "scheme.start", 0.0 );
   const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
@@ -161,7 +167,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
-  DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
+  DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
 
   std::vector< Polygon > recIO;
@@ -172,6 +178,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // Initial data
   Dune::VoF::circleInterpolation( circle.center( startTime ), circle.radius( startTime ), colorFunction );
+  colorFunction.communicate();
 
   // Initial reconstruction
   flags.reflag( colorFunction, eps );
@@ -197,6 +204,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     reconstruction( colorFunction, reconstructionSet, flags );
     evolution( colorFunction, reconstructionSet, velocity, tp, update, flags );
     colorFunction.axpy( 1.0, update );
+    colorFunction.communicate();
 
     double dt = tp.deltaT();
     tp.next();
