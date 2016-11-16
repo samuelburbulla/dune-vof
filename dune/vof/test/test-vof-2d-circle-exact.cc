@@ -220,12 +220,15 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   }
 
+  if ( tp.time() == startTime )
+    error += Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
+
   return error;
 }
 
 int main(int argc, char** argv)
 try {
-  Dune::MPIHelper& mpihelper = Dune::MPIHelper::instance( argc, argv );
+  Dune::Fem::MPIManager::initialize( argc, argv );
 
   using GridType = Dune::GridSelector::GridType;
 
@@ -254,9 +257,12 @@ try {
   for ( ; level < maxLevel; ++level )
   {
     // start time integration
-    auto L1Error = algorithm( grid.leafGridView(), parameters );
+    double singleL1Error = algorithm( grid.leafGridView(), parameters );
 
-    if ( mpihelper.rank() == 0 )
+    const auto& comm = Dune::Fem::MPIManager::comm();
+    double L1Error = comm.sum( singleL1Error );
+
+    if ( Dune::Fem::MPIManager::rank() == 0 )
     {
       // print errors and eoc
       if ( level > 0 )

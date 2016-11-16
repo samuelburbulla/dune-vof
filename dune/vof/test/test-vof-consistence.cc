@@ -190,10 +190,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
 
-  double l1Error = 0.0;
-  for ( auto entity : elements( gridView ) )
-    l1Error += std::abs( uhExact[ entity ] - colorFunction[ entity ] ) * entity.geometry().volume();
-
   return Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
 }
 
@@ -208,7 +204,7 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  for ( double cfl = 1.0; cfl > 1e-2; cfl *= 0.5 )
+  for ( double cfl = 0.25; cfl >= 0.25; cfl *= 0.5 )
   {
     std::cout << std::endl << "CFL=" << cfl << std::endl;
 
@@ -238,9 +234,7 @@ try {
       // print errors and eoc
       if ( level > 0 )
       {
-        const double log2 = 0.693147180559945309417232121458176568075500134360255254120;
-        const double eoc = ( log( lastError ) - log( error ) ) / log2;
-
+        const double eoc = ( log( lastError ) - log( error ) ) / M_LN2;
 
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
       }

@@ -30,7 +30,7 @@ namespace Dune
       double diskr = r * r * n.two_norm2() - d * d;
       if ( diskr < 0 )
         return 0;
-      else if ( std::abs( diskr ) == 0.0 ) //< std::numeric_limits< double >::epsilon() )
+      else if ( std::abs( diskr ) == 0.0 )
       {
         Coordinate v ( { n[0] * d, n[1] * d } );
         v /= n.two_norm2();
@@ -90,20 +90,17 @@ namespace Dune
       if ( i == polygon.size() )
         return polygon.volume();
 
-      bool inside = false;
-
       for ( int i = 0; i < polygon.size(); ++i )
       {
         auto edge = polygon.edge( ( i + i0 ) % polygon.size() );
         std::vector< Coordinate > intersections;
-        int iscase = circleIntersection ( edge, center, radius, intersections );
+        circleIntersection ( edge, center, radius, intersections );
 
         switch ( intersections.size() )
         {
           case 1:
             secPoints.push_back( intersections[ 0 ] );
             polyPoints.push_back( intersections[ 0 ] );
-            if ( iscase == 2 ) inside = !inside;
             break;
           case 2:
             secPoints.push_back( intersections[ 0 ] );
@@ -115,8 +112,8 @@ namespace Dune
             break;
         };
 
-        if ( inside )
-          polyPoints.push_back( edge.vertex(1) );
+        if ( ( edge.vertex( 1 ) - center ).two_norm() < radius )
+          polyPoints.push_back( edge.vertex( 1 ) );
       }
 
       double volume = 0.0;
@@ -165,7 +162,7 @@ namespace Dune
       DF uhExact( uhComp );
       circleInterpolation( center, radius, uhExact );
 
-      for ( auto entity : elements( uhComp.gridView() ) )
+      for ( auto entity : elements( uhComp.gridView(), Partitions::interiorBorder ) )
       {
         double volume = entity.geometry().volume();
 
