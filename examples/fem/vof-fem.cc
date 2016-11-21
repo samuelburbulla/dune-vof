@@ -22,7 +22,6 @@
 #include <dune/fem/function/common/instationary.hh>
 #include <dune/fem/gridpart/leafgridpart.hh>
 #include <dune/fem/io/file/dataoutput.hh>
-#include <dune/fem/misc/l1norm.hh>
 #include <dune/fem/misc/mpimanager.hh>
 #include <dune/fem/space/common/functionspace.hh>
 #include <dune/fem/space/common/interpolate.hh>
@@ -33,6 +32,7 @@
 #include <dune/vof/femdfwrapper.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
+#include <dune/vof/reconstructedfunction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
@@ -212,7 +212,6 @@ try {
   using ProblemType = Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
   using SolutionType = Dune::Fem::InstationaryFunction< ProblemType >;
   using GridSolutionType = Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
-  using L1NormType = Dune::Fem::L1Norm< GridPartType >;
 
 
   // Create Grid
@@ -238,10 +237,9 @@ try {
     DiscreteFunctionSpaceType space( gridPart );
     ProblemType problem;
     DiscreteFunctionType uh( "uh", space );
-    L1NormType l1norm( gridPart );
 
     SolutionType solution( problem, startTime );
-    GridSolutionType u( "solution", solution, gridPart, 9 );
+    GridSolutionType u( "solution", solution, gridPart, 19 );
     Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
 
     if ( restartStep == -1 )
@@ -290,9 +288,22 @@ try {
     // Calculate Error
     // ===============
     solution.setTime( actualEndTime );
-    DiscreteFunctionType uhEnd( "", space );
-    l2projection( u, uhEnd );
-    const double newL1Error = l1norm.distance( uh, uhEnd );
+    Dune::VoF::ReconstructedFunction< DiscreteFunctionType > uRec ( uh );
+
+    using Quadrature = Dune::Fem::CachingQuadrature < GridPartType, 0 >;
+    double newL1Error = 0.0;
+    for ( const auto& entity : elements( gridPart, Dune::Partitions::interior ) )
+    {
+      Quadrature quad ( entity, 19 );
+      for ( const auto& qp : quad )
+      {
+        const auto x = entity.geometry().global( qp.position() );
+        DiscreteFunctionType::RangeType v, w;
+        solution.evaluate( x, v );
+        uRec.evaluate( entity, x, w );
+        newL1Error += std::abs( v - w ) * qp.weight() * entity.geometry().integrationElement( qp.position() );
+      }
+    }
 
     if( Dune::Fem::MPIManager::rank() == 0 )
     {
