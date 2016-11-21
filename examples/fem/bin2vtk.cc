@@ -27,6 +27,7 @@
 #include <dune/fem/io/streams/binarystreams.hh>
 
 // dune-vof includes
+#include <dune/vof/curvature.hh>
 #include <dune/vof/femdfwrapper.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
@@ -233,7 +234,9 @@ try {
       const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
       auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
       auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
-      auto flags = Dune::VoF::flags( gridPart );
+
+      using Flags = Dune::VoF::Flags< GridPartType >;
+      Flags flags = Dune::VoF::flags( gridPart );
       DiscreteFunctionType dfFlags ( "flags", space );
 
       flags.reflag( cuh, eps );
@@ -242,14 +245,21 @@ try {
       for ( const auto& entity : elements( gridPart ) )
         dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
 
+      using Curvature = Dune::VoF::Curvature< GridPartType, Stencils, ReconstructionSet, Flags >;
+      Curvature curvature ( gridPart, stencils );
+      curvature( reconstructions, flags );
+
+      DiscreteFunctionType dfCurvature ( "curvature", space );
+      for ( const auto& entity : elements( gridPart ) )
+        dfCurvature.localFunction( entity )[0] = curvature[ entity ];
 
 
       // Write data to vtk file
       // ----------------------
-      using DataIOTupleType = std::tuple< DiscreteFunctionType *, DiscreteFunctionType * >;
+      using DataIOTupleType = std::tuple< DiscreteFunctionType *, DiscreteFunctionType *, DiscreteFunctionType * >;
       using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
 
-      DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags );
+      DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags, &dfCurvature );
       DataOutputType dataOutput( grid, dataIOTuple, dataOutputParameters );
       dataOutput.write();
 
