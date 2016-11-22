@@ -16,3 +16,5 @@ dune_add_test( NAME test-vof-2d-diagonal SOURCES test-vof.cc COMPILE_DEFINITIONS
 dune_add_test( NAME test-vof-3d-diagonal SOURCES test-vof.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=3;PROBLEM=Diagonal" )
 
 dune_add_test( NAME test-vof-consistence SOURCES test-vof-consistence.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=2" )
+
+dune_add_test( NAME test-curvature SOURCES test-curvature.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=2" )

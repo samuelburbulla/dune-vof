@@ -66,6 +66,15 @@ namespace Dune
         return curvature_[ index( entity ) ];
       }
 
+      double operator[] ( const int index ) const
+      {
+        return curvature_[ index ];
+      }
+
+      std::size_t size () const { return curvature_.size(); }
+
+      const GridView &gridView () const { return gridView_; }
+
     private:
       void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags )
       {
@@ -85,6 +94,7 @@ namespace Dune
           Coordinate centroidNb = interfaceNb.centroid();
 
           Coordinate diffN = reconstructions[ entity ].innerNormal() - reconstructions[ neighbor ].innerNormal();
+          //Coordinate diffN = reconstructions[ entity ].innerNormal();
           Coordinate diffC = centroidEn - centroidNb;
 
           double weight = diffC.two_norm2();
@@ -151,7 +161,6 @@ namespace Dune
         return m;
       }
 
-      const GridView &gridView () const { return gridView_; }
       const IndexSet& indexSet () const { return gridView().indexSet(); }
       Index index ( const Entity &entity ) const { return indexSet().index( entity ); }
 
