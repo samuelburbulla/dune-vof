@@ -137,7 +137,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Testproblem
   using ProblemType = Ellipse< double, GridView::dimensionworld >;
   DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
-  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.1 } );
+  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.1, 0.3 } );
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
@@ -191,7 +191,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
 
-  return Dune::VoF::curvatureError( curvature, flags, reconstructionSet, 0.0 );
+  return Dune::VoF::curvatureError( curvature, flags, reconstructionSet, problem );
 }
 
 int main(int argc, char** argv)

@@ -25,7 +25,7 @@ struct Ellipse
     for( int i = 0; i < dimDomain; ++i )
     {
       const auto tmp = axis_[ i ] * ( x - DomainType( 0.5 ) );
-      val += tmp * tmp / radii_[ i ];
+      val += tmp * tmp / ( radii_[ i ] * radii_[ i ] );
     }
 
     u = val < 1.0 ? 1.0 : 0.0;
@@ -36,9 +36,28 @@ struct Ellipse
     evaluate( x, u );
   }
 
-  void velocityField ( const DomainType&, double t, DomainType& v ) const
+  void velocityField ( const DomainType& x, double t, DomainType& v ) const
   {
     v = 0.0;
+  }
+
+  double curvature ( const DomainType& x ) const
+  {
+    double curv = 0.0;
+
+    const auto tmp = axis_[ 0 ] * ( x - DomainType( 0.5 ) );
+    curv += tmp * tmp * radii_[ 1 ] * radii_[ 1 ] * radii_[ 1 ] * radii_[ 1 ];
+
+    const auto tmp2 = axis_[ 1 ] * ( x - DomainType( 0.5 ) );
+    curv += tmp2 * tmp2 * radii_[ 0 ] * radii_[ 0 ] * radii_[ 0 ] * radii_[ 0 ];
+
+    curv = curv * curv * curv;
+    curv = std::sqrt( curv );
+
+    for( int i = 0; i < dimDomain; ++i )
+      curv /= radii_[ i ] * radii_[ i ] * radii_[ i ] * radii_[ i ];
+
+    return 1.0 / curv;
   }
 
   std::array< DomainType, dim > axis_;

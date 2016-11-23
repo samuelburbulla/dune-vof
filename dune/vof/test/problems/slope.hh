@@ -28,9 +28,14 @@ struct Slope< ctype, 2 >
     evaluate( x, u );
   }
 
-  void velocityField ( const DomainType&, double t, DomainType& v ) const
+  void velocityField ( const DomainType& x, double t, DomainType& v ) const
   {
     v = 0.0;
+  }
+
+  double curvature ( const DomainType& x ) const
+  {
+    return 0.0;
   }
 
 private:

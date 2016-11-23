@@ -81,11 +81,10 @@ namespace Dune
     }
 
 
-    template< class CU, class F, class R >
-    static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const double radius )
+    template< class CU, class F, class R, class P >
+    static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem )
     {
       double error = 0.0;
-      double kappa = 1.0 / radius;
 
       for ( auto entity : elements( curvature.gridView(), Partitions::interior ) )
       {
@@ -96,10 +95,10 @@ namespace Dune
         auto it = intersect( polygon, reconstructions[ entity ].boundary() );
         auto interface = static_cast< typename decltype( it )::Result > ( it );
 
-        error += interface.volume() * std::abs( kappa - curvature[ entity ] );
+        error += interface.volume() * std::abs( problem.curvature( interface.centroid() ) - curvature[ entity ] );
       }
 
-      return error / ( 2.0 * M_PI * radius );
+      return error;
     }
 
   } // namespace VoF
