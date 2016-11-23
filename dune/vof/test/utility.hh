@@ -16,7 +16,6 @@ namespace Dune
     // Exact interpolation for circle
     // ==============================
 
-
     template < class Coordinate >
     static inline int circleIntersection ( const Dune::VoF::Line< Coordinate >& line, const Coordinate& c, double r, std::vector< Coordinate > &points )
     {
@@ -152,39 +151,6 @@ namespace Dune
         uh[ entity ] = intersectionVolume( polygon, center, radius ) / geo.volume();
       }
     }
-
-
-    template< class DF, class F, class R, class Coord >
-    static inline double exactL1Error ( const DF &uhComp, const F &flags, const R &reconstructions, const Coord &center, const double radius )
-    {
-      double l1Error = 0.0;
-
-      DF uhExact( uhComp );
-      circleInterpolation( center, radius, uhExact );
-
-      for ( auto entity : elements( uhComp.gridView(), Partitions::interior ) )
-      {
-        double volume = entity.geometry().volume();
-
-        double T1 = uhExact[ entity ] * volume;
-        double T0 = volume - T1;
-
-        if ( !reconstructions[ entity ] )
-          l1Error += T0 * std::abs( uhComp[ entity ] ) + T1 * std::abs( 1.0 - uhComp[ entity ] );
-        else
-        {
-          auto entityAsPolytope = makePolytope( entity.geometry() );
-          Dune::VoF::Polygon< Coord > calculatedOnePart = intersect( entityAsPolytope, reconstructions[ entity ] );
-          double sharedOneVolume = intersectionVolume( calculatedOnePart, center, radius );
-
-          l1Error += ( T1 - sharedOneVolume ) + ( uhComp[ entity ] * volume - sharedOneVolume );
-        }
-      }
-
-      return l1Error;
-    }
-
-
 
   } // namespace VoF
 

@@ -1,5 +1,5 @@
-#ifndef PROBLEM_HH
-#define PROBLEM_HH
+#ifndef ROTATINGCIRCLE_HH
+#define ROTATINGCIRCLE_HH
 
 #include <cmath>
 
@@ -57,6 +57,11 @@ struct RotatingCircle < ctype, 3 >
   enum { dimDomain = 3 };
   enum { dimRange = 1 };
 
+  void evaluate ( const DomainType &x, RangeType &u ) const
+  {
+    return evaluate ( x, 0.0, u );
+  }
+
   void evaluate ( const DomainType &x, double t, RangeType &u ) const
   {
     DomainType center{ 0.5, 0.5, 0.5 };
@@ -82,62 +87,4 @@ struct RotatingCircle < ctype, 3 >
 
 };
 
-
-template < class ctype, int dim >
-struct LinearWall
-{
-  using DomainType = Dune::FieldVector< ctype, dim >;
-  using RangeType = Dune::FieldVector< ctype, 1 >;
-
-  enum { dimDomain = dim };
-  enum { dimRange = 1 };
-
-  void evaluate ( const DomainType &x, double t, RangeType &u ) const
-  {
-    double pos = 0.4;
-    double width = 0.3;
-
-    u = ( std::abs( x[0] - t * speed_ - pos ) <= width ) ? 1.0 : 0.0;
-  }
-
-  void velocityField ( const DomainType &x, const double t, DomainType &rot ) const
-  {
-    rot[ 0 ] = speed_;
-    rot[ 1 ] = 0.0;
-  }
-
-private:
-  double speed_ = 0.02;
-
-};
-
-
-template < class ctype, int dim >
-struct Diagonal
-{
-  using DomainType = Dune::FieldVector< ctype, dim >;
-  using RangeType = Dune::FieldVector< ctype, 1 >;
-
-  enum { dimDomain = dim };
-  enum { dimRange = 1 };
-
-  void evaluate ( const DomainType &x, double t, RangeType &u ) const
-  {
-    double pos = 0.3;
-
-    u = ( x[0] + x[1] < pos + t * speed_ ) ? 1.0 : 0.0;
-  }
-
-  void velocityField ( const DomainType &x, const double t, DomainType &rot ) const
-  {
-    rot[ 0 ] = speed_;
-    rot[ 1 ] = speed_;
-    rot /= std::sqrt( 2 );
-  }
-
-private:
-  double speed_ = 0.05;
-
-};
-
-#endif //#ifndef PROBLEM_HH
+#endif //#ifndef ROTATINGCIRCLE_HH
