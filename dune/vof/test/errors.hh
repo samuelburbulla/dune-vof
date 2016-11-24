@@ -81,8 +81,8 @@ namespace Dune
     }
 
 
-    template< class CU, class F, class R, class P >
-    static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem )
+    template< class CU, class F, class R, class P, class DF >
+    static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem, DF &curvatureError )
     {
       double error = 0.0;
 
@@ -96,6 +96,7 @@ namespace Dune
         auto interface = static_cast< typename decltype( it )::Result > ( it );
 
         error += interface.volume() * std::abs( problem.curvature( interface.centroid() ) - curvature[ entity ] );
+        curvatureError[ entity ] = interface.volume() * std::abs( problem.curvature( interface.centroid() ) - curvature[ entity ] );
       }
 
       return error;

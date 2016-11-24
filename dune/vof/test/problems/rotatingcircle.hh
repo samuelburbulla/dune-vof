@@ -40,6 +40,11 @@ struct RotatingCircle < ctype, 2 >
     r *= 2 * M_PI / 10;
   }
 
+  ctype curvature( const DomainType &x ) const
+  {
+    return 1.0 / radius( 0.0 );
+  }
+
 private:
   DomainType rotationCenter () const
   {

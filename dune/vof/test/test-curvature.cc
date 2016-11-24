@@ -33,6 +33,7 @@
 #include "errors.hh"
 #include "io.hh"
 #include "problems/ellipse.hh"
+#include "problems/rotatingcircle.hh"
 #include "problems/slope.hh"
 #include "utility.hh"
 #include "vtu.hh"
@@ -148,8 +149,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // build domain references for each cell
   Stencils stencils( gridView );
 
-  using Curvature = Dune::VoF::Curvature< GridView, Stencils, ReconstructionSet, Flags >;
+  using Curvature = Dune::VoF::Curvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
   Curvature curvature ( gridView, stencils );
+  ColorFunction curvatureError( gridView );
 
   // allocate and initialize objects for data representation
   ColorFunction colorFunction( gridView );
@@ -166,6 +168,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
   vtkwriter.addCellData ( curvature, "curvature" );
+  vtkwriter.addCellData ( curvatureError, "curvatureError" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
@@ -182,7 +185,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Initial reconstruction
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
-  curvature( reconstructionSet, flags );
+  curvature( colorFunction, reconstructionSet, flags );
+
+  double error = Dune::VoF::curvatureError( curvature, flags, reconstructionSet, problem, curvatureError );
 
   if ( writeData )
   {
@@ -191,7 +196,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
 
-  return Dune::VoF::curvatureError( curvature, flags, reconstructionSet, problem );
+  return error;
 }
 
 int main(int argc, char** argv)

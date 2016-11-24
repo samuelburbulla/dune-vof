@@ -26,11 +26,12 @@ namespace Dune
      * \tparam  RS  reconstruction set
      * \tparam  FL  flags
      */
-    template< class GV, class ST, class RS, class FL >
+    template< class GV, class ST, class DF, class RS, class FL >
     struct Curvature
     {
       using GridView = GV;
       using Stencils = ST;
+      using DiscreteFunction = DF;
       using ReconstructionSet = RS;
       using Flags = FL;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
@@ -48,7 +49,7 @@ namespace Dune
        : gridView_( gridView ), stencils_( stencils ), curvature_( indexSet().size( 0 ) )
       {}
 
-      void operator() ( const ReconstructionSet &reconstructions, const Flags &flags )
+      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
         for ( const auto& entity : elements( gridView() ) )
         {
@@ -57,7 +58,7 @@ namespace Dune
           if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
             continue;
 
-          applyLocal( entity, reconstructions, flags );
+          applyLocal( entity, uh, reconstructions, flags );
         }
       }
 
@@ -76,15 +77,42 @@ namespace Dune
       const GridView &gridView () const { return gridView_; }
 
     private:
-      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags )
+      void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
-        double sumWeights = 0.0;
+        /*
+        double uxx = 0.0, uxy = 0.0, uyy = 0.0;
+
+        Coordinate cEn = entity.geometry().center();
+        Coordinate ex ( { 1.0, 0.0 } );
+        Coordinate ey ( { 1.0, 0.0 } );
+        Coordinate exy = ex + ey;
+        exy /= exy.two_norm();
+
+
+        for( const auto& neighbor : stencils_[ entity ] )
+        {
+          Coordinate cNb = neighbor.geometry().center();
+          Coordinate dX = cNb - cEn;
+
+          uxx += ( uh[ neighbor ] - uh[ entity ] ) * std::abs( ex * dX ) / dX.two_norm2();
+          uyy += ( uh[ neighbor ] - uh[ entity ] ) * std::abs( ey * dX ) / dX.two_norm2();
+          uxy += ( uh[ neighbor ] - uh[ entity ] ) * std::abs( exy * dX ) / dX.two_norm2();
+        }
+
+        double ux = reconstructions[ entity ].innerNormal()[ 0 ];
+        double uy = reconstructions[ entity ].innerNormal()[ 1 ];
+
+        double tmp = std::sqrt( 1.0 + ux * ux + uy * uy );
+        curvature_[ index( entity ) ] = uxx; //( uxx + uyy + uxx * uy * uy + uyy * ux * ux - 2.0 * uxy * ux * uy ) / ( tmp * tmp * tmp );
+        */
+        int n = 0;
+        double h = 0.0;
         double divN ( 0.0 );
 
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate centroidEn = interfaceEn.centroid();
+        Coordinate normalEn = reconstructions[ entity ].innerNormal();
 
-        sumWeights = 0.0;
         for( const auto& neighbor : stencils_[ entity ] )
         {
           if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
@@ -93,17 +121,14 @@ namespace Dune
           auto interfaceNb = interface( neighbor, reconstructions );
           Coordinate centroidNb = interfaceNb.centroid();
 
-          Coordinate diffN = reconstructions[ entity ].innerNormal() - reconstructions[ neighbor ].innerNormal();
-          //Coordinate diffN = reconstructions[ entity ].innerNormal();
           Coordinate diffC = centroidEn - centroidNb;
 
-          double weight = diffC.two_norm2();
-
-          divN += weight * ( diffN * diffC ) / diffC.two_norm2();
-          sumWeights += weight;
+          divN += ( normalEn * diffC ) / diffC.two_norm();
+          h += std::abs( diffC * generalizedCrossProduct( normalEn ) );
+          n++;
         }
-
-        curvature_[ index( entity ) ] = - divN / sumWeights;
+        h /= n;
+        curvature_[ index( entity ) ] = - ( divN / h );
 
         /*
         // Interpolate with circle through points
