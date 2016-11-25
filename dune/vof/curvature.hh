@@ -51,6 +51,8 @@ namespace Dune
 
       void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
+        curvature_.clear();
+
         for ( const auto& entity : elements( gridView() ) )
         {
           curvature_[ index( entity ) ] = 0.0;
@@ -79,32 +81,31 @@ namespace Dune
     private:
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
-        /*
-        double uxx = 0.0, uxy = 0.0, uyy = 0.0;
+        // Least squares for gradients
+        Coordinate center = entity.geometry().center();
 
-        Coordinate cEn = entity.geometry().center();
-        Coordinate ex ( { 1.0, 0.0 } );
-        Coordinate ey ( { 1.0, 0.0 } );
-        Coordinate exy = ex + ey;
-        exy /= exy.two_norm();
-
-
-        for( const auto& neighbor : stencils_[ entity ] )
+        for ( std::size_t k = 0; k < dim; ++k )
         {
-          Coordinate cNb = neighbor.geometry().center();
-          Coordinate dX = cNb - cEn;
+          Matrix AtA( 0.0 );
+          Coordinate Atb( 0.0 );
 
-          uxx += ( uh[ neighbor ] - uh[ entity ] ) * std::abs( ex * dX ) / dX.two_norm2();
-          uyy += ( uh[ neighbor ] - uh[ entity ] ) * std::abs( ey * dX ) / dX.two_norm2();
-          uxy += ( uh[ neighbor ] - uh[ entity ] ) * std::abs( exy * dX ) / dX.two_norm2();
+          for( const auto& neighbor : stencils_[ entity ] )
+          {
+            Coordinate d = neighbor.geometry().center() - center;
+            const ctype weight = 1.0 / d.two_norm2();
+            d *= weight;
+            AtA += outerProduct( d, d );
+            Atb.axpy( weight * ( reconstructions[ neighbor ].innerNormal()[ k ] - reconstructions[ entity ].innerNormal()[ k ] ), d );
+          }
+
+          Coordinate dNk;
+          AtA.solve( dNk, Atb );
+
+          curvature_[ index( entity ) ] -= dNk[ k ];
         }
 
-        double ux = reconstructions[ entity ].innerNormal()[ 0 ];
-        double uy = reconstructions[ entity ].innerNormal()[ 1 ];
-
-        double tmp = std::sqrt( 1.0 + ux * ux + uy * uy );
-        curvature_[ index( entity ) ] = uxx; //( uxx + uyy + uxx * uy * uy + uyy * ux * ux - 2.0 * uxy * ux * uy ) / ( tmp * tmp * tmp );
-        */
+        /*
+        // Finite differences
         int n = 0;
         double h = 0.0;
         double divN ( 0.0 );
@@ -129,6 +130,7 @@ namespace Dune
         }
         h /= n;
         curvature_[ index( entity ) ] = - ( divN / h );
+        */
 
         /*
         // Interpolate with circle through points

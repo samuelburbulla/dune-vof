@@ -42,10 +42,10 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
       static constexpr int dim = Coordinate::dimension;
-
+      static constexpr int derivatives = dim + dim * ( dim + 1 ) / 2;
       using ctype = typename Coordinate::value_type;
-      using Matrix = FieldMatrix< ctype, dim, dim >;
-      using Vector = Coordinate;
+      using Matrix = FieldMatrix< ctype, derivatives, derivatives >;
+      using Vector = FieldVector< ctype, derivatives >;
 
     public:
       explicit ModifiedYoungsReconstruction ( const StencilSet &stencils )
@@ -68,8 +68,8 @@ namespace Dune
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
-          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
-            continue;
+          //if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) && !flags.isActive( entity ) )
+            //continue;
 
           applyLocal( entity, flags, color, reconstructions[ entity ] );
         }
@@ -94,9 +94,11 @@ namespace Dune
       template< class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
       {
+        if ( stencil( entity ).size() < 8 )
+          return;
+
         const auto geometry = entity.geometry();
 
-        Coordinate normal;
         const Coordinate center = geometry.center();
         const auto colorEn = color[ entity ];
         assert( colorEn == colorEn );
@@ -106,13 +108,37 @@ namespace Dune
         for ( const auto &neighbor : stencil( entity ) )
         {
           Coordinate d = neighbor.geometry().center() - center;
-          const ctype wk = 1.0 / d.two_norm2();
-          d *= wk;
-          AtA += outerProduct( d, d );
-          assert( color[ neighbor ] == color[ neighbor ] );
-          Atb.axpy( wk * ( color[ neighbor ] - colorEn ), d );
+
+          Vector v; // v = ( dx,  dy, dxx, dyy, dxy )
+          for ( std::size_t i = 0; i < dim; ++i )
+            v[ i ] = d[ i ];
+
+          for ( std::size_t i = 0; i < dim; ++i )
+            v[ i + dim ] = 0.5 * d[ i ] * d[ i ];
+
+          int n = 0;
+          for ( std::size_t i = 0; i < dim; ++i )
+            for ( std::size_t j = i+1; j < dim; ++j )
+              if ( i == j )
+                continue;
+              else
+              {
+                v[ n + 2 * dim ] = d[ i ] * d[ j ];
+                n++;
+              }
+
+          const ctype weight = 1.0 / d.two_norm2();
+          v *= weight;
+          AtA += outerProduct( v, v );
+          Atb.axpy( weight * ( color[ neighbor ] - colorEn ), v );
         }
-        AtA.solve( normal, Atb );
+
+        Vector solution;
+        AtA.solve( solution, Atb );
+
+        Coordinate normal;
+        for ( std::size_t i = 0; i < dim; ++i )
+          normal[ i ] = solution[ i ];
 
         if( normal.two_norm2() < std::numeric_limits< ctype >::epsilon() )
           return;
@@ -126,7 +152,7 @@ namespace Dune
       Matrix outerProduct ( const Vector &a, const Vector &b ) const
       {
         Matrix m( 0.0 );
-        for ( std::size_t i = 0; i < dim; ++i )
+        for ( std::size_t i = 0; i < derivatives; ++i )
           m[ i ].axpy( a[ i ], b );
 
         return m;

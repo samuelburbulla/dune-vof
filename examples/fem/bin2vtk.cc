@@ -245,9 +245,9 @@ try {
       for ( const auto& entity : elements( gridPart ) )
         dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
 
-      using Curvature = Dune::VoF::Curvature< GridPartType, Stencils, ReconstructionSet, Flags >;
+      using Curvature = Dune::VoF::Curvature< GridPartType, Stencils, decltype( cuh ), ReconstructionSet, Flags >;
       Curvature curvature ( gridPart, stencils );
-      curvature( reconstructions, flags );
+      curvature( uh, reconstructions, flags );
 
       DiscreteFunctionType dfCurvature ( "curvature", space );
       for ( const auto& entity : elements( gridPart ) )
