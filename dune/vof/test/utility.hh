@@ -152,6 +152,21 @@ namespace Dune
       }
     }
 
+    template< class Map, class DF >
+    static inline void circleInterpolation ( Map&& map, double volEl, DF &uh )
+    {
+      uh.clear();
+
+      for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
+      {
+        const auto& geo = entity.geometry();
+        auto polygon = Dune::VoF::makePolytope( geo, std::forward< Map >( map ) );
+
+        using Coord = typename decltype( polygon )::Coordinate;
+        uh[ entity ] = volEl * intersectionVolume( polygon, Coord( 0.0 ), 1.0 ) / geo.volume();
+      }
+    }
+
   } // namespace VoF
 
 }  // namespace Dune

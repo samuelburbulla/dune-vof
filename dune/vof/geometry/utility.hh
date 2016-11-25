@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 #include <dune/common/deprecated.hh>
 #include <dune/common/typetraits.hh>
@@ -148,6 +149,13 @@ namespace Dune
       return makePolygon ( geometry );
     }
 
+    template < class Geometry, class Map >
+    static inline auto makePolytope ( const Geometry& geometry, Map&& map )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2, Polygon< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makePolygon ( geometry, std::forward< Map >( map ) );
+    }
+
     template < class Geometry >
     static inline auto makePolytope ( const Geometry& geometry )
       -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 3, Polyhedron< typename Geometry::GlobalCoordinate > >::type
@@ -155,6 +163,12 @@ namespace Dune
       return makePolyhedron( geometry );
     }
 
+    template < class Geometry, class Map >
+    static inline auto makePolytope ( const Geometry& geometry, Map&& map )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 3, Polyhedron< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makePolyhedron( geometry, std::forward< Map >( map ) );
+    }
 
   } // namespace VoF
 

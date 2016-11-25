@@ -24,11 +24,29 @@ struct Ellipse
     double val = 0;
     for( int i = 0; i < dimDomain; ++i )
     {
-      const auto tmp = axis_[ i ] * ( x - DomainType( 0.5 ) );
-      val += tmp * tmp / ( radii_[ i ] * radii_[ i ] );
+      const auto tmp = ( axis_[ i ] * ( x - DomainType( 0.5 ) ) ) / radii_[ i ];
+      val += tmp * tmp;
     }
 
     u = val < 1.0 ? 1.0 : 0.0;
+  }
+
+  DomainType center () const { return DomainType( 0.5 ); }
+
+  decltype(auto) referenceMap () const
+  {
+    return [ this ] ( const DomainType& x )
+    {
+      DomainType y;
+      for ( int i = 0; i < dimDomain; ++i )
+        y[ i ] = ( this->axis_[ i ] * ( x - this->center() ) ) / this->radii_[ i ];
+      return y;
+    };
+  }
+
+  double volumeElement () const
+  {
+    return std::accumulate( radii_.begin(), radii_.end(), 1.0, std::multiplies<>() );
   }
 
   void evaluate ( const DomainType& x, double t, RangeType& u ) const
