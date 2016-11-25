@@ -8,6 +8,9 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "problems/ellipse.hh"
+#include "problems/slope.hh"
+#include "../geometry/intersect.hh"
+#include "../geometry/halfspace.hh"
 #include "utility.hh"
 
 namespace Dune
@@ -56,6 +59,27 @@ namespace Dune
     {
       std::cout << " -- average using intersection" << std::endl;
       circleInterpolation( e.referenceMap(), e.volumeElement(), u );
+    }
+
+    template< class DF >
+    void average ( DF &uh, const Slope< double, 2 >& s )
+    {
+      using Coordinate = FieldVector< double, 2 >;
+      std::cout << " -- average using intersection" << std::endl;
+      uh.clear();
+
+      HalfSpace< Coordinate > halfspace ( s.normal(), Coordinate( { 0.5, 0.5 } ) );
+
+      for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
+      {
+        const auto& geo = entity.geometry();
+        Dune::VoF::Polygon< Coordinate > polygon = Dune::VoF::makePolytope( geo );
+
+        auto it = intersect( polygon, halfspace );
+        auto part = static_cast< typename decltype( it )::Result > ( it );
+
+        uh[ entity ] = part.volume() / geo.volume();
+      }
     }
 
 

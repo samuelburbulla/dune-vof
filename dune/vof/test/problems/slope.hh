@@ -14,7 +14,7 @@ struct Slope< ctype, 2 >
   using RangeType = Dune::FieldVector< ctype, 1 >;
 
   Slope ( double angle = 0.5 * M_PI )
-    : normal_{ -std::sin( angle ), std::cos( angle ) }
+    : normal_{ std::sin( angle ), -std::cos( angle ) }
   {}
 
   void evaluate ( const DomainType& x, RangeType& u ) const
@@ -37,6 +37,8 @@ struct Slope< ctype, 2 >
   {
     return 0.0;
   }
+
+  const DomainType& normal() const { return normal_; }
 
 private:
   DomainType normal_;

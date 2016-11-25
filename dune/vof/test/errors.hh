@@ -95,8 +95,9 @@ namespace Dune
         auto it = intersect( polygon, reconstructions[ entity ].boundary() );
         auto interface = static_cast< typename decltype( it )::Result > ( it );
 
-        error += interface.volume() * std::abs( problem.curvature( interface.centroid() ) - curvature[ entity ] );
-        curvatureError[ entity ] = interface.volume() * std::abs( problem.curvature( interface.centroid() ) - curvature[ entity ] );
+        double localError = interface.volume() * std::abs( problem.curvature( interface.centroid() ) - curvature[ entity ] );
+        error += localError;
+        curvatureError[ entity ] = localError;
       }
 
       return error;

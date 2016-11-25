@@ -51,8 +51,6 @@ namespace Dune
 
       void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
-        curvature_.clear();
-
         for ( const auto& entity : elements( gridView() ) )
         {
           curvature_[ index( entity ) ] = 0.0;
@@ -81,6 +79,7 @@ namespace Dune
     private:
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
+        /*
         // Least squares for gradients
         Coordinate center = entity.geometry().center();
 
@@ -103,8 +102,8 @@ namespace Dune
 
           curvature_[ index( entity ) ] -= dNk[ k ];
         }
+        */
 
-        /*
         // Finite differences
         int n = 0;
         double h = 0.0;
@@ -116,7 +115,7 @@ namespace Dune
 
         for( const auto& neighbor : stencils_[ entity ] )
         {
-          if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
+          if ( ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) ) )
             continue;
 
           auto interfaceNb = interface( neighbor, reconstructions );
@@ -130,7 +129,7 @@ namespace Dune
         }
         h /= n;
         curvature_[ index( entity ) ] = - ( divN / h );
-        */
+
 
         /*
         // Interpolate with circle through points
