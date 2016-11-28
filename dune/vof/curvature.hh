@@ -80,6 +80,53 @@ namespace Dune
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
         /*
+        // Height function
+        Coordinate normal = reconstructions[ entity ].innerNormal();
+        Coordinate center = entity.geometry().center();
+
+        Coordinate direction ( 0.0 );
+        Coordinate directionOrth ( 0.0 );
+        if ( std::abs( normal[ 0 ] ) > std::abs( normal[ 1 ] ) )
+        {
+         direction[ 0 ] = 1.0;
+         directionOrth[ 1 ] = 1.0;
+        }
+        else
+        {
+         direction[ 1 ] = 1.0;
+         directionOrth[ 0 ] = 1.0;
+        }
+
+        double left = 0.0, right = 0.0;
+        double middle = uh[ entity ];
+        double dx = std::numeric_limits< double >::max();
+        for( const auto& neighbor : stencils_[ entity ] )
+        {
+          Coordinate d = neighbor.geometry().center() - center;
+
+          if ( std::abs( d * directionOrth ) < std::numeric_limits< double >::epsilon() )
+            middle += uh[ neighbor ];
+          else if ( d * directionOrth > 0 )
+            right += uh[ neighbor ];
+          else if ( d * directionOrth < 0 )
+            left += uh[ neighbor ];
+
+
+          dx = std::min( dx, d.two_norm() );
+        }
+        right *= dx;
+        left *= dx;
+        middle *= dx;
+
+        if ( dx < middle && middle < 2 * dx )
+        {
+          double Hx = ( right - left ) / ( 2 * dx );
+          double Hxx = ( right - 2 * middle + left ) / ( dx * dx );
+
+          curvature_[ index( entity ) ] = - Hxx / std::pow( 1.0 + Hx * Hx, 2.0 / 3.0 );
+        }
+        */
+        /*
         // Least squares for gradients
         Coordinate center = entity.geometry().center();
 
@@ -103,7 +150,6 @@ namespace Dune
           curvature_[ index( entity ) ] -= dNk[ k ];
         }
         */
-
         // Finite differences
         int n = 0;
         double h = 0.0;
@@ -123,14 +169,11 @@ namespace Dune
 
           Coordinate diffC = centroidEn - centroidNb;
 
-          divN += ( normalEn * diffC ) / diffC.two_norm();
-          h += std::abs( diffC * generalizedCrossProduct( normalEn ) );
+          double dx = std::abs( generalizedCrossProduct( normalEn ) * diffC );
+          divN += ( normalEn * diffC ) / ( dx * dx );
           n++;
         }
-        h /= n;
-        curvature_[ index( entity ) ] = - ( divN / h );
-
-
+        curvature_[ index( entity ) ] = - divN * 2.0 / n;
         /*
         // Interpolate with circle through points
         Matrix AtA( 0.0 );

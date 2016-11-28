@@ -138,7 +138,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Testproblem
   using ProblemType = Ellipse< double, GridView::dimensionworld >;
   DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
-  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
+  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.4, 0.4 } );
+  //using ProblemType = Slope< double, GridView::dimensionworld >;
+  //ProblemType problem ( 0.5 );
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
