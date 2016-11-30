@@ -41,14 +41,17 @@
 // filterReconstruction
 // --------------------
 
-template < class GridView, class ReconstructionSet, class Polygon >
-void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
+template < class GridView, class ReconstructionSet, class Flags, class Polygon >
+void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, const Flags &flags, std::vector< Polygon > &io )
 {
   using Coord = typename Polygon::Coordinate;
 
   io.clear();
   for ( const auto& entity : elements( gridView ) )
   {
+    if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+      continue;
+
     auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
     auto intersection = static_cast< typename decltype( is )::Result > ( is );
 
@@ -138,9 +141,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Testproblem
   using ProblemType = Ellipse< double, GridView::dimensionworld >;
   DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
-  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.4, 0.4 } );
+  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
   //using ProblemType = Slope< double, GridView::dimensionworld >;
-  //ProblemType problem ( 0.5 );
+  //ProblemType problem ( 0.25 * M_PI );
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
@@ -181,7 +184,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 
   // Initial data
-  Dune::VoF::average( colorFunction, problem );
+  Dune::VoF::average( colorFunction, problem, 0.0 );
   colorFunction.communicate();
 
   // Initial reconstruction
@@ -193,7 +196,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   if ( writeData )
   {
-    filterReconstruction( gridView, reconstructionSet, recIO );
+    filterReconstruction( gridView, reconstructionSet, flags, recIO );
     vtkwriter.write( 0 );
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
