@@ -67,7 +67,7 @@ namespace Dune
     private:
       const IndexSet &indexSet () const { return gridView_.indexSet(); }
 
-      const GridView& gridView_;
+      GridView gridView_;
       std::vector< Reconstruction > reconstructionSet_;
     };
 
