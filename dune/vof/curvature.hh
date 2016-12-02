@@ -38,7 +38,7 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
       static constexpr int dim = Coordinate::dimension;
-      static constexpr int derivatives = dim + dim * ( dim + 1 ) / 2;
+      static constexpr int derivatives = dim; //dim + dim * ( dim + 1 ) / 2;
       using ctype = typename Coordinate::value_type;
       using Matrix = FieldMatrix< ctype, derivatives, derivatives >;
       using Vector = FieldVector< ctype, derivatives >;
@@ -136,32 +136,55 @@ namespace Dune
           curvature_[ index( entity ) ] = - Hxx / std::pow( 1.0 + Hx * Hx, 3.0 / 2.0 );
         }
         */
-        /*
+
         // Least squares for gradients
-        Coordinate center = entity.geometry().center();
+        auto interfaceEn = interface( entity, reconstructions );
+        Coordinate center = interfaceEn.centroid();
+        //Coordinate center = entity.geometry().center();
+
+        Matrix nablaN( 0.0 );
 
         for ( std::size_t k = 0; k < dim; ++k )
         {
           Matrix AtA( 0.0 );
           Coordinate Atb( 0.0 );
 
-          for( const auto& neighbor : stencils_[ entity ] )
+          for( const auto &neighbor : stencils_[ entity ] )
           {
-            Coordinate d = neighbor.geometry().center() - center;
+            if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
+              continue;
+
+
+            auto interfaceNb = interface( neighbor, reconstructions );
+            Coordinate centerNb = interfaceNb.centroid();
+
+            //Coordinate centerNb = neighbor.geometry().center();
+
+            Coordinate d = centerNb - center;
             const ctype weight = 1.0 / d.two_norm2();
             d *= weight;
             AtA += outerProduct( d, d );
             Atb.axpy( weight * ( reconstructions[ neighbor ].innerNormal()[ k ] - reconstructions[ entity ].innerNormal()[ k ] ), d );
           }
 
-          Coordinate dNk;
+
+          Coordinate dNk ( 0.0 );
           AtA.solve( dNk, Atb );
-
           curvature_[ index( entity ) ] -= dNk[ k ];
+          nablaN[ k ] = dNk;
         }
-        */
+
+        Coordinate n = reconstructions[ entity ].innerNormal();
+        Coordinate nablaNn;
+        nablaN.mv( n, nablaNn );
+
+        curvature_[ index( entity ) ] += n * nablaNn;
+        //std::cout << n * nablaNn << std::endl;
 
 
+
+
+        /*
         // Second order Taylor series expansion with least squares
         if ( stencils_[ entity ].size() < 8 )
           return;
@@ -212,7 +235,7 @@ namespace Dune
           curvature_[ index( entity ) ] = 0.0;
         else
           curvature_[ index( entity ) ] = - ( dxxu * dyu * dyu + dyyu * dxu * dxu - 2.0 * dxu * dyu * dxyu ) / std::pow( dxu * dxu + dyu * dyu, 3.0 / 2.0 );
-
+        */
 
         /*
         // New finite differences

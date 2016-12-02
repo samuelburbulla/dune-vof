@@ -101,7 +101,7 @@ namespace Dune
         const double colorEn = color[ entity ];
 
         // second order
-        if ( stencil( entity ).size() >= 8 )
+        if ( stencil( entity ).size() >= std::pow( 3, dim ) - 1  )
         {
           Matrix AtA( 0.0 );
           Vector Atb( 0.0 );

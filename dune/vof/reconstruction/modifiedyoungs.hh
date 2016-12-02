@@ -10,6 +10,7 @@
 
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/utility.hh>
+//#include <dune/vof/reconstruction/modifiedyoungssecondorder.hh>
 
 namespace Dune
 {
@@ -42,12 +43,11 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
       static constexpr int dim = Coordinate::dimension;
-      static constexpr int derivatives = dim + dim * ( dim + 1 ) / 2;
       using ctype = typename Coordinate::value_type;
-      using MatrixD = FieldMatrix< ctype, derivatives, derivatives >;
-      using VectorD = FieldVector< ctype, derivatives >;
       using Matrix = FieldMatrix< ctype, dim, dim >;
       using Vector = FieldVector< ctype, dim >;
+
+      //friend class ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet, StencilSet >;
 
     public:
       explicit ModifiedYoungsReconstruction ( const StencilSet &stencils )
@@ -70,11 +70,12 @@ namespace Dune
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
-          //if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) && !flags.isActive( entity ) )
+          //if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
             //continue;
 
           applyLocal( entity, flags, color, reconstructions[ entity ] );
         }
+
         elapsedTime += MPI_Wtime();
 
         auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
@@ -83,7 +84,6 @@ namespace Dune
         return elapsedTime;
       }
 
-    private:
       /**
        * \brief   (local) operator application
        *
@@ -101,61 +101,19 @@ namespace Dune
         const auto geometry = entity.geometry();
 
         const Coordinate center = geometry.center();
-        const auto colorEn = color[ entity ];
+        const double colorEn = color[ entity ];
 
-        // second order
-        if ( stencil( entity ).size() >= 8 )
+        Matrix AtA( 0.0 );
+        Vector Atb( 0.0 );
+        for ( const auto &neighbor : stencil( entity ) )
         {
-          MatrixD AtA( 0.0 );
-          VectorD Atb( 0.0 );
-          for ( const auto &neighbor : stencil( entity ) )
-          {
-            Coordinate d = neighbor.geometry().center() - center;
-
-            VectorD v; // v = ( dx,  dy, dxx, dyy, dxy )
-            for ( std::size_t i = 0; i < dim; ++i )
-              v[ i ] = d[ i ];
-
-            for ( std::size_t i = 0; i < dim; ++i )
-              v[ i + dim ] = 0.5 * d[ i ] * d[ i ];
-
-            int n = 0;
-            for ( std::size_t i = 0; i < dim; ++i )
-              for ( std::size_t j = i+1; j < dim; ++j )
-                if ( i == j )
-                  continue;
-                else
-                {
-                  v[ n + 2 * dim ] = d[ i ] * d[ j ];
-                  n++;
-                }
-
-            const ctype weight = 1.0 / d.two_norm2();
-            v *= weight;
-            AtA += outerProduct( v, v );
-            Atb.axpy( weight * ( color[ neighbor ] - colorEn ), v );
-          }
-
-          VectorD solution;
-          AtA.solve( solution, Atb );
-
-          for ( std::size_t i = 0; i < dim; ++i )
-            normal[ i ] = solution[ i ];
+          Vector d = neighbor.geometry().center() - center;
+          const ctype weight = 1.0 / d.two_norm2();
+          d *= weight;
+          AtA += outerProduct( d, d );
+          Atb.axpy( weight * ( color[ neighbor ] - colorEn ), d );
         }
-        else // first order
-        {
-          Matrix AtA( 0.0 );
-          Vector Atb( 0.0 );
-          for ( const auto &neighbor : stencil( entity ) )
-          {
-            Coordinate d = neighbor.geometry().center() - center;
-            const ctype weight = 1.0 / d.two_norm2();
-            d *= weight;
-            AtA += outerProduct( d, d );
-            Atb.axpy( weight * ( color[ neighbor ] - colorEn ), d );
-          }
-          AtA.solve( normal, Atb );
-        }
+        AtA.solve( normal, Atb );
 
         if( normal.two_norm2() < std::numeric_limits< ctype >::epsilon() )
           return;
@@ -167,21 +125,15 @@ namespace Dune
           auto polytope = makePolytope( geometry );
           reconstruction = locateHalfSpace( polytope, normal, colorEn );
         }
+        else
+          reconstruction = Reconstruction( normal, 0.0 );
       }
 
+    private:
       Matrix outerProduct ( const Vector &a, const Vector &b ) const
       {
         Matrix m( 0.0 );
         for ( std::size_t i = 0; i < dim; ++i )
-          m[ i ].axpy( a[ i ], b );
-
-        return m;
-      }
-
-      MatrixD outerProduct ( const VectorD &a, const VectorD &b ) const
-      {
-        MatrixD m( 0.0 );
-        for ( std::size_t i = 0; i < derivatives; ++i )
           m[ i ].axpy( a[ i ], b );
 
         return m;
