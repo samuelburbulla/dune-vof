@@ -54,15 +54,34 @@ namespace Dune
 
       void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
-        curvature_.clear();
-
         for ( const auto& entity : elements( gridView() ) )
         {
+          curvature_[ index( entity ) ] = 0.0;
+
           if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
             continue;
 
           applyLocal( entity, uh, reconstructions, flags );
         }
+
+        auto tmpCurvature1 ( curvature_ );
+        for ( const auto& entity : elements( gridView() ) )
+        {
+          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+            continue;
+
+          applySmoothing1st( entity, uh, tmpCurvature1 );
+        }
+
+        auto tmpCurvature2 ( curvature_ );
+        for ( const auto& entity : elements( gridView() ) )
+        {
+          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+            continue;
+
+          applySmoothing2nd( entity, uh, reconstructions, tmpCurvature2 );
+        }
+
       }
 
       double operator[] ( const Entity& entity ) const
@@ -80,6 +99,51 @@ namespace Dune
       const GridView &gridView () const { return gridView_; }
 
     private:
+      double smoothingWeight( const double color )
+      {
+        return std::pow( 1.0 - 2.0 * std::abs( 0.5 - color ), 8.0 );
+      }
+
+      void applySmoothing1st ( const Entity &entity, const DiscreteFunction &uh, const std::vector< double > tmpCurvature )
+      {
+        double kappa = tmpCurvature[ index( entity ) ] * smoothingWeight( uh[ entity ] );
+        double sumWeights = smoothingWeight( uh[ entity ] );
+
+        for ( const auto &neighbor : stencils_[ entity ] )
+        {
+          kappa += tmpCurvature[ index( neighbor ) ] * smoothingWeight( uh[ neighbor ] );
+          sumWeights += smoothingWeight( uh[ neighbor ] );
+        }
+
+        kappa /= sumWeights;
+        curvature_[ index( entity ) ] = kappa;
+      }
+
+      double additionalSmoothingWeight( const Coordinate &normal, const Coordinate &delta )
+      {
+        return std::pow( std::abs( normal * delta ), 8.0 );
+      }
+
+      void applySmoothing2nd ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const std::vector< double > tmpCurvature )
+      {
+        Coordinate normal = reconstructions[ entity ].innerNormal();
+
+        double kappa = tmpCurvature[ index( entity ) ] * smoothingWeight( uh[ entity ] );
+        double sumWeights = smoothingWeight( uh[ entity ] );
+
+        for ( const auto &neighbor : stencils_[ entity ] )
+        {
+          Coordinate delta = neighbor.geometry().center() - entity.geometry().center();
+          delta /= delta.two_norm();
+
+          kappa += tmpCurvature[ index( neighbor ) ] * smoothingWeight( uh[ neighbor ] ) * additionalSmoothingWeight( normal, delta );
+          sumWeights += smoothingWeight( uh[ neighbor ] ) * additionalSmoothingWeight( normal, delta );
+        }
+
+        kappa /= sumWeights;
+        curvature_[ index( entity ) ] = kappa;
+      }
+
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags )
       {
         /*
@@ -138,9 +202,9 @@ namespace Dune
         */
 
         // Least squares for gradients
-        auto interfaceEn = interface( entity, reconstructions );
-        Coordinate center = interfaceEn.centroid();
-        //Coordinate center = entity.geometry().center();
+        //auto interfaceEn = interface( entity, reconstructions );
+        //Coordinate center = interfaceEn.centroid();
+        Coordinate center = entity.geometry().center();
 
         Matrix nablaN( 0.0 );
 
@@ -151,14 +215,12 @@ namespace Dune
 
           for( const auto &neighbor : stencils_[ entity ] )
           {
-            if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
-              continue;
+            //if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
+              //continue;
+            //auto interfaceNb = interface( neighbor, reconstructions );
+            //Coordinate centerNb = interfaceNb.centroid();
 
-
-            auto interfaceNb = interface( neighbor, reconstructions );
-            Coordinate centerNb = interfaceNb.centroid();
-
-            //Coordinate centerNb = neighbor.geometry().center();
+            Coordinate centerNb = neighbor.geometry().center();
 
             Coordinate d = centerNb - center;
             const ctype weight = 1.0 / d.two_norm2();
@@ -167,19 +229,16 @@ namespace Dune
             Atb.axpy( weight * ( reconstructions[ neighbor ].innerNormal()[ k ] - reconstructions[ entity ].innerNormal()[ k ] ), d );
           }
 
-
           Coordinate dNk ( 0.0 );
           AtA.solve( dNk, Atb );
           curvature_[ index( entity ) ] -= dNk[ k ];
-          nablaN[ k ] = dNk;
+          //nablaN[ k ] = dNk;
         }
 
-        Coordinate n = reconstructions[ entity ].innerNormal();
-        Coordinate nablaNn;
-        nablaN.mv( n, nablaNn );
-
-        curvature_[ index( entity ) ] += n * nablaNn;
-        //std::cout << n * nablaNn << std::endl;
+        //Coordinate n = reconstructions[ entity ].innerNormal();
+        //Coordinate nablaNn;
+        //nablaN.mv( n, nablaNn );
+        //curvature_[ index( entity ) ] -= n * nablaNn;
 
 
 
@@ -293,9 +352,9 @@ namespace Dune
         */
         /*
         // Finite differences
-        int n = 0;
-        double h = 0.0;
         double divN ( 0.0 );
+        double dN ( 0.0 );
+        int n = 0;
 
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate centroidEn = interfaceEn.centroid();
@@ -311,11 +370,16 @@ namespace Dune
 
           Coordinate diffC = centroidEn - centroidNb;
 
-          double dx = std::abs( generalizedCrossProduct( normalEn ) * diffC );
-          divN += ( normalEn * diffC ) / ( dx * dx );
+          double dx = generalizedCrossProduct( normalEn ) * diffC;
+          double dy = normalEn * diffC;
+          divN += dy / ( dx * dx );
+          dN += dy / dx;
           n++;
         }
-        curvature_[ index( entity ) ] = - divN * 2.0 / n;
+        divN /= n / 2.0;
+        dN /= n / 2.0;
+
+        curvature_[ index( entity ) ] = - divN / std::pow( 1 + dN * dN, 3.0 / 2.0 );
         */
         /*
         // Interpolate with circle through points

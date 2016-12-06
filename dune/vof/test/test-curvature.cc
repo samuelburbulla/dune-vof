@@ -55,8 +55,8 @@ void filterReconstruction( const GridView &gridView, const ReconstructionSet &re
     auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
     auto intersection = static_cast< typename decltype( is )::Result > ( is );
 
-    if ( intersection == typename decltype( is )::Result() )
-      continue;
+    //if ( intersection == typename decltype( is )::Result() )
+      //continue;
 
     std::vector< Coord > vertices;
     for ( std::size_t i = 0; i < intersection.size(); ++i )
@@ -142,8 +142,11 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using ProblemType = Ellipse< double, GridView::dimensionworld >;
   DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
   ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
+  //DomainVector axis2 ( { 0.0, 1.0, 0.0 } );
+  //DomainVector axis3 ( { 0.0, 0.0, 1.0 } );
+  //ProblemType problem ( { axis, axis2, axis3 }, { 0.4, 0.4, 0.4 } );
   //using ProblemType = Slope< double, GridView::dimensionworld >;
-  //ProblemType problem ( 0.25 * M_PI );
+  //ProblemType problem ( 0.125 * M_PI );
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
@@ -165,6 +168,10 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   Flags flags ( gridView );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
 
+  ColorFunction normalX( gridView );
+  ColorFunction normalY( gridView );
+  //ColorFunction normalZ( gridView );
+
   // File io
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
@@ -174,6 +181,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   vtkwriter.addCellData ( colorFunction, "celldata" );
   vtkwriter.addCellData ( curvature, "curvature" );
   vtkwriter.addCellData ( curvatureError, "curvatureError" );
+  vtkwriter.addCellData ( normalX, "nX" );
+  vtkwriter.addCellData ( normalY, "nY" );
+  //vtkwriter.addCellData ( normalZ, "nZ" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
@@ -184,7 +194,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 
   // Initial data
-  Dune::VoF::average( colorFunction, problem, 0.0 );
+  Dune::VoF::average( colorFunction, problem );
   colorFunction.communicate();
 
   // Initial reconstruction
@@ -196,6 +206,12 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   if ( writeData )
   {
+    for ( const auto &entity : elements( gridView ) )
+    {
+      normalX[ entity ] = reconstructionSet[ entity ].innerNormal()[ 0 ];
+      normalY[ entity ] = reconstructionSet[ entity ].innerNormal()[ 1 ];
+      //normalZ[ entity ] = reconstructionSet[ entity ].innerNormal()[ 2 ];
+    }
     filterReconstruction( gridView, reconstructionSet, flags, recIO );
     vtkwriter.write( 0 );
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
