@@ -63,7 +63,7 @@ double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const F
   double dtMin = std::numeric_limits< double >::max();
   for( const auto &entity : elements( gridPart ) )
   {
-    if( !flags.isMixed( entity ) && !flags.isActive( entity ) && !flags.isFullAndMixed( entity ) )
+    if( !flags.isActive( entity ) )
     continue;
 
     const auto geoEn = entity.geometry();

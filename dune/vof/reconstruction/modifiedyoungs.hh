@@ -68,7 +68,7 @@ namespace Dune
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
-          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+          if ( !flags.isMixed( entity ) )
             continue;
 
           applyLocal( entity, flags, color, reconstructions[ entity ] );
