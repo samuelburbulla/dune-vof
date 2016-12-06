@@ -71,7 +71,7 @@ namespace Dune
 
         for( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
-          if( !flags.isMixed( entity ) && !flags.isActive( entity ) && !flags.isFullAndMixed( entity ) )
+          if( !flags.isActive( entity ) )
             continue;
 
           applyLocal( entity, flags, timeProvider, color, reconstructions, velocity, update);
@@ -118,7 +118,7 @@ namespace Dune
           ctype flux = 0.0;
           if ( v * outerNormal > 0 ) // outflow
           {
-            if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
+            if ( flags.isMixed( entity ) )
               flux = -truncVolume( upwind, reconstructions[ entity ] );
             else if ( flags.isFull( entity ) )
               flux = -upwind.volume();
@@ -129,7 +129,7 @@ namespace Dune
             {
               const auto &neighbor = intersection.outside();
 
-              if ( flags.isMixed( neighbor ) || flags.isFullAndMixed( neighbor ) )
+              if ( flags.isMixed( neighbor ) )
                 flux = truncVolume( upwind, reconstructions[ neighbor ] );
               else if ( flags.isFull( neighbor ) )
                 flux = upwind.volume();
@@ -137,7 +137,7 @@ namespace Dune
             // Handle boundary data
             else
             {
-              if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
+              if ( flags.isMixed( entity ) )
                 flux = truncVolume( upwind, reconstructions[ entity ] );
               else if ( flags.isFull( entity ) )
                 flux = upwind.volume();
