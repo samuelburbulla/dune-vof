@@ -145,7 +145,7 @@ namespace Dune
 
           normalize( normal );
 
-          if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
+          if ( flags.isMixed( entity ) )
           {
             auto polytope = makePolytope( geometry );
             reconstruction = locateHalfSpace( polytope, normal, colorEn );

@@ -58,7 +58,7 @@ namespace Dune
         {
           curvature_[ index( entity ) ] = 0.0;
 
-          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+          if ( !flags.isMixed( entity ) )
             continue;
 
           applyLocal( entity, uh, reconstructions, flags );
@@ -67,7 +67,7 @@ namespace Dune
         auto tmpCurvature1 ( curvature_ );
         for ( const auto& entity : elements( gridView() ) )
         {
-          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+          if ( !flags.isMixed( entity ) )
             continue;
 
           applySmoothing1st( entity, uh, tmpCurvature1 );
@@ -76,7 +76,7 @@ namespace Dune
         auto tmpCurvature2 ( curvature_ );
         for ( const auto& entity : elements( gridView() ) )
         {
-          if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+          if ( !flags.isMixed( entity ) )
             continue;
 
           applySmoothing2nd( entity, uh, reconstructions, tmpCurvature2 );
@@ -215,7 +215,7 @@ namespace Dune
 
           for( const auto &neighbor : stencils_[ entity ] )
           {
-            //if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
+            //if ( !flags.isMixed( neighbor ) )
               //continue;
             //auto interfaceNb = interface( neighbor, reconstructions );
             //Coordinate centerNb = interfaceNb.centroid();
@@ -313,7 +313,7 @@ namespace Dune
 
         for( const auto& neighbor1 : stencils_[ entity ] )
         {
-          if ( ( !flags.isMixed( neighbor1 ) && !flags.isFullAndMixed( neighbor1 ) ) )
+          if ( !flags.isMixed( neighbor1 ) )
             continue;
 
           auto interfaceNb1 = interface( neighbor1, reconstructions );
@@ -328,7 +328,7 @@ namespace Dune
 
           for( const auto& neighbor2 : stencils_[ entity ] )
           {
-            if ( ( !flags.isMixed( neighbor2 ) && !flags.isFullAndMixed( neighbor2 ) ) )
+            if ( !flags.isMixed( neighbor2 ) )
               continue;
 
             if ( neighbor1 == neighbor2 )
@@ -362,7 +362,7 @@ namespace Dune
 
         for( const auto& neighbor : stencils_[ entity ] )
         {
-          if ( ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) ) )
+          if ( !flags.isMixed( neighbor ) )
             continue;
 
           auto interfaceNb = interface( neighbor, reconstructions );
@@ -392,7 +392,7 @@ namespace Dune
 
         for( const auto& neighbor : stencils_[ entity ] )
         {
-          if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
+          if ( !flags.isMixed( neighbor ) )
             continue;
 
           auto interfaceNb = interface( neighbor, reconstructions );
@@ -434,7 +434,7 @@ namespace Dune
 
         for( const auto& neighbor : stencils_[ entity ] )
         {
-          if ( !flags.isMixed( neighbor ) && !flags.isFullAndMixed( neighbor ) )
+          if ( !flags.isMixed( neighbor ) )
             continue;
 
           auto interfaceNb = interface( neighbor, reconstructions );
