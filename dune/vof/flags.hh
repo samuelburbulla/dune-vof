@@ -29,12 +29,12 @@ namespace Dune
 
       enum class Flag {
         empty       = 0,
-        mixed       = 1,
-        full        = 2,
+        mixed       = 2,
+        full        = 5,
         mixedfull   = 3,
-        activeempty = 4,
-        activefull  = 5,
-        nan         = 6
+        activeempty = 1,
+        activefull  = 4,
+        nan         = 99
       };
     private:
       using IndexSet = decltype( std::declval< GridView >().indexSet() );
@@ -53,19 +53,24 @@ namespace Dune
        : gridView_ ( gridView ), flags_( size(), Flag::nan )
       {}
 
-      const bool isMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixed; }
-      const bool isFullAndMixed ( const Entity& entity ) const { return flags_[ index( entity ) ] == Flag::mixedfull; }
+      const bool isMixed ( const Entity& entity ) const
+      {
+        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 2, 3 );
+      }
 
       const bool isFull ( const Entity& entity ) const
       {
-        const Flag &flag = flags_[ index( entity ) ];
-        return ( flag == Flag::activefull || flag == Flag::full );
+        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 4, 5 );
+      }
+
+      const bool isEmpty ( const Entity& entity ) const
+      {
+        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 0, 1 );
       }
 
       const bool isActive ( const Entity& entity ) const
       {
-        const Flag &flag = flags_[ index( entity ) ];
-        return ( flag == Flag::activeempty ) || ( flag == Flag::activefull );
+        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 1, 4 );
       }
 
       const Flag& operator[] ( const Entity& entity ) const { return flags_[ index( entity ) ]; }
@@ -143,6 +148,12 @@ namespace Dune
       }
 
     private:
+      template < typename T >
+      constexpr static bool inRange( const T &value, const T &lower, const T &upper )
+      {
+        return ( value >= lower ) && ( value <= upper );
+      }
+
       template< class Reduce >
       Exchange< Reduce > makeExchange ( Reduce reduce ) { return Exchange< Reduce >( *this, std::move( reduce ) ); }
 
