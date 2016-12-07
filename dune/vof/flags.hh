@@ -27,7 +27,7 @@ namespace Dune
       using GridView = GV;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
 
-      enum class Flag {
+      enum class Flag : std::size_t {
         empty       = 0,
         mixed       = 2,
         full        = 5,
@@ -48,30 +48,41 @@ namespace Dune
       template< class Reduce >
       struct Exchange;
 
+      template< std::size_t Lower, std::size_t Upper >
+      struct Range
+      {
+        constexpr Range () = default;
+        static constexpr bool contains ( std::size_t val ) { return ( val - Lower <= Upper - Lower ); }
+
+        template< class T >
+        static constexpr auto contains ( T val )
+          -> std::enable_if_t< std::is_enum< T >() and std::is_integral< std::underlying_type_t< T > >() , bool >
+        {
+          return ( static_cast< std::underlying_type_t< T > >( val ) - Lower <= Upper - Lower );
+        }
+      };
+
     public:
+      using Empty = Range< static_cast< std::size_t >( Flag::empty ),
+                           static_cast< std::size_t >( Flag::activeempty ) >;
+
+      using Mixed = Range< static_cast< std::size_t >( Flag::mixed ),
+                           static_cast< std::size_t >( Flag::mixedfull ) >;
+
+      using Full = Range< static_cast< std::size_t >( Flag::activefull ),
+                          static_cast< std::size_t >( Flag::full ) >;
+
+      using Active = Range< static_cast< std::size_t >( Flag::activeempty ),
+                            static_cast< std::size_t >( Flag::activefull ) >;
+
       explicit Flags ( const GridView &gridView )
        : gridView_ ( gridView ), flags_( size(), Flag::nan )
       {}
 
-      const bool isMixed ( const Entity& entity ) const
-      {
-        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 2, 3 );
-      }
-
-      const bool isFull ( const Entity& entity ) const
-      {
-        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 4, 5 );
-      }
-
-      const bool isEmpty ( const Entity& entity ) const
-      {
-        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 0, 1 );
-      }
-
-      const bool isActive ( const Entity& entity ) const
-      {
-        return inRange( static_cast< int > ( flags_[ index( entity ) ] ), 1, 4 );
-      }
+      bool isEmpty  ( const Entity& entity ) const { return inRange( entity, Empty{} ); }
+      bool isMixed  ( const Entity& entity ) const { return inRange( entity, Mixed{} ); }
+      bool isFull   ( const Entity& entity ) const { return inRange( entity, Full{} ); }
+      bool isActive ( const Entity& entity ) const { return inRange( entity, Active{} );; }
 
       const Flag& operator[] ( const Entity& entity ) const { return flags_[ index( entity ) ]; }
       Flag& operator[] ( const Entity& entity ) { return flags_[ index( entity ) ]; }
@@ -148,10 +159,10 @@ namespace Dune
       }
 
     private:
-      template < typename T >
-      constexpr static bool inRange( const T &value, const T &lower, const T &upper )
+      template< class _Range >
+      bool inRange ( const Entity& en, _Range = {} ) const
       {
-        return ( value >= lower ) && ( value <= upper );
+        return _Range::contains( flags_[ index( en ) ] );
       }
 
       template< class Reduce >
