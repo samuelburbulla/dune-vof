@@ -97,10 +97,8 @@ namespace Dune
        * \param eps   marker tolerance
        */
       template< class DF >
-      double reflag ( const DF& color, const double eps )
+      void reflag ( const DF& color, const double eps )
       {
-        double elapsedTime = - MPI_Wtime();
-
         for ( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           const auto idx = index( entity );
@@ -128,12 +126,9 @@ namespace Dune
             }
           }
         }
-        elapsedTime += MPI_Wtime();
-
         auto exchange1 = makeExchange( []( Flag a, Flag b ){ return b; } );
         color.gridView().grid().communicate( exchange1, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
 
-        elapsedTime -= MPI_Wtime();
         for ( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           const auto idx = index( entity );
@@ -150,12 +145,8 @@ namespace Dune
                   flag = Flag::activefull;
               }
         }
-        elapsedTime += MPI_Wtime();
-
         auto exchange2 = makeExchange( [] ( Flag a, Flag b  ) { return std::max( a, b ); } );
         color.gridView().grid().communicate( exchange2, Dune::All_All_Interface, Dune::ForwardCommunication );
-
-        return elapsedTime;
       }
 
     private:
