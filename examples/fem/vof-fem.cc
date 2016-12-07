@@ -42,6 +42,7 @@
 #include "binarywriter.hh"
 #include "polygon.hh"
 #include "reconstructionwriter.hh"
+#include "velocity.hh"
 #include "../problems/linearwall.hh"
 #include "../problems/rotatingcircle.hh"
 #include "../problems/sflow.hh"
@@ -102,6 +103,7 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
   using DataOutputType = BinaryWriter;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
+  using Velocity = Velocity< P >;
 
   GridPartType gridPart( grid );
 
@@ -113,10 +115,11 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
 
   auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
   auto cupdate = Dune::VoF::discreteFunctionWrapper( update );
+  Velocity velocity( problem );
 
-  auto evolution = Dune::VoF::evolution( reconstructions, cuh );
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
+  auto evolution = Dune::VoF::evolution( cupdate, reconstructions, flags, velocity );
 
   // Calculate initial data
   flags.reflag( cuh, eps );
@@ -128,7 +131,6 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
   TimeProviderType timeProvider( start, cfl, gridPart.comm() );
   timeProvider.init( dtInit );
 
-  auto velocity = [ &problem ] ( const auto &x, const auto &t ) { DomainType u; problem.velocityField( x, t, u ); return u; };
 
   // Write inital data
   DataOutputType dataOutput( level, timeProvider );
@@ -158,12 +160,14 @@ const std::tuple< double, double, double, double, double > algorithm ( Grid &gri
 
     elapsedTimeTimestep += flags.reflag( cuh, eps );
     elapsedTimeTimestep += reconstruction( cuh, reconstructions, flags );
-    elapsedTimeTimestep += evolution( cuh, reconstructions, velocity, timeProvider, cupdate, flags );
+    evolution( timeProvider.time(), timeProvider.deltaT(), cupdate );
 
     update.communicate();
     uh.axpy( 1.0, update );
 
+    timeProvider.provideTimeStepEstimate( evolution.provideTimeStepEstimate() );
     timeProvider.next();
+
     if ( writeData )
       dataOutput.write( grid, uh, timeProvider );
 
