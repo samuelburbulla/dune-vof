@@ -54,11 +54,11 @@ namespace Dune
         constexpr Range () = default;
         static constexpr bool contains ( std::size_t val ) { return ( val - Lower <= Upper - Lower ); }
 
-        template< class T >
-        static constexpr auto contains ( T val )
-          -> std::enable_if_t< std::is_enum< T >() and std::is_integral< std::underlying_type_t< T > >() , bool >
+        template< class T, class = std::enable_if_t< std::is_enum< T >{} >,
+                           class = std::enable_if_t< std::is_integral< std::underlying_type_t< T > >{} > >
+        static constexpr bool contains ( T val )
         {
-          return ( static_cast< std::underlying_type_t< T > >( val ) - Lower <= Upper - Lower );
+          return contains( static_cast< std::underlying_type_t< T > >( val ) );
         }
       };
 
