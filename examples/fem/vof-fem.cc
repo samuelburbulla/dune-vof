@@ -42,6 +42,7 @@
 #include "binarywriter.hh"
 #include "polygon.hh"
 #include "reconstructionwriter.hh"
+#include "velocity.hh"
 #include "../problems/linearwall.hh"
 #include "../problems/rotatingcircle.hh"
 #include "../problems/sflow.hh"
@@ -74,7 +75,7 @@ double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const F
         continue;
 
       const auto geoIs = intersection.geometry();
-      auto v = velocity( geoIs.center() );
+      auto v = velocity( geoIs.center(), 0.0 );
       dtMin = std::min( dtMin, geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v ) );
     }
   }
@@ -87,98 +88,78 @@ double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const F
 // ---------
 
 template< class Grid, class DF, class P >
-const std::tuple< double, double, double, double, double > algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
+double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
 {
   using GridType = Grid;
   using GridPartType = Dune::Fem::LeafGridPart< GridType >;
-
-  using DomainType = typename Dune::FieldVector < double, GridType::dimensionworld >;
-
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
-  using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
-  using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
-
-  using TimeProviderType = Dune::Fem::TimeProvider< typename GridType::CollectiveCommunication >;
-  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
-  using DataOutputType = BinaryWriter;
-  using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
-
   GridPartType gridPart( grid );
 
+  // Create stencils
+  using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
   Stencils stencils( gridPart );
-  ReconstructionSet reconstructions( gridPart );
 
+  // Create discrete functions
+  using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
+  using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
   DiscreteFunctionSpaceType space( gridPart );
+
+  using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
   DiscreteFunctionType update( "update", space );
 
   auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
   auto cupdate = Dune::VoF::discreteFunctionWrapper( update );
 
-  auto evolution = Dune::VoF::evolution( reconstructions, cuh );
+  // Create reconstruction set
+  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
+  ReconstructionSet reconstructions( gridPart );
+
+  // Create velocity object
+  using Velocity = Velocity< P >;
+  Velocity velocity( problem );
+
+  // Create operators
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
+  auto evolution = Dune::VoF::evolution( cupdate, reconstructions, flags, velocity );
 
   // Calculate initial data
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
 
-  // Initialize time provider
-  auto v0 = [ &problem ] ( const auto &x ) { DomainType u; problem.velocityField( x, 0.0, u ); return u; };
-  double dtInit = initTimeStep( gridPart, v0, flags );
+  // Create and initialize time provider
+  using TimeProviderType = Dune::Fem::TimeProvider< typename GridType::CollectiveCommunication >;
   TimeProviderType timeProvider( start, cfl, gridPart.comm() );
-  timeProvider.init( dtInit );
+  timeProvider.init( initTimeStep( gridPart, velocity, flags ) );
 
-  auto velocity = [ &problem ] ( const auto &x, const auto &t ) { DomainType u; problem.velocityField( x, t, u ); return u; };
-
-  // Write inital data
+  // Create data output
+  using DataOutputType = BinaryWriter;
   DataOutputType dataOutput( level, timeProvider );
-  if ( writeData )
-    dataOutput.write( grid, uh, timeProvider );
 
-  const auto& comm = Dune::Fem::MPIManager::comm();
+  // Calculate and write initial data
+  if ( writeData ) dataOutput.write( grid, uh, timeProvider );
 
   // Time Iteration
-  // ==============
-  double maxElapsedTimeTimestep = std::numeric_limits< double >::min();
-  double minElapsedTimeTimestep = std::numeric_limits< double >::max();
-  double avgElapsedTimeTimestep = 0.0;
-
-  comm.barrier();
-  double elapsedTime = - MPI_Wtime();
-
   for( ; timeProvider.time() <= end; )
   {
-
     if( Dune::Fem::Parameter::verbose() )
       std::cerr << "time step = " << timeProvider.timeStep() << ", "
                 << "time = " << timeProvider.time() << ", "
                 << "dt = " << timeProvider.deltaT() << std::endl;
 
-    double elapsedTimeTimestep = 0.0;
-
-    elapsedTimeTimestep += flags.reflag( cuh, eps );
-    elapsedTimeTimestep += reconstruction( cuh, reconstructions, flags );
-    elapsedTimeTimestep += evolution( cuh, reconstructions, velocity, timeProvider, cupdate, flags );
+    flags.reflag( cuh, eps );
+    reconstruction( cuh, reconstructions, flags );
+    evolution( timeProvider.time(), timeProvider.deltaT(), cupdate );
 
     update.communicate();
     uh.axpy( 1.0, update );
 
+    timeProvider.provideTimeStepEstimate( evolution.provideTimeStepEstimate() );
     timeProvider.next();
-    if ( writeData )
-      dataOutput.write( grid, uh, timeProvider );
 
-    avgElapsedTimeTimestep += elapsedTimeTimestep;
-    maxElapsedTimeTimestep = std::max( maxElapsedTimeTimestep, elapsedTimeTimestep );
-    minElapsedTimeTimestep = std::min( minElapsedTimeTimestep, elapsedTimeTimestep );
+    if ( writeData ) dataOutput.write( grid, uh, timeProvider );
   }
 
-  comm.barrier();
-  elapsedTime += MPI_Wtime();
-  auto totalElapsedTime = comm.sum( elapsedTime );
-
-  avgElapsedTimeTimestep /= timeProvider.timeStep();
-
-  return std::make_tuple ( timeProvider.time(), totalElapsedTime, maxElapsedTimeTimestep, minElapsedTimeTimestep, avgElapsedTimeTimestep );
+  return timeProvider.time();
 }
 
 
@@ -186,7 +167,6 @@ int main(int argc, char** argv)
 try {
 
   Dune::Fem::MPIManager::initialize( argc, argv );
-
 
   // Read Parameter File
   // ===================
@@ -228,7 +208,7 @@ try {
 
   // EOC Calculation
   // ===============
-  double oldL1Error = 0;
+  double oldError = 0;
   for( int step = level; step <= level+repeats; ++step )
   {
     // Initialize Data
@@ -275,23 +255,15 @@ try {
 
 
     // Run Algorithm
-    // ===============
-    auto results = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
-
-    const double actualEndTime = std::get<0> ( results );
-    const double elapsedTime = std::get<1> ( results );
-    const double maxElapsedTimeTimestep = std::get<2> ( results );
-    const double minElapsedTimeTimestep = std::get<3> ( results );
-    const double avgElapsedTimeTimestep = std::get<4> ( results );
+    double actualEndTime = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
 
 
     // Calculate Error
-    // ===============
     solution.setTime( actualEndTime );
     Dune::VoF::ReconstructedFunction< DiscreteFunctionType > uRec ( uh );
 
     using Quadrature = Dune::Fem::CachingQuadrature < GridPartType, 0 >;
-    double newL1Error = 0.0;
+    double error = 0.0;
     for ( const auto& entity : elements( gridPart, Dune::Partitions::interior ) )
     {
       Quadrature quad ( entity, 19 );
@@ -301,48 +273,21 @@ try {
         DiscreteFunctionType::RangeType v, w;
         solution.evaluate( x, v );
         uRec.evaluate( entity, x, w );
-        newL1Error += std::abs( v - w ) * qp.weight() * entity.geometry().integrationElement( qp.position() );
+        error += std::abs( v - w ) * qp.weight() * entity.geometry().integrationElement( qp.position() );
       }
     }
 
-    if( Dune::Fem::MPIManager::rank() == 0 )
+    if ( Dune::Fem::MPIManager::rank() == 0 )
     {
-      const double l1eoc = log( oldL1Error / newL1Error ) / M_LN2;
-      std::cout << "L1-Error =" << std::setw( 16 ) << newL1Error
-                << "   averaged Duration = " << elapsedTime / Dune::Fem::MPIManager::size() << "s"
-                << std::endl;
+      const double l1eoc = log( oldError / error ) / M_LN2;
+      std::cout << "L1-Error =" << std::setw( 16 ) << error << std::endl;
 
       if ( step > level )
         std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
     }
 
-    double balance = maxElapsedTimeTimestep / minElapsedTimeTimestep;
-
-    if( Dune::Fem::Parameter::verbose() )
-      std::cout << "Core " << Dune::Fem::MPIManager::rank() << ": " << std::endl
-                << " Timestep duration:" << std::endl
-                << "   max=" << maxElapsedTimeTimestep << "s" << std::endl
-                << "   min=" << minElapsedTimeTimestep << "s" << std::endl
-                << "   avg=" << avgElapsedTimeTimestep << "s" << std::endl
-                << " balance=" << maxElapsedTimeTimestep / minElapsedTimeTimestep << std::endl
-                << std::endl;
-
-    const auto& comm = Dune::Fem::MPIManager::comm();
-    double maxBalance = comm.max( balance );
-    double minBalance = comm.min( balance );
-    double avgBalance = comm.sum( balance );
-    avgBalance /= Dune::Fem::MPIManager::size();
-
-    if( Dune::Fem::Parameter::verbose() )
-      if( Dune::Fem::MPIManager::rank() == 0 )
-        std::cout << "Overall Balance:" << std::endl
-                  << "   max=" << maxBalance << std::endl
-                  << "   min=" << minBalance << std::endl
-                  << "   avg=" << avgBalance << std::endl
-                  << std::endl;
-
     Dune::Fem::GlobalRefine::apply( grid, refineStepsForHalf );
-    oldL1Error = newL1Error;
+    oldError = error;
   }
 
   return 0;

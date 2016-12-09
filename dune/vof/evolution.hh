@@ -27,128 +27,155 @@ namespace Dune
      * \brief operator for time evoution
      * \details Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 24ff
      *
-     * \tparam  RS  reconstructions set type
      * \tparam  DF  discrete function type
+     * \tparam  RS  reconstructions set type
+     * \tparam  FL  flags set type
+     * \tparam  VE  velocity field type
      */
-    template< class RS, class DF >
+    template< class DF, class RS, class FL, class VE >
     struct Evolution
     {
       using ReconstructionSet = RS;
-      using ColorFunction = DF;
+      using Flags = FL;
+      using DiscreteFunction = DF;
+      using Velocity = VE;
 
-      using GridView = typename ColorFunction::GridView;
+      using GridView = typename DiscreteFunction::GridView;
 
     private:
-      using Reconstruction = typename ReconstructionSet::Reconstruction;
       using Entity = typename ReconstructionSet::Entity;
-
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
-      using Polytope = typename std::conditional< Coordinate::dimension == 2, Polygon< Coordinate >, Polyhedron< Coordinate > >::type;
+      using ctype = typename DiscreteFunction::ctype;
 
-      using ctype = typename ColorFunction::ctype;
     public:
-      explicit Evolution () {}
+      explicit Evolution ( const DiscreteFunction& update,
+                           const ReconstructionSet& reconstructions,
+                           const Flags& flags,
+                           Velocity& velocity )
+        : gridView_( update.gridView() ),
+          reconstructions_( reconstructions ),
+          flags_( flags ),
+          velocity_( velocity )
+      {}
 
       /**
        * \brief (gobal) operator application
        *
-       * \tparam  Velocity        velocity field type
-       * \tparam  Flags
-       * \param   color           discrete function
-       * \param   reconstructions set of reconstructions
-       * \param   velocity        velocity field
-       * \param   timeProvider    time provider
+       * \param   t               time
+       * \param   deltaT          delta t
        * \param   update          discrete function of flow
-       * \param   flags           set of flags
        */
-      template< class Velocity, class Flags, class TimeProvider >
-      double operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Velocity& velocity, TimeProvider &timeProvider,
-                        ColorFunction &update, const Flags &flags ) const
+      void operator() ( double t, double deltaT, DiscreteFunction &update ) const
       {
-        double elapsedTime = - MPI_Wtime();
+        dtEst_ = std::numeric_limits< double >::max();
 
         update.clear();
 
-        for( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
+        for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
-          if( !flags.isActive( entity ) )
+          if( !flags_.isActive( entity ) )
             continue;
 
-          applyLocal( entity, flags, timeProvider, color, reconstructions, velocity, update);
+          applyLocal( entity, reconstructions_, flags_, velocity_, t, deltaT, update );
         }
+      }
 
-        elapsedTime += MPI_Wtime();
-        return elapsedTime;
+      double provideTimeStepEstimate () const
+      {
+        return dtEst_;
       }
 
     private:
       /**
        * \brief (local) operator application
        *
-       * \tparam  Velocity        velocity field type
-       * \tparam  Flags
        * \param   entity          current element
-       * \param   flags           set of flags
-       * \param   timeProvider    time provider
-       * \param   color           discrete function
        * \param   reconstructions set of reconstructions
+       * \param   flags           set of flags
        * \param   velocity        velocity field
+       * \param   t               time
+       * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
-      template< class Velocity, class Flags, class TimeProvider >
-      void applyLocal ( const Entity &entity, const Flags &flags, TimeProvider &timeProvider, const ColorFunction &color, const ReconstructionSet &reconstructions,
-                        const Velocity& velocity, ColorFunction &update ) const
+      void applyLocal ( const Entity &entity,
+                        const ReconstructionSet &reconstructions,
+                        const Flags &flags,
+                        Velocity& velocity,
+                        double t,
+                        double deltaT,
+                        DiscreteFunction &update ) const
       {
-        const auto geoEn = entity.geometry();
+        double volume = entity.geometry().volume();
 
-        for ( const auto &intersection : intersections( color.gridView(), entity ) )
+        for ( const auto &intersection : intersections( gridView(), entity ) )
         {
-          const auto geoIs = intersection.geometry();
+          if ( !intersection.neighbor() )
+            continue;
 
-          const Coordinate outerNormal = intersection.centerUnitOuterNormal();
-          Coordinate v = velocity( geoIs.center(), timeProvider.time() + 0.5 * timeProvider.deltaT() );
+          const Coordinate &outerNormal = intersection.centerUnitOuterNormal();
 
-          double dtEst = geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v );
-          timeProvider.provideTimeStepEstimate( dtEst );
+          velocity.bind( intersection );
+          Coordinate v = velocity( intersection.geometry().center(), t + 0.5 * deltaT );
 
-          v *= timeProvider.deltaT();
+          dtEst_ = std::min( dtEst_, volume / std::abs( intersection.integrationOuterNormal( 0.0 ) * v ) );
 
-          auto upwind = upwindPolygon( geoIs, v );
+          v *= deltaT;
 
           ctype flux = 0.0;
-          if ( v * outerNormal > 0 ) // outflow
-          {
-            if ( flags.isMixed( entity ) )
-              flux = -truncVolume( upwind, reconstructions[ entity ] );
-            else if ( flags.isFull( entity ) )
-              flux = -upwind.volume();
-          }
-          else if ( v * outerNormal < 0 ) // inflow
-          {
-            if ( intersection.neighbor() )
-            {
-              const auto &neighbor = intersection.outside();
 
-              if ( flags.isMixed( neighbor ) )
-                flux = truncVolume( upwind, reconstructions[ neighbor ] );
-              else if ( flags.isFull( neighbor ) )
-                flux = upwind.volume();
-            }
-            // Handle boundary data
-            else
-            {
-              if ( flags.isMixed( entity ) )
-                flux = truncVolume( upwind, reconstructions[ entity ] );
-              else if ( flags.isFull( entity ) )
-                flux = upwind.volume();
-            }
+          // outflow
+          if ( v * outerNormal > 0 )
+          {
+            geometricFlux( intersection.inside(), intersection.geometry(), reconstructions, flags, v, flux );
+            flux *= -1.0;
           }
+          // inflow
+          else if ( v * outerNormal < 0 )
+            geometricFlux( intersection.outside(), intersection.geometry(), reconstructions, flags, v, flux );
 
-          update[ entity ] += flux / geoEn.volume();
+          update[ entity ] += flux / volume;
+
         }
       }
-    };
 
+      /**
+       * \brief Computes and returns the geometric flux
+       * \details [long description]
+       *
+       * \tparam  Geometry
+       * \param   entity
+       * \param   geometry
+       * \param   reconstructions
+       * \param   flags
+       * \param   v
+       * \param   flux
+       */
+      template< class Geometry >
+      void geometricFlux ( const Entity& entity,
+                           const Geometry& geometry,
+                           const ReconstructionSet& reconstructions,
+                           const Flags& flags,
+                           const Coordinate& v,
+                           ctype& flux ) const
+      {
+        flux = 0.0;
+        auto upwind = upwindPolygon( geometry, v );
+
+        if ( flags.isMixed( entity ) )
+          flux = truncVolume( upwind, reconstructions[ entity ] );
+        else if ( flags.isFull( entity ) )
+          flux = upwind.volume();
+      }
+
+      const GridView& gridView() const { return gridView_; }
+
+      const GridView& gridView_;
+      const ReconstructionSet& reconstructions_;
+      const Flags& flags_;
+      Velocity& velocity_;
+
+      mutable double dtEst_;
+    };
 
     // evolution
     // --------
@@ -157,15 +184,17 @@ namespace Dune
      * \ingroup Method
      * \brief generate time evolution operator
      *
+     * \tparam  DiscreteFunction
      * \tparam  ReconstructionSet
-     * \tparam  ColorFunction
-     * \param   rs                  reconstruction set
+     * \tparam  Flags
+     * \tparam  Velocity
      * \return [description]
      */
-    template< class ReconstructionSet, class ColorFunction >
-    static inline auto evolution ( const ReconstructionSet&, const ColorFunction& ) -> decltype( Evolution< ReconstructionSet, ColorFunction >() )
+    template< class DiscreteFunction, class ReconstructionSet, class Flags, class Velocity >
+    static inline auto evolution ( const DiscreteFunction& df, const ReconstructionSet& rs, const Flags& fl, Velocity& ve )
+     -> decltype( Evolution< DiscreteFunction, ReconstructionSet, Flags, Velocity >( df, rs, fl, ve ) )
     {
-      return Evolution< ReconstructionSet, ColorFunction >();
+      return Evolution< DiscreteFunction, ReconstructionSet, Flags, Velocity >( df, rs, fl, ve );
     }
 
   } // namespace VoF
