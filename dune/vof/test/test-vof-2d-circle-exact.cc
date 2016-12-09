@@ -33,6 +33,7 @@
 #include "io.hh"
 #include "problem.hh"
 #include "utility.hh"
+#include "velocity.hh"
 #include "vtu.hh"
 
 // filterReconstruction
@@ -94,23 +95,22 @@ class TimeProvider
   int step_ = 0;
 };
 
-
 // initTimeStep
 // ---------------------
 
 template < class GridView, class Velocity >
-double initTimeStep( const GridView& gridView, const Velocity &velocity )
+double initTimeStep( const GridView& gridView, Velocity &velocity )
 {
   double dtMin = std::numeric_limits< double >::max();
-
-  for( const auto &entity : elements( gridView, Dune::Partitions::interiorBorder ) )
+  for( const auto &entity : elements( gridView ) )
   {
-    const auto geoEn = entity.geometry();
-    for ( const auto &intersection : intersections( gridView, entity ) )
+    const auto& geoEn = entity.geometry();
+    for ( const auto& intersection : intersections( gridView, entity ) )
     {
-      const auto geoIs = intersection.geometry();
-      auto v = velocity( geoIs.center() );
-      dtMin = std::min( dtMin, ( geoEn.volume() / geoIs.volume() ) / v.two_norm() );
+      const auto& geoIs = intersection.geometry();
+      velocity.bind( intersection );
+      auto v = velocity( geoIs.local( geoIs.center() ) );
+      dtMin = std::min( dtMin, geoEn.volume() / std::abs( intersection.integrationOuterNormal( 0.0 ) * v ) );
     }
   }
   return dtMin;
@@ -122,7 +122,6 @@ double initTimeStep( const GridView& gridView, const Velocity &velocity )
 template < class GridView >
 double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
-  using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
@@ -134,19 +133,20 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // Testproblem
   using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
+  using Velocity = Velocity< ProblemType, GridView >;
+
   ProblemType circle;
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
-
-  double dtPart = initTimeStep( gridView, [ &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, 0.0, rot ); return rot; } );
-  const auto& comm = Dune::Fem::MPIManager::comm();
-  double dt = comm.min( dtPart );
-
   const double startTime = parameters.get< double >( "scheme.start", 0.0 );
   const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
-  const bool writeData = parameters.get< bool >( "io.writeData", 0 );
+
+  Velocity velocity( circle, startTime );
+  double dt = initTimeStep( gridView, velocity );
+
+  const bool writeData = parameters.get< bool >( "io.writeData", dt );
 
   int saveNumber = 1;
   const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
@@ -161,7 +161,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
-  auto evolution = Dune::VoF::evolution( reconstructionSet, colorFunction );
+  auto evolution = Dune::VoF::evolution( reconstructionSet, flags );
 
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
@@ -192,9 +192,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   }
 
   TimeProvider tp ( parameters.get< double >( "scheme.cflFactor" ), dt, startTime );
-
-  auto velocity = [ &circle ] ( const auto &x, const auto &t ) { DomainVector rot; circle.velocityField( x, t, rot ); return rot; };
-
   double error = 0;
 
   while ( tp.time() < endTime )
@@ -202,11 +199,15 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     flags.reflag( colorFunction, eps );
 
     reconstruction( colorFunction, reconstructionSet, flags );
-    evolution( colorFunction, reconstructionSet, velocity, tp, update, flags );
+
+    Velocity velocity( circle, tp.time() );
+    double dtEst = evolution( velocity, tp.deltaT(), update );
+
     colorFunction.axpy( 1.0, update );
     colorFunction.communicate();
 
     double dt = tp.deltaT();
+    tp.provideTimeStepEstimate( dtEst );
     tp.next();
 
     error += dt * Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );

@@ -59,7 +59,7 @@ struct Problem : public Base
 };
 
 template < class GridPart, class Velocity, class Flags >
-double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const Flags &flags )
+double initTimeStep( const GridPart& gridPart, Velocity &velocity, const Flags &flags )
 {
   double dtMin = std::numeric_limits< double >::max();
   for( const auto &entity : elements( gridPart ) )
@@ -75,7 +75,8 @@ double initTimeStep( const GridPart& gridPart, const Velocity &velocity, const F
         continue;
 
       const auto geoIs = intersection.geometry();
-      auto v = velocity( geoIs.center(), 0.0 );
+      velocity.bind( intersection );
+      auto v = velocity( geoIs.local( geoIs.center() ) );
       dtMin = std::min( dtMin, geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v ) );
     }
   }
@@ -113,18 +114,17 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
   ReconstructionSet reconstructions( gridPart );
 
-  // Create velocity object
-  using Velocity = Velocity< P >;
-  Velocity velocity( problem );
-
   // Create operators
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
-  auto evolution = Dune::VoF::evolution( cupdate, reconstructions, flags, velocity );
+  auto evolution = Dune::VoF::evolution( reconstructions, flags );
 
   // Calculate initial data
   flags.reflag( cuh, eps );
   reconstruction( cuh, reconstructions, flags );
+
+  using Velocity = Velocity< P, typename GridPartType::GridViewType >;
+  Velocity velocity( problem, start );
 
   // Create and initialize time provider
   using TimeProviderType = Dune::Fem::TimeProvider< typename GridType::CollectiveCommunication >;
@@ -138,6 +138,8 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
   // Calculate and write initial data
   if ( writeData ) dataOutput.write( grid, uh, timeProvider );
 
+
+
   // Time Iteration
   for( ; timeProvider.time() <= end; )
   {
@@ -146,14 +148,17 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
                 << "time = " << timeProvider.time() << ", "
                 << "dt = " << timeProvider.deltaT() << std::endl;
 
+                // Create velocity object
+    Velocity velocity( problem, timeProvider.time() );
+
     flags.reflag( cuh, eps );
     reconstruction( cuh, reconstructions, flags );
-    evolution( timeProvider.time(), timeProvider.deltaT(), cupdate );
+    double dtEst = evolution( velocity, timeProvider.deltaT(), cupdate );
 
     update.communicate();
     uh.axpy( 1.0, update );
 
-    timeProvider.provideTimeStepEstimate( evolution.provideTimeStepEstimate() );
+    timeProvider.provideTimeStepEstimate( dtEst );
     timeProvider.next();
 
     if ( writeData ) dataOutput.write( grid, uh, timeProvider );

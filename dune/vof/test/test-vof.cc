@@ -32,6 +32,7 @@
 #include "errors.hh"
 #include "io.hh"
 #include "problem.hh"
+#include "velocity.hh"
 #include "vtu.hh"
 
 // filterReconstruction
@@ -93,14 +94,19 @@ class TimeProvider
 // ---------------------
 
 template < class GridView, class Velocity >
-double initTimeStep( const GridView& gridView, const Velocity &velocity )
+double initTimeStep( const GridView& gridView, Velocity &velocity )
 {
   double dtMin = std::numeric_limits< double >::max();
   for( const auto &entity : elements( gridView ) )
   {
-    const auto geoEn = entity.geometry();
-    auto v = velocity( geoEn.center() );
-    dtMin = std::min( dtMin, geoEn.volume() / v.two_norm() );
+    const auto& geoEn = entity.geometry();
+    for ( const auto& intersection : intersections( gridView, entity ) )
+    {
+      const auto& geoIs = intersection.geometry();
+      velocity.bind( intersection );
+      auto v = velocity( geoIs.local( geoIs.center() ) );
+      dtMin = std::min( dtMin, geoEn.volume() / ( intersection.geometry().volume() * std::abs( intersection.centerUnitOuterNormal() * v ) ) );
+    }
   }
   return dtMin;
 }
@@ -111,7 +117,6 @@ double initTimeStep( const GridView& gridView, const Velocity &velocity )
 template < class GridView >
 double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
-  using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
@@ -123,15 +128,19 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // Testproblem
   using ProblemType = PROBLEM < double, GridView::dimensionworld >;
+  using Velocity = Velocity< ProblemType, GridView >;
   ProblemType problem;
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
-  double dt = initTimeStep( gridView, [ &problem ] ( const auto &x ) { DomainVector rot; problem.velocityField( x, 0.0, rot ); return rot; } );
   const double startTime = parameters.get< double >( "scheme.start", 0.0 );
   const double endTime = parameters.get< double >( "scheme.end", 10 );
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
-  const bool writeData = parameters.get< bool >( "io.writeData", 0 );
+
+  Velocity velocity( problem, startTime );
+  double dt = initTimeStep( gridView, velocity );
+
+  const bool writeData = parameters.get< bool >( "io.writeData", dt );
 
   int saveNumber = 1;
   const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
@@ -146,7 +155,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
-  auto evolution = Dune::VoF::evolution(  reconstructionSet, colorFunction );
+  auto evolution = Dune::VoF::evolution( reconstructionSet, flags );
 
   // VTK Writer
   std::stringstream path;
@@ -177,16 +186,17 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   TimeProvider tp ( dt, startTime, parameters.get< double >( "scheme.cflFactor" ) );
 
-  auto velocity = [ &problem ] ( const auto &x, const auto &t ) { DomainVector rot; problem.velocityField( x, t, rot ); return rot; };
-
   while ( tp.time() < endTime )
   {
     flags.reflag( colorFunction, eps );
 
     reconstruction( colorFunction, reconstructionSet, flags );
-    evolution( colorFunction, reconstructionSet, velocity, tp, update, flags );
+
+    Velocity velocity( problem, tp.time() );
+    double dtEst = evolution( velocity, tp.deltaT(), update );
     colorFunction.axpy( 1.0, update );
 
+    tp.provideTimeStepEstimate( dtEst );
     tp.next();
 
     if ( writeData && tp.time() > nextSaveTime - 0.5 * tp.deltaT() )

@@ -26,7 +26,7 @@ namespace Dune
     {
       typedef DF DiscreteFunction;
       typedef typename DiscreteFunction::GridPartType::GridViewType GridView;
-      typedef typename GridView::template Codim< 0 >::EntityType Entity;
+      typedef typename GridView::template Codim< 0 >::Entity Entity;
       typedef typename DiscreteFunction::RangeFieldType ctype;
 
     public:

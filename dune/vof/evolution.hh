@@ -27,17 +27,14 @@ namespace Dune
      * \brief operator for time evoution
      * \details Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 24ff
      *
-     * \tparam  DF  discrete function type
      * \tparam  RS  reconstructions set type
      * \tparam  FL  flags set type
-     * \tparam  VE  velocity field type
      */
-    template< class RS, class FL, class VE >
+    template< class RS, class FL >
     struct Evolution
     {
       using ReconstructionSet = RS;
       using Flags = FL;
-      using Velocity = VE;
 
     private:
       using Entity = typename ReconstructionSet::Entity;
@@ -46,24 +43,22 @@ namespace Dune
 
     public:
       explicit Evolution ( const ReconstructionSet& reconstructions,
-                           const Flags& flags,
-                           Velocity& velocity )
+                           const Flags& flags )
         : reconstructions_( reconstructions ),
-          flags_( flags ),
-          velocity_( velocity )
+          flags_( flags )
       {}
 
       /**
        * \brief (gobal) operator application
        *
-       * \param   t               time
+       * \param   velocity        velocity
        * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
-      template< class DiscreteFunction >
-      void operator() ( DiscreteFunction &update, double t, double deltaT ) const
+      template< class Velocity, class DiscreteFunction >
+      double operator() ( Velocity& velocity, double deltaT, DiscreteFunction &update ) const
       {
-        dtEst_ = std::numeric_limits< double >::max();
+        double dtEst = std::numeric_limits< double >::max();
 
         update.clear();
 
@@ -72,13 +67,11 @@ namespace Dune
           if( !flags_.isActive( entity ) )
             continue;
 
-          applyLocal( entity, reconstructions_, flags_, velocity_, t, deltaT, update );
+          using std::min;
+          dtEst = min( dtEst, applyLocal( entity, reconstructions_, flags_, velocity, deltaT, update ) );
         }
-      }
 
-      double provideTimeStepEstimate () const
-      {
-        return dtEst_;
+        return dtEst;
       }
 
     private:
@@ -89,19 +82,18 @@ namespace Dune
        * \param   reconstructions set of reconstructions
        * \param   flags           set of flags
        * \param   velocity        velocity field
-       * \param   t               time
        * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
-      template< class DiscreteFunction >
-      void applyLocal ( const Entity &entity,
-                        const ReconstructionSet &reconstructions,
-                        const Flags &flags,
-                        Velocity& velocity,
-                        double t,
-                        double deltaT,
-                        DiscreteFunction &update ) const
+      template< class Velocity, class DiscreteFunction >
+      double applyLocal ( const Entity &entity,
+                          const ReconstructionSet &reconstructions,
+                          const Flags &flags,
+                          Velocity& velocity,
+                          double deltaT,
+                          DiscreteFunction &update ) const
       {
+        double dtEst = std::numeric_limits< double >::max();
         double volume = entity.geometry().volume();
 
         for ( const auto &intersection : intersections( update.gridView(), entity ) )
@@ -112,11 +104,12 @@ namespace Dune
           const Coordinate &outerNormal = intersection.centerUnitOuterNormal();
 
           velocity.bind( intersection );
-          Coordinate v = velocity( intersection.geometry().center(), t + 0.5 * deltaT );
+          const auto& refElement = ReferenceElements< ctype, std::decay_t< decltype( intersection ) >::mydimension >::general( intersection.type() );
+          Coordinate v = velocity( refElement.position( 0, 0 ) );
 
           using std::abs;
           using std::min;
-          dtEst_ = min( dtEst_, volume / abs( intersection.integrationOuterNormal( 0.0 ) * v ) );
+          dtEst = min( dtEst, volume / ( intersection.geometry().volume() * abs( outerNormal * v ) ) );
 
           v *= deltaT;
 
@@ -135,6 +128,8 @@ namespace Dune
           update[ entity ] += flux / volume;
 
         }
+
+        return dtEst;
       }
 
       /**
@@ -168,7 +163,6 @@ namespace Dune
 
       const ReconstructionSet& reconstructions_;
       const Flags& flags_;
-      Velocity& velocity_;
 
       mutable double dtEst_;
     };
@@ -183,14 +177,13 @@ namespace Dune
      * \tparam  DiscreteFunction
      * \tparam  ReconstructionSet
      * \tparam  Flags
-     * \tparam  Velocity
      * \return [description]
      */
-    template< class ReconstructionSet, class Flags, class Velocity >
-    static inline auto evolution ( const ReconstructionSet& rs, const Flags& fl, Velocity& ve )
-     -> decltype( Evolution< ReconstructionSet, Flags, Velocity >( rs, fl, ve ) )
+    template< class ReconstructionSet, class Flags >
+    static inline auto evolution ( const ReconstructionSet& rs, const Flags& fl )
+     -> decltype( Evolution< ReconstructionSet, Flags >( rs, fl ) )
     {
-      return Evolution< ReconstructionSet, Flags, Velocity >( rs, fl, ve );
+      return Evolution< ReconstructionSet, Flags >( rs, fl );
     }
 
   } // namespace VoF
