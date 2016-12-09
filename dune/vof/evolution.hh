@@ -32,28 +32,23 @@ namespace Dune
      * \tparam  FL  flags set type
      * \tparam  VE  velocity field type
      */
-    template< class DF, class RS, class FL, class VE >
+    template< class RS, class FL, class VE >
     struct Evolution
     {
       using ReconstructionSet = RS;
       using Flags = FL;
-      using DiscreteFunction = DF;
       using Velocity = VE;
-
-      using GridView = typename DiscreteFunction::GridView;
 
     private:
       using Entity = typename ReconstructionSet::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
-      using ctype = typename DiscreteFunction::ctype;
+      using ctype = typename Entity::Geometry::ctype;
 
     public:
-      explicit Evolution ( const DiscreteFunction& update,
-                           const ReconstructionSet& reconstructions,
+      explicit Evolution ( const ReconstructionSet& reconstructions,
                            const Flags& flags,
                            Velocity& velocity )
-        : gridView_( update.gridView() ),
-          reconstructions_( reconstructions ),
+        : reconstructions_( reconstructions ),
           flags_( flags ),
           velocity_( velocity )
       {}
@@ -65,13 +60,14 @@ namespace Dune
        * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
-      void operator() ( double t, double deltaT, DiscreteFunction &update ) const
+      template< class DiscreteFunction >
+      void operator() ( DiscreteFunction &update, double t, double deltaT ) const
       {
         dtEst_ = std::numeric_limits< double >::max();
 
         update.clear();
 
-        for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
+        for( const auto &entity : elements( update.gridView(), Partitions::interiorBorder ) )
         {
           if( !flags_.isActive( entity ) )
             continue;
@@ -97,6 +93,7 @@ namespace Dune
        * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
+      template< class DiscreteFunction >
       void applyLocal ( const Entity &entity,
                         const ReconstructionSet &reconstructions,
                         const Flags &flags,
@@ -107,7 +104,7 @@ namespace Dune
       {
         double volume = entity.geometry().volume();
 
-        for ( const auto &intersection : intersections( gridView(), entity ) )
+        for ( const auto &intersection : intersections( update.gridView(), entity ) )
         {
           if ( !intersection.neighbor() )
             continue;
@@ -117,7 +114,9 @@ namespace Dune
           velocity.bind( intersection );
           Coordinate v = velocity( intersection.geometry().center(), t + 0.5 * deltaT );
 
-          dtEst_ = std::min( dtEst_, volume / std::abs( intersection.integrationOuterNormal( 0.0 ) * v ) );
+          using std::abs;
+          using std::min;
+          dtEst_ = min( dtEst_, volume / abs( intersection.integrationOuterNormal( 0.0 ) * v ) );
 
           v *= deltaT;
 
@@ -167,9 +166,6 @@ namespace Dune
           flux = upwind.volume();
       }
 
-      const GridView& gridView() const { return gridView_; }
-
-      const GridView& gridView_;
       const ReconstructionSet& reconstructions_;
       const Flags& flags_;
       Velocity& velocity_;
@@ -190,11 +186,11 @@ namespace Dune
      * \tparam  Velocity
      * \return [description]
      */
-    template< class DiscreteFunction, class ReconstructionSet, class Flags, class Velocity >
-    static inline auto evolution ( const DiscreteFunction& df, const ReconstructionSet& rs, const Flags& fl, Velocity& ve )
-     -> decltype( Evolution< DiscreteFunction, ReconstructionSet, Flags, Velocity >( df, rs, fl, ve ) )
+    template< class ReconstructionSet, class Flags, class Velocity >
+    static inline auto evolution ( const ReconstructionSet& rs, const Flags& fl, Velocity& ve )
+     -> decltype( Evolution< ReconstructionSet, Flags, Velocity >( rs, fl, ve ) )
     {
-      return Evolution< DiscreteFunction, ReconstructionSet, Flags, Velocity >( df, rs, fl, ve );
+      return Evolution< ReconstructionSet, Flags, Velocity >( rs, fl, ve );
     }
 
   } // namespace VoF
