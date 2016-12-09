@@ -25,7 +25,7 @@ namespace Dune
     struct FemDiscreteFunctionWrapper
     {
       typedef DF DiscreteFunction;
-      typedef typename DiscreteFunction::GridPartType GridView;
+      typedef typename DiscreteFunction::GridPartType::GridViewType GridView;
       typedef typename GridView::template Codim< 0 >::EntityType Entity;
       typedef typename DiscreteFunction::RangeFieldType ctype;
 
@@ -37,7 +37,7 @@ namespace Dune
       ctype& operator[] ( const Entity& entity ) { return discreteFunction().localFunction( entity )[0]; }
       const ctype& operator[] ( const Entity& entity ) const { return discreteFunction().localFunction( entity )[0]; }
 
-      const GridView &gridView () const { return discreteFunction().gridPart(); }
+      GridView gridView () const { return static_cast< GridView >( discreteFunction().gridPart() ); }
 
       void axpy ( const ctype a, DiscreteFunction &x )
       {
