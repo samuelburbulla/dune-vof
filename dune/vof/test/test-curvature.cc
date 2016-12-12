@@ -18,39 +18,45 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
+#include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/curvature/generalheightfunctioncurvature.hh>
 
 //- local includes
 #include "average.hh"
 #include "colorfunction.hh"
 #include "errors.hh"
-#include "exactevolution.hh"
 #include "io.hh"
+#include "problems/ellipse.hh"
 #include "problems/rotatingcircle.hh"
+#include "problems/slope.hh"
 #include "utility.hh"
 #include "vtu.hh"
 
 // filterReconstruction
 // --------------------
 
-template < class GridView, class ReconstructionSet, class Polygon >
-void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
+template < class GridView, class ReconstructionSet, class Flags, class Polygon >
+void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, const Flags &flags, std::vector< Polygon > &io )
 {
   using Coord = typename Polygon::Coordinate;
 
   io.clear();
   for ( const auto& entity : elements( gridView ) )
   {
+    if ( !flags.isMixed( entity ) )
+      continue;
+
     auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
     auto intersection = static_cast< typename decltype( is )::Result > ( is );
 
-    if ( intersection == typename decltype( is )::Result() )
-      continue;
+    //if ( intersection == typename decltype( is )::Result() )
+      //continue;
 
     std::vector< Coord > vertices;
     for ( std::size_t i = 0; i < intersection.size(); ++i )
@@ -78,7 +84,9 @@ class TimeProvider
   void next() {
     time_ += dt_;
     step_++;
-    dt_ = dtEst_;
+
+    const auto& comm = Dune::Fem::MPIManager::comm();
+    dt_ = comm.min( dtEst_ );
     dtEst_ = std::numeric_limits< double >::max();
   }
 
@@ -101,7 +109,7 @@ double initTimeStep( const GridView& gridView, const Velocity &velocity )
 {
   double dtMin = std::numeric_limits< double >::max();
 
-  for( const auto &entity : elements( gridView ) )
+  for( const auto &entity : elements( gridView, Dune::Partitions::interiorBorder ) )
   {
     const auto geoEn = entity.geometry();
     for ( const auto &intersection : intersections( gridView, entity ) )
@@ -118,7 +126,7 @@ double initTimeStep( const GridView& gridView, const Velocity &velocity )
 // ---------
 
 template < class GridView >
-double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters, const double cfl )
+double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
   using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = ColorFunction< GridView >;
@@ -131,71 +139,91 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
 
   // Testproblem
-  using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
-  ProblemType circle;
+  using ProblemType = Ellipse< double, GridView::dimensionworld >;
+  DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
+  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
+  //DomainVector axis2 ( { 0.0, 1.0, 0.0 } );
+  //DomainVector axis3 ( { 0.0, 0.0, 1.0 } );
+  //ProblemType problem ( { axis, axis2, axis3 }, { 0.4, 0.4, 0.4 } );
+  //using ProblemType = Slope< double, GridView::dimensionworld >;
+  //ProblemType problem ( 0.125 * M_PI );
 
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
-  double dt = initTimeStep( gridView, [ &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, 0.0, rot ); return rot; } );
+
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
   const bool writeData = parameters.get< bool >( "io.writeData", 0 );
 
   // build domain references for each cell
   Stencils stencils( gridView );
 
+  using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  CurvatureOperator curvatureOperator ( gridView, stencils );
+  ColorFunction curvatureSet( gridView );
+  ColorFunction curvatureError( gridView );
+
   // allocate and initialize objects for data representation
   ColorFunction colorFunction( gridView );
-  ColorFunction errorFunction( gridView );
-  ColorFunction uhExact( colorFunction );
   ColorFunction update( gridView );
+  ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
-  auto exactEvolution = Dune::VoF::exactEvolution( colorFunction );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
 
+  ColorFunction normalX( gridView );
+  ColorFunction normalY( gridView );
+  //ColorFunction normalZ( gridView );
+
+  // File io
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
-  DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
-  vtkwriter.addCellData ( colorFunction, "uh" );
-  vtkwriter.addCellData ( uhExact, "u" );
+  DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
+  vtkwriter.addCellData ( colorFunction, "celldata" );
+  vtkwriter.addCellData ( curvatureSet, "curvature" );
+  vtkwriter.addCellData ( curvatureError, "curvatureError" );
+  vtkwriter.addCellData ( normalX, "nX" );
+  vtkwriter.addCellData ( normalY, "nY" );
+  //vtkwriter.addCellData ( normalZ, "nZ" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
+  std::stringstream name;
+  name.fill('0');
+  name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
+
+
 
   // Initial data
-  Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), colorFunction );
-  Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), uhExact );
+  Dune::VoF::average( colorFunction, problem );
+  colorFunction.communicate();
 
-  // Initial flagging
-  flags.reflag( colorFunction, eps );
-
-  if ( writeData )
-    vtkwriter.write( 0 );
-
-  TimeProvider tp ( cfl, dt, 0.0 );
-
-  auto velocity = [ &circle ] ( const auto &x, const auto &t ) { DomainVector rot; circle.velocityField( x, t, rot ); return rot; };
-
-  exactEvolution( colorFunction, circle, velocity, tp, update, flags );
-  colorFunction.axpy( 1.0, update );
-  tp.next();
-
-  Dune::VoF::circleInterpolation( circle.center( tp.time() ), circle.radius( tp.time() ), uhExact );
-
-  if ( writeData )
-    vtkwriter.write( 1 );
-
-  ReconstructionSet reconstructionSet( gridView );
-  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
+  // Initial reconstruction
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
+  curvatureOperator( reconstructionSet, flags, curvatureSet );
 
-  return Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
+  double error = Dune::VoF::curvatureError( curvatureSet, flags, reconstructionSet, problem, curvatureError );
+
+  if ( writeData )
+  {
+    for ( const auto &entity : elements( gridView ) )
+    {
+      normalX[ entity ] = reconstructionSet[ entity ].innerNormal()[ 0 ];
+      normalY[ entity ] = reconstructionSet[ entity ].innerNormal()[ 1 ];
+      //normalZ[ entity ] = reconstructionSet[ entity ].innerNormal()[ 2 ];
+    }
+    filterReconstruction( gridView, reconstructionSet, flags, recIO );
+    vtkwriter.write( 0 );
+    vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
+  }
+
+  return error;
 }
 
 int main(int argc, char** argv)
 try {
-  Dune::MPIHelper::instance( argc, argv );
+  Dune::Fem::MPIManager::initialize( argc, argv );
 
   using GridType = Dune::GridSelector::GridType;
 
@@ -204,52 +232,47 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  for ( double cfl = 0.25; cfl >= 0.25; cfl *= 0.5 )
+  double lastL1Error = 0.0;
+
+  //  create grid
+  std::stringstream gridFile;
+  gridFile << GridType::dimension << "dgrid.dgf";
+
+  Dune::GridPtr< GridType > gridPtr( gridFile.str() );
+  gridPtr->loadBalance();
+  GridType& grid = *gridPtr;
+
+  int level = parameters.get< int >( "grid.level" );
+  const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
+
+  grid.globalRefine( refineStepsForHalf * level );
+
+  int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level;
+
+  for ( ; level < maxLevel; ++level )
   {
-    std::cout << std::endl << "CFL=" << cfl << std::endl;
+    // start time integration
+    double singleL1Error = algorithm( grid.leafGridView(), parameters );
 
-    double lastError = 0.0;
+    const auto& comm = Dune::Fem::MPIManager::comm();
+    double L1Error = comm.sum( singleL1Error );
 
-    //  create grid
-    std::stringstream gridFile;
-    gridFile << GridType::dimension << "dgrid.dgf";
-
-    Dune::GridPtr< GridType > gridPtr( gridFile.str() );
-    gridPtr->loadBalance();
-    GridType& grid = *gridPtr;
-
-    int level = parameters.get< int >( "grid.level" );
-    const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
-
-    grid.globalRefine( refineStepsForHalf * level );
-
-    int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level;
-
-    for ( ; level < maxLevel; ++level )
+    if ( Dune::Fem::MPIManager::rank() == 0 )
     {
-      // start time integration
-      auto error = algorithm( grid.leafGridView(), parameters, cfl );
-
-
       // print errors and eoc
       if ( level > 0 )
       {
-        const double eoc = ( log( lastError ) - log( error ) ) / M_LN2;
-
+        const double eoc = ( log( lastL1Error ) - log( L1Error ) ) / M_LN2;
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
       }
 
-      std::cout << "Err " << level << ": " << error << std::endl;
-
-      lastError = error;
-
-      // refine
-      parameters[ "grid.level" ] = std::to_string( level+1 );
-      grid.globalRefine( refineStepsForHalf );
-
+      std::cout << "Err " << level << ": " << L1Error << std::endl;
     }
+    lastL1Error = L1Error;
 
-    parameters[ "grid.level" ] = std::to_string( 0 );
+    // refine
+    parameters[ "grid.level" ] = std::to_string( level+1 );
+    grid.globalRefine( refineStepsForHalf );
   }
 
   return 0;

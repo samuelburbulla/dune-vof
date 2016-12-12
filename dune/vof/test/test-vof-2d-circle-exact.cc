@@ -31,7 +31,7 @@
 #include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
-#include "problem.hh"
+#include "problems/rotatingcircle.hh"
 #include "utility.hh"
 #include "velocity.hh"
 #include "vtu.hh"

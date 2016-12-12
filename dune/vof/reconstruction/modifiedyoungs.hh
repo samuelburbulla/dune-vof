@@ -42,10 +42,11 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
       static constexpr int dim = Coordinate::dimension;
-
       using ctype = typename Coordinate::value_type;
       using Matrix = FieldMatrix< ctype, dim, dim >;
-      using Vector = Coordinate;
+      using Vector = FieldVector< ctype, dim >;
+
+      //friend class ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet, StencilSet >;
 
     public:
       explicit ModifiedYoungsReconstruction ( const StencilSet &stencils )
@@ -71,11 +72,11 @@ namespace Dune
 
           applyLocal( entity, flags, color, reconstructions[ entity ] );
         }
+
         auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
         color.gridView().communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
       }
 
-    private:
       /**
        * \brief   (local) operator application
        *
@@ -88,23 +89,22 @@ namespace Dune
       template< class Flags >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
       {
+        Coordinate normal( 0.0 );
+
         const auto geometry = entity.geometry();
 
-        Coordinate normal;
         const Coordinate center = geometry.center();
-        const auto colorEn = color[ entity ];
-        assert( colorEn == colorEn );
+        const double colorEn = color[ entity ];
 
         Matrix AtA( 0.0 );
         Vector Atb( 0.0 );
         for ( const auto &neighbor : stencil( entity ) )
         {
-          Coordinate d = neighbor.geometry().center() - center;
-          const ctype wk = 1.0 / d.two_norm2();
-          d *= wk;
+          Vector d = neighbor.geometry().center() - center;
+          const ctype weight = 1.0 / d.two_norm2();
+          d *= weight;
           AtA += outerProduct( d, d );
-          assert( color[ neighbor ] == color[ neighbor ] );
-          Atb.axpy( wk * ( color[ neighbor ] - colorEn ), d );
+          Atb.axpy( weight * ( color[ neighbor ] - colorEn ), d );
         }
         AtA.solve( normal, Atb );
 
@@ -113,19 +113,16 @@ namespace Dune
 
         normalize( normal );
 
-        auto polytope = makePolytope( geometry );
-        reconstruction = locateHalfSpace( polytope, normal, colorEn );
+        if ( flags.isMixed( entity ) )
+        {
+          auto polytope = makePolytope( geometry );
+          reconstruction = locateHalfSpace( polytope, normal, colorEn );
+        }
+        else
+          reconstruction = Reconstruction( normal, 0.0 );
       }
 
-      Matrix outerProduct ( const Vector &a, const Vector &b ) const
-      {
-        Matrix m( 0.0 );
-        for ( std::size_t i = 0; i < dim; ++i )
-          m[ i ].axpy( a[ i ], b );
-
-        return m;
-      }
-
+    private:
       const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
 
       const StencilSet &stencils_;

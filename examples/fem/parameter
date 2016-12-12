@@ -11,9 +11,9 @@ fem.io.recprefix: vof-rec
 
 #### Parameters for program ####
 start: 0.0
-end: 10.0
+end: 2.0
 
-level: 0
+level: 3
 repeats: 0
 
 cfl: 0.25

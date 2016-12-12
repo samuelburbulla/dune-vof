@@ -194,7 +194,7 @@ try {
   using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
 
   // Testproblem
-  using ProblemType = Problem< RotatingCircle< double, GridPartType::dimensionworld >, FunctionSpaceType >;
+  using ProblemType = Problem< SFlow< double, GridPartType::dimensionworld >, FunctionSpaceType >;
   using SolutionType = Dune::Fem::InstationaryFunction< ProblemType >;
   using GridSolutionType = Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
 

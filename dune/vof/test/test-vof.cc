@@ -31,8 +31,10 @@
 #include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
-#include "problem.hh"
 #include "velocity.hh"
+#include "problems/rotatingcircle.hh"
+#include "problems/linearwall.hh"
+#include "problems/slope.hh"
 #include "vtu.hh"
 
 // filterReconstruction
@@ -172,7 +174,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
 
   // Initial reconstruction
-  average( colorFunction, [ &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, 0.0, u ); return u; } );
+  Dune::VoF::average( colorFunction, problem );
 
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
@@ -216,9 +218,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   }
 
-  auto ft = [ &tp, &problem ] ( const auto &x ) { Dune::FieldVector< double, 1 > u; problem.evaluate( x, tp.time(), u ); return u; };
-
-  return l1error( colorFunction, ft );
+  return Dune::VoF::l1error( gridView, reconstructionSet, flags, problem, tp.time() );
 }
 
 int main(int argc, char** argv)

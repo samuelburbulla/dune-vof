@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 #include <dune/common/deprecated.hh>
 #include <dune/common/typetraits.hh>
@@ -139,6 +140,22 @@ namespace Dune
     }
 
 
+
+    // outerProduct
+    // ------------
+    template < class ctype, int dim >
+    FieldMatrix< ctype, dim, dim > outerProduct ( const FieldVector< ctype, dim > &a, const FieldVector< ctype, dim > &b )
+    {
+      FieldMatrix< ctype, dim, dim > m( 0.0 );
+      for ( std::size_t i = 0; i < dim; ++i )
+        m[ i ].axpy( a[ i ], b );
+
+      return m;
+    }
+
+
+
+
     // makePolytope
     // ------------
     template < class Geometry >
@@ -148,6 +165,13 @@ namespace Dune
       return makePolygon ( geometry );
     }
 
+    template < class Geometry, class Map >
+    static inline auto makePolytope ( const Geometry& geometry, Map&& map )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2, Polygon< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makePolygon ( geometry, std::forward< Map >( map ) );
+    }
+
     template < class Geometry >
     static inline auto makePolytope ( const Geometry& geometry )
       -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 3, Polyhedron< typename Geometry::GlobalCoordinate > >::type
@@ -155,6 +179,24 @@ namespace Dune
       return makePolyhedron( geometry );
     }
 
+    template < class Geometry, class Map >
+    static inline auto makePolytope ( const Geometry& geometry, Map&& map )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 3, Polyhedron< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makePolyhedron( geometry, std::forward< Map >( map ) );
+    }
+
+
+    // return the interface
+    // --------------------
+    template< class Entity, class ReconstructionSet >
+    auto interface( const Entity &entity, const ReconstructionSet &reconstructions )
+    {
+      auto polygon = makePolytope( entity.geometry() );
+      auto it = intersect( polygon, reconstructions[ entity ].boundary() );
+      auto interface = static_cast< typename decltype( it )::Result > ( it );
+      return interface;
+    }
 
   } // namespace VoF
 

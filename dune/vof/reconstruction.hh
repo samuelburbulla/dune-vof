@@ -3,6 +3,7 @@
 
 #include <dune/vof/reconstruction/modifiedswartz.hh>
 #include <dune/vof/reconstruction/modifiedyoungs.hh>
+#include <dune/vof/reconstruction/modifiedyoungssecondorder.hh>
 #include <dune/vof/reconstructionSet.hh>
 
 namespace Dune
@@ -28,19 +29,19 @@ namespace Dune
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
      -> typename std::enable_if< GridView::dimension == 2,
                                  ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > > >::type
+                                  ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > > >::type
     {
       return ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                           ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
+                                           ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                          >( stencils );
     }
 
     template< class GridView, class Stencils, class ColorFunction >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
      ->  typename std::enable_if< GridView::dimension == 3,
-                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
+                                  ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
     {
-      return ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
+      return ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
     }
 
   } // namespace VoF

@@ -205,6 +205,21 @@ namespace Dune {
         DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
     }
 
+    template< class Geometry, class Map >
+    static inline auto makePolygon( const Geometry& geometry, Map&& map )
+      -> Polygon< typename Geometry::GlobalCoordinate >
+    {
+      using Container = std::vector< typename Geometry::GlobalCoordinate >;
+      auto type = geometry.type();
+
+      if( type.isTriangle() )
+        return makePolygon( Container{ map( geometry.corner( 0 ) ), map( geometry.corner( 1 ) ), map( geometry.corner( 2 ) ) } );
+      else if ( type.isQuadrilateral() )
+        return makePolygon( Container{ map( geometry.corner( 0 ) ), map( geometry.corner( 1 ) ), map( geometry.corner( 3 ) ), map( geometry.corner( 2 ) ) } );
+      else
+        DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
+    }
+
   } // namespace VoF
 
 } // namespace Dune
