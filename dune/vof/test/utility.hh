@@ -138,22 +138,23 @@ namespace Dune
     }
 
 
-    template< class Coord, class DF >
-    static inline void circleInterpolation ( const Coord &center, double radius, DF &uh )
+    template< class ctype, int dim, class DF >
+    static inline void circleInterpolation ( const FieldVector< ctype, dim > &center, double radius, DF &uh )
     {
       uh.clear();
 
       for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
       {
         const auto& geo = entity.geometry();
-        Dune::VoF::Polygon< Coord > polygon = Dune::VoF::makePolytope( geo );
+        Dune::VoF::Polygon< FieldVector< ctype, dim > > polygon = Dune::VoF::makePolytope( geo );
 
         uh[ entity ] = intersectionVolume( polygon, center, radius ) / geo.volume();
       }
     }
 
     template< class Map, class DF >
-    static inline void circleInterpolation ( Map&& map, double volEl, DF &uh )
+    static inline auto circleInterpolation ( Map&& map, double volEl, DF &uh )
+      -> void_t< decltype( map( std::declval< typename DF::GridView::template Codim< 0 >::Geometry::GlobalCoordinate >() ) ) >
     {
       uh.clear();
 

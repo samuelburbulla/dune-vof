@@ -75,7 +75,7 @@ struct Ellipse
     for( int i = 0; i < dimDomain; ++i )
       curv /= radii_[ i ] * radii_[ i ] * radii_[ i ] * radii_[ i ];
 
-    return 1.0 / curv;
+    return - 1.0 / curv;
   }
 
   std::array< DomainType, dim > axis_;

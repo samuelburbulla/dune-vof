@@ -18,7 +18,6 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
-#include <dune/vof/curvature.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
 #include <dune/vof/reconstruction.hh>
@@ -26,6 +25,7 @@
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/curvature/generalheightfunctioncurvature.hh>
 
 //- local includes
 #include "average.hh"
@@ -49,7 +49,7 @@ void filterReconstruction( const GridView &gridView, const ReconstructionSet &re
   io.clear();
   for ( const auto& entity : elements( gridView ) )
   {
-    if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+    if ( !flags.isMixed( entity ) )
       continue;
 
     auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
@@ -157,8 +157,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // build domain references for each cell
   Stencils stencils( gridView );
 
-  using Curvature = Dune::VoF::Curvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
-  Curvature curvature ( gridView, stencils );
+  using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  CurvatureOperator curvatureOperator ( gridView, stencils );
+  ColorFunction curvatureSet( gridView );
   ColorFunction curvatureError( gridView );
 
   // allocate and initialize objects for data representation
@@ -179,7 +180,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
-  vtkwriter.addCellData ( curvature, "curvature" );
+  vtkwriter.addCellData ( curvatureSet, "curvature" );
   vtkwriter.addCellData ( curvatureError, "curvatureError" );
   vtkwriter.addCellData ( normalX, "nX" );
   vtkwriter.addCellData ( normalY, "nY" );
@@ -200,9 +201,9 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Initial reconstruction
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
-  curvature( colorFunction, reconstructionSet, flags );
+  curvatureOperator( reconstructionSet, flags, curvatureSet );
 
-  double error = Dune::VoF::curvatureError( curvature, flags, reconstructionSet, problem, curvatureError );
+  double error = Dune::VoF::curvatureError( curvatureSet, flags, reconstructionSet, problem, curvatureError );
 
   if ( writeData )
   {

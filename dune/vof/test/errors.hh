@@ -37,7 +37,7 @@ namespace Dune
 
           if ( flags.isFull( entity ) )
             w = 1.0;
-          else if ( flags.isMixed( entity ) || flags.isFullAndMixed( entity ) )
+          else if ( flags.isMixed( entity ) )
             w = ( reconstructionSet[ entity ].levelSet( x ) > 0.0 );
           else
             w = 0.0;
@@ -89,14 +89,17 @@ namespace Dune
 
       for ( auto entity : elements( curvature.gridView(), Partitions::interior ) )
       {
-        if ( !flags.isMixed( entity ) && !flags.isFullAndMixed( entity ) )
+        if ( !flags.isMixed( entity ) )
+          continue;
+
+        if ( curvature[ entity ] == 0.0 )
           continue;
 
         auto polygon = makePolytope( entity.geometry() );
         auto it = intersect( polygon, reconstructions[ entity ].boundary() );
         auto interface = static_cast< typename decltype( it )::Result > ( it );
-        //auto point = interface.centroid();
-        auto point = entity.geometry().center();
+        auto point = interface.centroid();
+        //auto point = entity.geometry().center();
 
         double localError = std::abs( problem.curvature( point ) - curvature[ entity ] );
         error += localError;
