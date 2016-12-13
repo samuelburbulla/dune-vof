@@ -27,6 +27,7 @@
 #include <dune/fem/io/streams/binarystreams.hh>
 
 // dune-vof includes
+#include <dune/vof/curvatureSet.hh>
 #include <dune/vof/curvature/generalheightfunctioncurvature.hh>
 #include <dune/vof/femdfwrapper.hh>
 #include <dune/vof/evolution.hh>
@@ -248,9 +249,12 @@ try {
       using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridPartType, Stencils, decltype( cuh ), ReconstructionSet, Flags >;
       CurvatureOperator curvatureOperator ( gridPart, stencils );
       DiscreteFunctionType dfCurvature( "curvature", space );
-      auto curvatureSet = Dune::VoF::discreteFunctionWrapper( dfCurvature );
-      curvatureOperator( reconstructions, flags, curvatureSet );
 
+      using CurvatureSet = Dune::VoF::CurvatureSet< GridPartType >;
+      CurvatureSet curvatureSet( gridPart );
+      curvatureOperator( reconstructions, flags, curvatureSet );
+      for ( const auto& entity : elements( gridPart ) )
+        dfCurvature.localFunction( entity )[0] = static_cast< double > ( curvatureSet[ entity ] );
 
       // Write data to vtk file
       // ----------------------

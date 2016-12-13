@@ -42,7 +42,8 @@ namespace Dune
        : gridView_( gridView ), stencils_( stencils )
       {}
 
-      void operator() ( const ReconstructionSet &reconstructions, const Flags &flags, DiscreteFunction &curvatureSet )
+      template< class CurvatureSet >
+      void operator() ( const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
       {
         for ( const auto& entity : elements( gridView() ) )
         {
@@ -56,7 +57,8 @@ namespace Dune
       }
 
     private:
-      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, DiscreteFunction &curvatureSet )
+      template< class CurvatureSet >
+      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
       {
         double AtA = 0.0;
         double Atb = 0.0;

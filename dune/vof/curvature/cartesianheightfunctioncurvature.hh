@@ -42,7 +42,8 @@ namespace Dune
        : gridView_( gridView ), stencils_( stencils )
       {}
 
-      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, DiscreteFunction &curvature )
+      template< class CurvatureSet >
+      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature )
       {
         for ( const auto& entity : elements( gridView() ) )
         {
@@ -68,7 +69,8 @@ namespace Dune
 
     private:
 
-      void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, DiscreteFunction &curvature )
+      template< class CurvatureSet >
+      void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, CurvatureSet &curvature )
       {
         double tol = std::numeric_limits< double >::epsilon();
 
@@ -124,7 +126,8 @@ namespace Dune
         }
       }
 
-      void averageCurvature( const Entity &entity, DiscreteFunction &curvature )
+      template< class CurvatureSet >
+      void averageCurvature( const Entity &entity, CurvatureSet &curvature )
       {
         int n = 0;
         for( const auto& neighbor : stencil( entity ) )

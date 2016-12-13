@@ -87,7 +87,7 @@ namespace Dune
       double error = 0.0;
       int n = 0;
 
-      for ( auto entity : elements( curvature.gridView(), Partitions::interior ) )
+      for ( auto entity : elements( curvatureError.gridView(), Partitions::interior ) )
       {
         if ( !flags.isMixed( entity ) )
           continue;

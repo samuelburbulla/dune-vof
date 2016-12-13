@@ -7,6 +7,8 @@ add_subdirectory( test )
 set( vofdir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof )
 set( vof_HEADERS
   brents.hh
+  curvatureSet.hh
+  dataset.hh
   evolution.hh
   femdfwrapper.hh
   flags.hh

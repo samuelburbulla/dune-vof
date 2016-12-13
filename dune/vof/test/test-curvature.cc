@@ -18,6 +18,7 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
+#include <dune/vof/curvatureSet.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
 #include <dune/vof/reconstruction.hh>
@@ -130,6 +131,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 {
   using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = ColorFunction< GridView >;
+  using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
   using Flags = Dune::VoF::Flags< GridView >;
@@ -159,7 +161,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
   CurvatureOperator curvatureOperator ( gridView, stencils );
-  ColorFunction curvatureSet( gridView );
+  CurvatureSet curvatureSet( gridView );
   ColorFunction curvatureError( gridView );
 
   // allocate and initialize objects for data representation

@@ -47,7 +47,8 @@ namespace Dune
        : gridView_( gridView ), stencils_( stencils )
       {}
 
-      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, DiscreteFunction &curvature )
+      template< class CurvatureSet >
+      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature )
       {
         for ( const auto& entity : elements( gridView() ) )
         {
@@ -59,7 +60,7 @@ namespace Dune
           applyLocal( entity, uh, reconstructions, flags, curvature );
         }
 
-        DiscreteFunction tmpCurvature ( curvature );
+        CurvatureSet tmpCurvature ( curvature );
         for ( const auto& entity : elements( gridView() ) )
         {
           if ( !flags.isMixed( entity ) )
@@ -68,7 +69,7 @@ namespace Dune
           applySmoothing1st( entity, uh, tmpCurvature, curvature );
         }
 
-        DiscreteFunction tmpCurvature2 ( curvature );
+        CurvatureSet tmpCurvature2 ( curvature );
         for ( const auto& entity : elements( gridView() ) )
         {
           if ( !flags.isMixed( entity ) )
@@ -85,7 +86,8 @@ namespace Dune
         return std::pow( 1.0 - 2.0 * std::abs( 0.5 - color ), 8.0 );
       }
 
-      void applySmoothing1st ( const Entity &entity, const DiscreteFunction &uh, const DiscreteFunction &tmpCurvature, DiscreteFunction &curvature  )
+      template< class CurvatureSet >
+      void applySmoothing1st ( const Entity &entity, const DiscreteFunction &uh, const CurvatureSet &tmpCurvature, CurvatureSet &curvature  )
       {
         double kappa = curvature[ entity ] * smoothingWeight( uh[ entity ] );
         double sumWeights = smoothingWeight( uh[ entity ] );
@@ -105,7 +107,8 @@ namespace Dune
         return std::pow( std::abs( normal * delta ), 8.0 );
       }
 
-      void applySmoothing2nd ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const DiscreteFunction &tmpCurvature, DiscreteFunction &curvature  )
+      template< class CurvatureSet >
+      void applySmoothing2nd ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const CurvatureSet &tmpCurvature, CurvatureSet &curvature  )
       {
         Coordinate normal = reconstructions[ entity ].innerNormal();
 
@@ -125,7 +128,8 @@ namespace Dune
         curvature[ entity ] = kappa;
       }
 
-      void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, DiscreteFunction &curvature )
+      template< class CurvatureSet >
+      void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature )
       {
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate center = interfaceEn.centroid();
