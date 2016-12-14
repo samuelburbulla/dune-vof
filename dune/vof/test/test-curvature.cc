@@ -138,7 +138,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
-  using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::Reconstruction::Coordinate >;
+  using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::DataType::Coordinate >;
 
   // Testproblem
   using ProblemType = Ellipse< double, GridView::dimensionworld >;

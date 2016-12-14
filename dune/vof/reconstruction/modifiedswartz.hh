@@ -41,7 +41,7 @@ namespace Dune
       using GridView = typename ColorFunction::GridView;
 
     private:
-      using Reconstruction = typename ReconstructionSet::Reconstruction;
+      using Reconstruction = typename ReconstructionSet::DataType;
       using Stencil = typename StencilSet::Stencil;
 
       using Entity = typename ColorFunction::Entity;
