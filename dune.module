@@ -2,4 +2,4 @@ Module: dune-vof
 Version: 2016.10
 Maintainer: sambu@posteo.de
 Depends: dune-grid (>= 3.0) dune-geometry (>= 3.0) dune-common (>= 3.0)
-Suggests: dune-alugrid (>= 3.0) dune-spgrid (>= 3.0) dune-fem (>= 3.0) dune-corepy (>= 1.0) dune-fempy (>= 2.4)
+Suggests: dune-alugrid (>= 3.0) dune-spgrid (>= 2.5) dune-fem (>= 2.5) dune-corepy (>= 1.0) dune-fempy (>= 2.4)
