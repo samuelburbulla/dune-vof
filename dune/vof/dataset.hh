@@ -10,7 +10,16 @@ namespace Dune
   namespace VoF
   {
 
-    // dataSet_
+    namespace __impl
+    {
+
+      template< class GridView >
+      using Entity_t = typename decltype( std::declval< GridView >().template begin< 0 >() )::Entity;
+
+    } // namespace Impl
+
+
+    // DataSet
     // -------
 
     /**
@@ -25,7 +34,7 @@ namespace Dune
     {
       using GridView = GV;
       using DataType = T;
-      using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
+      using Entity = __impl::Entity_t< GV >;
 
     private:
       using IndexSet = decltype( std::declval< GridView >().indexSet() );
@@ -40,7 +49,7 @@ namespace Dune
        */
       struct Exchange;
 
-      explicit DataSet ( const GridView &gridView )
+      explicit DataSet ( GridView gridView )
         : gridView_( gridView ),
           dataSet_( indexSet().size( 0 ) )
        {}
