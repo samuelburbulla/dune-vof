@@ -2,6 +2,7 @@
 #define DUNE_VOF_GEOMETRY_3D_INTERSECT_HH
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 
 #include <algorithm>
@@ -222,7 +223,7 @@ namespace Dune {
         nodes.insert( nodes.end(), newNodes.begin(), newNodes.end() );
 
         auto intersection = Polyhedron< Coord > ( { faces, edges, nodes } );
-        assert ( !isnan( intersection.volume() ) );
+        assert ( !std::isnan( intersection.volume() ) );
         return intersection;
       }
 
