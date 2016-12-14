@@ -5,8 +5,10 @@
 
 #include <dune/vof/dataset.hh>
 
+
 namespace Dune
 {
+
   namespace VoF
   {
 
@@ -20,19 +22,8 @@ namespace Dune
      * \tparam  GridView  grid view
      */
     template< class GridView >
-    using CurvatureSet = DataSet< GridView, real_t< typename __impl::Entity_t< GridView >::Geometry::ctype > >;
+    using CurvatureSet = DataSet< GridView, real_t< typename GridView::Grid::ctype > >;
 
-    // template< class GridView >
-    // struct CurvatureSet
-    //  : public DataSet< GridView, double >
-    // {
-    //   using ThisType = CurvatureSet< GridView >
-    //   using BaseType = DataSet< GridView, double >;
-
-    //   explicit CurvatureSet ( const GridView &gridView )
-    //     : BaseType( gridView )
-    //   {}
-    // };
 
   } // namespace VoF
 

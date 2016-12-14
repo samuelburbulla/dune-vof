@@ -10,15 +10,6 @@ namespace Dune
   namespace VoF
   {
 
-    namespace __impl
-    {
-
-      template< class GridView >
-      using Entity_t = typename decltype( std::declval< GridView >().template begin< 0 >() )::Entity;
-
-    } // namespace Impl
-
-
     // DataSet
     // -------
 
@@ -34,15 +25,15 @@ namespace Dune
     {
       using GridView = GV;
       using DataType = T;
-      using Entity = __impl::Entity_t< GV >;
+      using Entity = typename GridView::template Codim< 0 >::Entity;
 
     private:
-      using IndexSet = decltype( std::declval< GridView >().indexSet() );
+      using IndexSet = typename GridView::IndexSet;
 
     public:
       using iterator = typename std::vector< DataType >::iterator;
       using const_iterator = typename std::vector< DataType >::const_iterator;
-      using Index = decltype( std::declval< IndexSet >().index( std::declval< Entity >() ) );
+      using Index = typename IndexSet::IndexType;
 
       /**
        * \brief MPI communication handler
