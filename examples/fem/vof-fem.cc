@@ -117,7 +117,7 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
   // Create operators
   auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
   auto flags = Dune::VoF::flags( gridPart );
-  auto evolution = Dune::VoF::evolution( reconstructions, flags );
+  auto evolution = Dune::VoF::evolution( gridPart );
 
   // Calculate initial data
   flags.reflag( cuh, eps );
@@ -153,7 +153,7 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
 
     flags.reflag( cuh, eps );
     reconstruction( cuh, reconstructions, flags );
-    double dtEst = evolution( velocity, timeProvider.deltaT(), cupdate );
+    double dtEst = evolution( reconstructions, flags, velocity, timeProvider.deltaT(), cupdate );
 
     update.communicate();
     uh.axpy( 1.0, update );

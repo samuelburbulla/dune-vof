@@ -27,26 +27,20 @@ namespace Dune
      * \brief operator for time evoution
      * \details Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 24ff
      *
-     * \tparam  RS  reconstructions set type
-     * \tparam  FL  flags set type
+     * \tparam  GV  grid view type
      */
-    template< class RS, class FL >
+    template< class GV >
     struct Evolution
     {
-      using ReconstructionSet = RS;
-      using Flags = FL;
+      using GridView = GV;
 
     private:
-      using Entity = typename ReconstructionSet::Entity;
+      using Entity = typename GridView::template Codim< 0 >::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
       using ctype = typename Entity::Geometry::ctype;
 
     public:
-      explicit Evolution ( const ReconstructionSet& reconstructions,
-                           const Flags& flags )
-        : reconstructions_( reconstructions ),
-          flags_( flags )
-      {}
+      explicit Evolution ( const GridView& gridView ) : gridView_( gridView ) {}
 
       /**
        * \brief (gobal) operator application
@@ -55,20 +49,20 @@ namespace Dune
        * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
-      template< class Velocity, class DiscreteFunction >
-      double operator() ( Velocity& velocity, double deltaT, DiscreteFunction &update ) const
+      template< class ReconstructionSet, class Flags, class Velocity, class DiscreteFunction >
+      double operator() ( const ReconstructionSet& reconstructions, const Flags& flags, Velocity& velocity, double deltaT, DiscreteFunction &update ) const
       {
         double dtEst = std::numeric_limits< double >::max();
 
         update.clear();
 
-        for( const auto &entity : elements( update.gridView(), Partitions::interiorBorder ) )
+        for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
-          if( !flags_.isActive( entity ) )
+          if( !flags.isActive( entity ) )
             continue;
 
           using std::min;
-          dtEst = min( dtEst, applyLocal( entity, reconstructions_, flags_, velocity, deltaT, update ) );
+          dtEst = min( dtEst, applyLocal( entity, reconstructions, flags, velocity, deltaT, update ) );
         }
 
         return dtEst;
@@ -85,7 +79,7 @@ namespace Dune
        * \param   deltaT          delta t
        * \param   update          discrete function of flow
        */
-      template< class Velocity, class DiscreteFunction >
+      template< class ReconstructionSet, class Flags, class Velocity, class DiscreteFunction >
       double applyLocal ( const Entity &entity,
                           const ReconstructionSet &reconstructions,
                           const Flags &flags,
@@ -96,7 +90,7 @@ namespace Dune
         double dtEst = std::numeric_limits< double >::max();
         double volume = entity.geometry().volume();
 
-        for ( const auto &intersection : intersections( update.gridView(), entity ) )
+        for ( const auto &intersection : intersections( gridView(), entity ) )
         {
           if ( !intersection.neighbor() )
             continue;
@@ -144,7 +138,7 @@ namespace Dune
        * \param   v
        * \param   flux
        */
-      template< class Geometry >
+      template< class Geometry, class ReconstructionSet, class Flags >
       void geometricFlux ( const Entity& entity,
                            const Geometry& geometry,
                            const ReconstructionSet& reconstructions,
@@ -161,10 +155,9 @@ namespace Dune
           flux = upwind.volume();
       }
 
-      const ReconstructionSet& reconstructions_;
-      const Flags& flags_;
+      const GridView& gridView() const { return gridView_; }
 
-      mutable double dtEst_;
+      const GridView& gridView_;
     };
 
     // evolution
@@ -174,16 +167,14 @@ namespace Dune
      * \ingroup Method
      * \brief generate time evolution operator
      *
-     * \tparam  DiscreteFunction
-     * \tparam  ReconstructionSet
-     * \tparam  Flags
+     * \tparam  GridView
      * \return [description]
      */
-    template< class ReconstructionSet, class Flags >
-    static inline auto evolution ( const ReconstructionSet& rs, const Flags& fl )
-     -> decltype( Evolution< ReconstructionSet, Flags >( rs, fl ) )
+    template< class GridView >
+    static inline auto evolution ( const GridView& gv )
+     -> decltype( Evolution< GridView >( gv ) )
     {
-      return Evolution< ReconstructionSet, Flags >( rs, fl );
+      return Evolution< GridView >( gv );
     }
 
   } // namespace VoF

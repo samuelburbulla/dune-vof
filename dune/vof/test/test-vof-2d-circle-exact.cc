@@ -161,7 +161,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
-  auto evolution = Dune::VoF::evolution( reconstructionSet, flags );
+  auto evolution = Dune::VoF::evolution( gridView );
 
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
@@ -201,7 +201,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     reconstruction( colorFunction, reconstructionSet, flags );
 
     Velocity velocity( circle, tp.time() );
-    double dtEst = evolution( velocity, tp.deltaT(), update );
+    double dtEst = evolution( reconstructions, flags, velocity, tp.deltaT(), update );
 
     colorFunction.axpy( 1.0, update );
     colorFunction.communicate();
