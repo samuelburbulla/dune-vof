@@ -201,7 +201,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     reconstruction( colorFunction, reconstructionSet, flags );
 
     Velocity velocity( circle, tp.time() );
-    double dtEst = evolution( reconstructions, flags, velocity, tp.deltaT(), update );
+    double dtEst = evolution( reconstructionSet, flags, velocity, tp.deltaT(), update );
 
     colorFunction.axpy( 1.0, update );
     colorFunction.communicate();

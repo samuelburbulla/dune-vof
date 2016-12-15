@@ -61,9 +61,16 @@ namespace Dune
 
       std::size_t size() const { return dataSet_.size(); }
 
+      const GridView &gridView () const { return gridView_; }
+
+      void communicate ()
+      {
+        auto exchange = Exchange ( *this );
+        gridView_.communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
+      }
+
     private:
       const IndexSet &indexSet () const { return gridView_.indexSet(); }
-
       GridView gridView_;
       std::vector< DataType > dataSet_;
     };
