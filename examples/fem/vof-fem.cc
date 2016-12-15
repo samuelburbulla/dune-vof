@@ -17,16 +17,8 @@
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-fem includes
-#include <dune/fem/function/adaptivefunction.hh>
-#include <dune/fem/function/common/gridfunctionadapter.hh>
-#include <dune/fem/function/common/instationary.hh>
-#include <dune/fem/gridpart/leafgridpart.hh>
 #include <dune/fem/io/file/dataoutput.hh>
 #include <dune/fem/misc/mpimanager.hh>
-#include <dune/fem/space/common/functionspace.hh>
-#include <dune/fem/space/common/interpolate.hh>
-#include <dune/fem/space/finitevolume.hh>
-#include <dune/fem/operator/projection/l2projection.hh>
 
 // dune-vof includes
 #include <dune/vof/femdfwrapper.hh>
@@ -37,6 +29,10 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
+
+#include <dune/vof/test/average.hh>
+#include <dune/vof/test/colorfunction.hh>
+#include <dune/vof/test/errors.hh>
 
 // local includes
 #include "binarywriter.hh"
@@ -49,14 +45,6 @@
 #include "../problems/slottedcylinder.hh"
 
 
-
-// Problem
-// -------
-template < class Base, class FunctionSpace >
-struct Problem : public Base
-{
-  using FunctionSpaceType = FunctionSpace;
-};
 
 template < class GridPart, class Velocity, class Flags >
 double initTimeStep( const GridPart& gridPart, Velocity &velocity, const Flags &flags )
@@ -88,48 +76,36 @@ double initTimeStep( const GridPart& gridPart, Velocity &velocity, const Flags &
 // Algorithm
 // ---------
 
-template< class Grid, class DF, class P >
-double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
+template< class Grid, class ColorFunction, class P >
+double algorithm ( Grid &grid, ColorFunction& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
 {
-  using GridType = Grid;
-  using GridPartType = Dune::Fem::LeafGridPart< GridType >;
-  GridPartType gridPart( grid );
+  using GridView = typename Grid::LeafGridView;
+  GridView gridView( grid.leafGridView() );
 
   // Create stencils
-  using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
-  Stencils stencils( gridPart );
-
-  // Create discrete functions
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
-  using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
-  DiscreteFunctionSpaceType space( gridPart );
-
-  using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
-  DiscreteFunctionType update( "update", space );
-
-  auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
-  auto cupdate = Dune::VoF::discreteFunctionWrapper( update );
+  using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
+  Stencils stencils( gridView );
 
   // Create reconstruction set
-  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
-  ReconstructionSet reconstructions( gridPart );
+  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
+  ReconstructionSet reconstructions( gridView );
 
   // Create operators
-  auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
-  auto flags = Dune::VoF::flags( gridPart );
-  auto evolution = Dune::VoF::evolution( gridPart );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
+  auto flags = Dune::VoF::flags( gridView );
+  auto evolution = Dune::VoF::evolution( gridView );
 
   // Calculate initial data
-  flags.reflag( cuh, eps );
-  reconstruction( cuh, reconstructions, flags );
+  flags.reflag( uh, eps );
+  reconstruction( uh, reconstructions, flags );
 
-  using Velocity = Velocity< P, typename GridPartType::GridViewType >;
+  using Velocity = Velocity< P, GridView >;
   Velocity velocity( problem, start );
 
   // Create and initialize time provider
-  using TimeProviderType = Dune::Fem::TimeProvider< typename GridType::CollectiveCommunication >;
-  TimeProviderType timeProvider( start, cfl, gridPart.comm() );
-  timeProvider.init( initTimeStep( gridPart, velocity, flags ) );
+  using TimeProviderType = Dune::Fem::TimeProvider< typename Grid::CollectiveCommunication >;
+  TimeProviderType timeProvider( start, cfl, gridView.comm() );
+  timeProvider.init( initTimeStep( gridView, velocity, flags ) );
 
   // Create data output
   using DataOutputType = BinaryWriter;
@@ -138,7 +114,7 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
   // Calculate and write initial data
   if ( writeData ) dataOutput.write( grid, uh, timeProvider );
 
-
+  ColorFunction update( gridView );
 
   // Time Iteration
   for( ; timeProvider.time() <= end; )
@@ -151,9 +127,9 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
                 // Create velocity object
     Velocity velocity( problem, timeProvider.time() );
 
-    flags.reflag( cuh, eps );
-    reconstruction( cuh, reconstructions, flags );
-    double dtEst = evolution( reconstructions, flags, velocity, timeProvider.deltaT(), cupdate );
+    flags.reflag( uh, eps );
+    reconstruction( uh, reconstructions, flags );
+    double dtEst = evolution( reconstructions, flags, velocity, timeProvider.deltaT(), update );
 
     update.communicate();
     uh.axpy( 1.0, update );
@@ -164,7 +140,7 @@ double algorithm ( Grid &grid, DF& uh, P& problem, int level, double start, doub
     if ( writeData ) dataOutput.write( grid, uh, timeProvider );
   }
 
-  return timeProvider.time();
+  return Dune::VoF::l1error( gridView, reconstructions, flags, problem, timeProvider.time() );
 }
 
 
@@ -187,28 +163,28 @@ try {
   const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
   const int restartStep = Dune::Fem::Parameter::getValue< int >( "restartStep", -1 );
 
-  using GridType = Dune::GridSelector::GridType;
-  using GridPartType = Dune::Fem::LeafGridPart< GridType >;
-  using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
-  using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
-  using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
-
-  // Testproblem
-  using ProblemType = Problem< SFlow< double, GridPartType::dimensionworld >, FunctionSpaceType >;
-  using SolutionType = Dune::Fem::InstationaryFunction< ProblemType >;
-  using GridSolutionType = Dune::Fem::GridFunctionAdapter< SolutionType, GridPartType >;
+  using Grid = Dune::GridSelector::GridType;
+  using GridView = typename Grid::LeafGridView;
 
 
   // Create Grid
   // ===========
   std::stringstream gridFile;
-  gridFile << GridType::dimension << "dgrid.dgf";
+  gridFile << Grid::dimension << "dgrid.dgf";
 
-  Dune::GridPtr< GridType > gridPtr( gridFile.str() );
+  Dune::GridPtr< Grid > gridPtr( gridFile.str() );
   gridPtr->loadBalance();
-  GridType& grid = *gridPtr;
-  const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
-  Dune::Fem::GlobalRefine::apply( grid, level * refineStepsForHalf );
+  Grid& grid = *gridPtr;
+  const int refineStepsForHalf = Dune::DGFGridInfo< Grid >::refineStepsForHalf();
+  grid.globalRefine( level * refineStepsForHalf );
+
+  GridView gridView( grid.leafGridView() );
+
+  using ColorFunction = ColorFunction< GridView >;
+
+  // Testproblem
+  using ProblemType = SFlow< double, GridView::dimensionworld >;
+  ProblemType problem;
 
 
   // EOC Calculation
@@ -218,20 +194,14 @@ try {
   {
     // Initialize Data
     // ===============
-    GridPartType gridPart( grid );
-    DiscreteFunctionSpaceType space( gridPart );
-    ProblemType problem;
-    DiscreteFunctionType uh( "uh", space );
+    ColorFunction uh( gridView );
 
-    SolutionType solution( problem, startTime );
-    GridSolutionType u( "solution", solution, gridPart, 19 );
-    Dune::Fem::L2Projection < GridSolutionType, DiscreteFunctionType > l2projection ( 15 );
 
     if ( restartStep == -1 )
     {
       // Use initial data of problem.
-      l2projection( u, uh );
-    }
+      Dune::VoF::average( uh, problem, 0.0 );
+    }/*
     else
     {
       // Use given data in binary file.
@@ -254,33 +224,13 @@ try {
         uh.read( binaryStream );
         std::cout << "Restarted in file " << filename << std::endl;
       }
-    }
+    }*/
 
     uh.communicate();
 
-
     // Run Algorithm
-    double actualEndTime = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
+    double error = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
 
-
-    // Calculate Error
-    solution.setTime( actualEndTime );
-    Dune::VoF::ReconstructedFunction< DiscreteFunctionType > uRec ( uh );
-
-    using Quadrature = Dune::Fem::CachingQuadrature < GridPartType, 0 >;
-    double error = 0.0;
-    for ( const auto& entity : elements( gridPart, Dune::Partitions::interior ) )
-    {
-      Quadrature quad ( entity, 19 );
-      for ( const auto& qp : quad )
-      {
-        const auto x = entity.geometry().global( qp.position() );
-        DiscreteFunctionType::RangeType v, w;
-        solution.evaluate( x, v );
-        uRec.evaluate( entity, x, w );
-        error += std::abs( v - w ) * qp.weight() * entity.geometry().integrationElement( qp.position() );
-      }
-    }
 
     if ( Dune::Fem::MPIManager::rank() == 0 )
     {
@@ -291,7 +241,7 @@ try {
         std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
     }
 
-    Dune::Fem::GlobalRefine::apply( grid, refineStepsForHalf );
+    grid.globalRefine( refineStepsForHalf );
     oldError = error;
   }
 

@@ -48,7 +48,7 @@ public:
       dfname << name.str() << ".bin";
       BinaryStream binaryStream ( Dune::concatPaths( path_, dfname.str() ) );
       binaryStream << timeProvider.time();
-      uh.write( binaryStream );
+      //uh.write( binaryStream );
 
       saveTime_ += saveStep_;
       writeStep_++;

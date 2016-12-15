@@ -87,6 +87,9 @@ namespace Dune
       const Flag& operator[] ( const Entity& entity ) const { return flags_[ index( entity ) ]; }
       Flag& operator[] ( const Entity& entity ) { return flags_[ index( entity ) ]; }
 
+      double operator[] ( const std::size_t index ) const { return static_cast< double >( flags_[ index ] ); }
+
+
       const std::size_t size() const { return indexSet().size( 0 ); }
 
       /**

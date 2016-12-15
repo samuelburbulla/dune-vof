@@ -25,12 +25,12 @@ namespace Dune
     template< class DF >
     struct ReconstructedFunction
     {
-      using GridPartType = typename DF::GridPartType;
+      using GridView = typename DF::GridView;
       using DomainType = typename DF::DomainType;
       using RangeType = typename DF::RangeType;
-      using Flags = typename Dune::VoF::Flags< GridPartType >;
-      using ReconstructionSet = typename Dune::VoF::ReconstructionSet< GridPartType >;
-      using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
+      using Flags = typename Dune::VoF::Flags< GridView >;
+      using ReconstructionSet = typename Dune::VoF::ReconstructionSet< GridView >;
+      using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
 
     public:
       ReconstructedFunction ( const DF &uh )

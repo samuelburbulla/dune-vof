@@ -14,16 +14,11 @@
 #include <dune/common/exceptions.hh>
 
 // dune-grid include
+#include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-fem includes
-#include <dune/fem/function/adaptivefunction.hh>
-#include <dune/fem/function/common/gridfunctionadapter.hh>
-#include <dune/fem/function/common/instationary.hh>
-#include <dune/fem/gridpart/leafgridpart.hh>
 #include <dune/fem/io/file/dataoutput.hh>
-#include <dune/fem/space/common/functionspace.hh>
-#include <dune/fem/space/finitevolume.hh>
 #include <dune/fem/io/streams/binarystreams.hh>
 
 // dune-vof includes
@@ -36,6 +31,9 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
+
+#include <dune/vof/test/colorfunction.hh>
+
 
 // local includes
 #include "polygon.hh"
@@ -178,25 +176,22 @@ try {
     std::stringstream gridFile;
     gridFile << GridType::dimension << "dgrid.dgf";
 
-    // GridType *gridPtr = Dune::BackupRestoreFacility< GridType >::restore( gridfile );
     Dune::GridPtr< GridType > gridPtr( gridFile.str() );
     gridPtr->loadBalance();
     GridType& grid = *gridPtr;
 
     const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
-    Dune::Fem::GlobalRefine::apply( grid, level * refineStepsForHalf );
+    grid.globalRefine( level * refineStepsForHalf );
 
 
     // Create discrete function
     // ------------------------
-    using GridPartType = Dune::Fem::LeafGridPart< GridType >;
-    using FunctionSpaceType = Dune::Fem::FunctionSpace< double, double, GridPartType::dimensionworld, 1 >;
-    using DiscreteFunctionSpaceType = Dune::Fem::FiniteVolumeSpace< FunctionSpaceType, GridPartType >;
-    using DiscreteFunctionType = Dune::Fem::AdaptiveDiscreteFunction< DiscreteFunctionSpaceType>;
+    using GridView = typename GridType::LeafGridView;
+    using ColorFunction = ColorFunction< GridView >;
 
-    GridPartType gridPart( grid );
-    DiscreteFunctionSpaceType space( gridPart );
-    DiscreteFunctionType uh( "uh", space );
+    GridView gridView( grid.leafGridView() );
+    ColorFunction uh( gridView );
+
 
     for ( std::size_t number = 0; ; number++ )
     {
@@ -218,7 +213,7 @@ try {
       double timeValue;
       binaryStream >> timeValue;
 
-      uh.read( binaryStream );
+      //uh.read( binaryStream );
       uh.communicate();
 
 
@@ -226,54 +221,46 @@ try {
       // Rebuild flags and reconstruction
       // --------------------------------
 
-      using ReconstructionSet = Dune::VoF::ReconstructionSet< GridPartType >;
-      ReconstructionSet reconstructions( gridPart );
+      using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
+      ReconstructionSet reconstructions( gridView );
 
-      using Stencils = Dune::VoF::VertexNeighborsStencil< GridPartType >;
-      Stencils stencils( gridPart );
+      using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
+      Stencils stencils( gridView );
 
       const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
-      auto cuh = Dune::VoF::discreteFunctionWrapper( uh );
-      auto reconstruction = Dune::VoF::reconstruction( gridPart, cuh, stencils );
+      auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
 
-      using Flags = Dune::VoF::Flags< GridPartType >;
-      Flags flags = Dune::VoF::flags( gridPart );
-      DiscreteFunctionType dfFlags ( "flags", space );
+      using Flags = Dune::VoF::Flags< GridView >;
+      Flags flags = Dune::VoF::flags( gridView );
+      ColorFunction dfFlags ( gridView );
 
-      flags.reflag( cuh, eps );
-      reconstruction( cuh, reconstructions, flags );
+      flags.reflag( uh, eps );
+      reconstruction( uh, reconstructions, flags );
 
-      for ( const auto& entity : elements( gridPart ) )
-        dfFlags.localFunction( entity )[0] = static_cast< double > ( flags[ entity ] );
-
-      using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridPartType, Stencils, decltype( cuh ), ReconstructionSet, Flags >;
-      CurvatureOperator curvatureOperator ( gridPart, stencils );
-      DiscreteFunctionType dfCurvature( "curvature", space );
-
-      using CurvatureSet = Dune::VoF::CurvatureSet< GridPartType >;
-      CurvatureSet curvatureSet( gridPart );
+      using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, Flags >;
+      CurvatureOperator curvatureOperator ( gridView, stencils );
+      using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
+      CurvatureSet curvatureSet( gridView );
       curvatureOperator( reconstructions, flags, curvatureSet );
-      for ( const auto& entity : elements( gridPart ) )
-        dfCurvature.localFunction( entity )[0] = static_cast< double > ( curvatureSet[ entity ] );
 
       // Write data to vtk file
       // ----------------------
-      using DataIOTupleType = std::tuple< DiscreteFunctionType *, DiscreteFunctionType *, DiscreteFunctionType * >;
-      using DataOutputType = Dune::Fem::DataOutput< GridType, DataIOTupleType >;
+      using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
-      DataIOTupleType dataIOTuple = std::make_tuple( &uh, &dfFlags, &dfCurvature );
-      DataOutputType dataOutput( grid, dataIOTuple, dataOutputParameters );
-      dataOutput.write();
+      DataWriter vtkwriter ( gridView, "vof", seriesName.str(), "" );
+      vtkwriter.addCellData ( uh, "celldata" );
+      vtkwriter.addCellData ( flags, "flags" );
+      vtkwriter.addCellData ( curvatureSet, "curvature" );
 
+      vtkwriter.write( number );
       dataPVDWriter.addDataSet( dataOutputParameters.prefix(), number, timeValue );
 
       // Write reconstruction to vtu file
       // --------------------------------
       using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
-      using RecOutputType = ReconstructionWriter< GridPartType, ReconstructionSet, RecOutputParameters, Polygon >;
+      using RecOutputType = ReconstructionWriter< GridView, ReconstructionSet, RecOutputParameters, Polygon >;
 
-      RecOutputType recOutput ( gridPart, reconstructions, recOutputParameters );
-      //recOutput.count() = number;
+      RecOutputType recOutput ( gridView, reconstructions, recOutputParameters );
       recOutput.write();
 
       recPVDWriter.addDataSet( recOutputParameters.prefix(), number, timeValue );
