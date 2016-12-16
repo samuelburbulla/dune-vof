@@ -1,20 +1,17 @@
-add_subdirectory( curvature )
-add_subdirectory( geometry )
-add_subdirectory( reconstruction )
-add_subdirectory( stencil )
-add_subdirectory( test )
+add_subdirectory(curvature)
+add_subdirectory(geometry)
+add_subdirectory(reconstruction)
+add_subdirectory(stencil)
+add_subdirectory(test)
 
-set( vofdir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof )
-set( vof_HEADERS
+set(HEADERS
   brents.hh
   curvatureSet.hh
   dataset.hh
   evolution.hh
-  femdfwrapper.hh
   flags.hh
-  mcmgmapper.hh
   reconstruction.hh
   reconstructionSet.hh
 )
 
-install(FILES ${vof_HEADERS} DESTINATION ${vofdir})
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof)

@@ -1,5 +1,4 @@
-set( curvaturedir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/curvature )
-set( curvature_HEADERS
+set(HEADERS
   cartesianheightfunctioncurvature.hh
   circleinterpolationcurvature.hh
   generalheightfunctioncurvature.hh
@@ -7,4 +6,4 @@ set( curvature_HEADERS
   normaldivergencecurvature.hh
 )
 
-install(FILES ${curvature_HEADERS} DESTINATION ${curvaturedir})
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/curvature)

@@ -1,7 +1,7 @@
-set( reconstructiondir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/reconstruction )
-set( reconstruction_HEADERS
+set(HEADERS
   modifiedswartz.hh
   modifiedyoungs.hh
+  modifiedyoungssecondorder.hh
 )
 
-install(FILES ${vof_HEADERS} DESTINATION ${reconstructiondir})
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/reconstruction)

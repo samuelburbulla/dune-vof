@@ -1,7 +1,6 @@
-set( stencildir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/stencil )
-set( stencil_HEADERS
+set(HEADERS
   edgeneighborsstencil.hh
   vertexneighborsstencil.hh
 )
 
-install(FILES ${stencil_HEADERS} DESTINATION ${stencildir})
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/stencil)

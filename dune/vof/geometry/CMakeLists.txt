@@ -1,11 +1,12 @@
-set( geometrydir ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/geometry )
-set( geometry_HEADERS
-  2d/polygon.hh
-  2d/intersect.hh
+add_subdirectory(2d)
+add_subdirectory(3d)
+
+set(HEADERS
   algorithm.hh
   halfspace.hh
   intersect.hh
+  upwindpolygon.hh
   utility.hh
 )
 
-install(FILES ${geometry_HEADERS} DESTINATION ${geometrydir})
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof/geometry)
