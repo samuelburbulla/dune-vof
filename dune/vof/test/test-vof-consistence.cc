@@ -30,6 +30,7 @@
 #include "colorfunction.hh"
 #include "errors.hh"
 #include "exactevolution.hh"
+#include "polygon.hh"
 #include "io.hh"
 #include "problems/rotatingcircle.hh"
 #include "utility.hh"
@@ -41,7 +42,7 @@
 template < class GridView, class ReconstructionSet, class Polygon >
 void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
 {
-  using Coord = typename Polygon::Coordinate;
+  using Coord = typename Polygon::Position;
 
   io.clear();
   for ( const auto& entity : elements( gridView ) )
@@ -57,7 +58,7 @@ void filterReconstruction( const GridView &gridView, const ReconstructionSet &re
       vertices.push_back( intersection.vertex( i ) );
 
     if ( vertices.size() > 0 )
-      io.push_back( Polygon( vertices ) );
+      io.push_back( Polygon( vertices ), reconstructionSet[ entity ].innerNormal() );
   }
 }
 
@@ -128,7 +129,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
-  using Polygon = Dune::VoF::Polygon< typename ReconstructionSet::DataType::Coordinate >;
+  using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
 
   // Testproblem
   using ProblemType = RotatingCircle< double, GridView::dimensionworld >;

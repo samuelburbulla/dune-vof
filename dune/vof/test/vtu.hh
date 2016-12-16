@@ -1,6 +1,7 @@
 #ifndef VTU_HH
 #define VTU_HH
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <functional>
@@ -58,7 +59,7 @@ struct VTUDataType< std::uint8_t >
   static std::string toString ( const std::uint8_t &value ) { return std::to_string( value ); }
 };
 
-template< >
+template<>
 struct VTUDataType< Dune::FieldVector< double, 2 > >
 {
   typedef VTUDataType< double > VTUDouble;
@@ -72,7 +73,7 @@ struct VTUDataType< Dune::FieldVector< double, 2 > >
   }
 };
 
-template< >
+template<>
 struct VTUDataType< Dune::FieldVector< double, 3 > >
 {
   typedef VTUDataType< double > VTUDouble;
@@ -86,6 +87,8 @@ struct VTUDataType< Dune::FieldVector< double, 3 > >
   }
 };
 
+
+
 // VTUWriter
 // ---------
 
@@ -93,7 +96,7 @@ template< class PolygonVector >
 class VTUWriter
 {
   typedef typename PolygonVector::value_type Polygon;
-  typedef typename Polygon::Coordinate Position;
+  typedef typename Polygon::Position Position;
 
 public:
   VTUWriter ( const PolygonVector &v ) : v_( v )
@@ -111,6 +114,10 @@ public:
     vtu << "  <UnstructuredGrid>" << std::endl;
     vtu << "    <Piece NumberOfPoints=\"" << overallSize_ << "\" "
         << "NumberOfCells=\"" << v_.size() << "\">" << std::endl;
+
+    vtu << "      <CellData Normals=\"normals\">" << std::endl;
+    writeNormals( vtu );
+    vtu << "      </CellData>" << std::endl;
 
     vtu << "      <Points>" << std::endl;
     writeCoordinates( vtu );
@@ -142,8 +149,8 @@ private:
     std::size_t index = 0;
 
     for( const Polygon &pol : v_ )
-      for( int i = 0; i < pol.size(); ++i )
-        points[ index++ ] = pol.vertex( i );
+      for( const Position &pos : pol )
+        points[ index++ ] = pos;
 
     writeDataArray( vtu, "Coordinates", points );
   }
@@ -160,12 +167,24 @@ private:
   void writeOffsets ( std::ostream &vtu ) const
   {
     const std::size_t size = v_.size();
-    if ( size == 0 ) return;
-    std::vector< std::int32_t > offsets( size );
-    offsets[ 0 ] = v_[ 0 ].size();
-    for( std::size_t i = 1; i < size; ++i )
-      offsets[ i ] = offsets[ i - 1 ] + v_[ i ].size();
-    writeDataArray( vtu, "offsets", offsets );
+    std::vector< std::int32_t > offsets;
+    if ( !v_.empty() )
+    {
+      offsets.push_back( v_[ 0 ].size() );
+      for( std::size_t i = 1; i < size; ++i )
+        offsets.push_back( offsets[ i - 1 ] + v_[ i ].size() );
+      writeDataArray( vtu, "offsets", offsets );
+    }
+  }
+
+  void writeNormals( std::ostream &vtu ) const
+  {
+    const std::size_t size = v_.size();
+    std::vector< Position > normals( size );
+    for( std::size_t i = 0; i < size; ++i  )
+      normals[ i ] = v_[ i ].normal();
+
+    writeDataArray( vtu, "normals", normals );
   }
 
   void writeTypes ( std::ostream &vtu ) const

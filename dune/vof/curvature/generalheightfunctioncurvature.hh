@@ -6,7 +6,6 @@
 #include <utility>
 
 //- dune-grid includes
-#include <dune/vof/mcmgmapper.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>
 

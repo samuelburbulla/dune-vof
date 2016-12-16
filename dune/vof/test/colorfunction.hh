@@ -29,6 +29,20 @@ public:
     for ( const auto& entity : elements( this->gridView() ) )
       this->operator[]( entity ) += a * x[ entity ];
   }
+
+  template< class BinaryInStream >
+  void write ( BinaryInStream &in ) const
+  {
+    for ( const auto &entity : elements( this->gridView() ) )
+      in.writeDouble( this->operator[]( entity ) );
+  }
+
+  template< class BinaryOutStream >
+  void read ( BinaryOutStream &out )
+  {
+    for ( const auto &entity : elements( this->gridView() ) )
+      out.readDouble( this->operator[]( entity ) );
+  }
 };
 
 #endif // #ifndef COLORFUNCTION_HH

@@ -1,9 +1,6 @@
 #ifndef DUNE_VOF_EDGENEIGHBORSSTENCIL_HH
 #define DUNE_VOF_EDGENEIGHBORSSTENCIL_HH
 
-//- dune-grid includes
-#include <dune/vof/mcmgmapper.hh>
-
 namespace Dune
 {
   namespace VoF

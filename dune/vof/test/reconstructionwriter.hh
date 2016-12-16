@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/path.hh>
 
 #include <dune/vof/geometry/2d/polygon.hh>
 #include <dune/vof/geometry/3d/polyhedron.hh>
@@ -22,11 +23,11 @@
 // ReconstructionWriter
 // --------------------
 
-template < class GridView, class ReconstructionSet, class DataParameters, class OutputPolygon >
+template < class GridView, class ReconstructionSet, class Flags, class DataParameters, class OutputPolygon >
 struct ReconstructionWriter
 {
-  ReconstructionWriter ( const GridView& gridView, const ReconstructionSet &reconstructionSet, const DataParameters &dataParameters )
-   : gridView_( gridView ), reconstructionSet_( reconstructionSet ), dataParameters_( dataParameters ), count_( dataParameters.startcounter() ) {};
+  ReconstructionWriter ( const GridView& gridView, const ReconstructionSet &reconstructionSet, const Flags &flags, const DataParameters &dataParameters )
+   : gridView_( gridView ), reconstructionSet_( reconstructionSet ), flags_( flags ), dataParameters_( dataParameters ), count_( dataParameters.startcounter() ) {};
 
   void write()
   {
@@ -35,6 +36,9 @@ struct ReconstructionWriter
     std::vector< OutputPolygon > io;
     for ( const auto& entity : Dune::elements( gridView_ ) )
     {
+      if ( !flags_.isMixed( entity ) )
+        continue;
+
       auto polytope = Dune::VoF::makePolytope( entity.geometry() );
       auto it = intersect( polytope, reconstructionSet_[ entity ].boundary() );
       auto intersection = static_cast< typename decltype( it )::Result > ( it );
@@ -69,7 +73,7 @@ private:
 
     std::stringstream name;
     name.fill('0');
-    name << "s" << std::setw(4) << size << "-" << dataParameters_.prefix() << std::setw(6) << count_ << ".pvtu";
+    name << "s" << std::setw(4) << size << "-" << dataParameters_.prefix() << std::setw(5) << count_ << ".pvtu";
 
     std::stringstream content;
     content.fill('0');
@@ -107,6 +111,7 @@ private:
 
   const GridView gridView_;
   const ReconstructionSet &reconstructionSet_;
+  const Flags &flags_;
   const DataParameters dataParameters_;
 
   std::size_t count_ = 0;

@@ -4,8 +4,6 @@ set( GRIDTYPE SPGRID )
 set( GRIDDIM 2 )
 
 set( GRIDFILES
-  2dgrid.dgf
-  3dgrid.dgf
   parameter
 )
 

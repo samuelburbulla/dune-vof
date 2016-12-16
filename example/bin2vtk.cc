@@ -14,7 +14,7 @@
 #include <dune/common/exceptions.hh>
 
 // dune-grid include
-#include <dune/grid/io/file/vtk/vtksequencewriter.hh>
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-fem includes
@@ -23,22 +23,17 @@
 
 // dune-vof includes
 #include <dune/vof/curvatureSet.hh>
+#include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/curvature/generalheightfunctioncurvature.hh>
-#include <dune/vof/femdfwrapper.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
-#include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
 
-#include <dune/vof/test/colorfunction.hh>
-
-
-// local includes
-#include "polygon.hh"
-#include "reconstructionwriter.hh"
-
+#include "../dune/vof/test/colorfunction.hh"
+#include "../dune/vof/test/polygon.hh"
+#include "../dune/vof/test/reconstructionwriter.hh"
 
 // DataOutputParameters
 // --------------------
@@ -55,7 +50,7 @@ struct DataOutputParameters
 
   virtual std::string prefix () const
   {
-    std::string prefix = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-fem" );
+    std::string prefix = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-data" );
     std::stringstream s;
     s << prefix << "-" << level_ << "-";
     return s.str();
@@ -122,7 +117,7 @@ struct PVDWriter
   {
     std::stringstream pvtu;
     pvtu.fill('0');
-    pvtu << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << prefix << std::setw(6) << number << ".pvtu";
+    pvtu << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << prefix << std::setw(5) << number << ".pvtu";
     content_ << "    <DataSet timestep=\"" << timeValue << "\" group=\"\" part=\"0\" file=\"" << pvtu.str() << "\"/>" << std::endl;
   }
 
@@ -174,7 +169,7 @@ try {
     using GridType = Dune::GridSelector::GridType;
 
     std::stringstream gridFile;
-    gridFile << GridType::dimension << "dgrid.dgf";
+    gridFile << "../dune/vof/test/" << GridType::dimension << "dgrid.dgf";
 
     Dune::GridPtr< GridType > gridPtr( gridFile.str() );
     gridPtr->loadBalance();
@@ -191,6 +186,32 @@ try {
 
     GridView gridView( grid.leafGridView() );
     ColorFunction uh( gridView );
+
+    using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
+    ReconstructionSet reconstructions( gridView );
+
+    using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
+    Stencils stencils( gridView );
+
+    const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
+    auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
+
+    using Flags = Dune::VoF::Flags< GridView >;
+    Flags flags = Dune::VoF::flags( gridView );
+    ColorFunction dfFlags ( gridView );
+
+    using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, Flags >;
+    CurvatureOperator curvatureOperator ( gridView, stencils );
+    using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
+    CurvatureSet curvatureSet( gridView );
+
+    using DataWriter = Dune::VTKWriter< GridView >;
+
+    DataWriter vtkwriter ( gridView );
+    vtkwriter.addCellData ( uh, "celldata" );
+    vtkwriter.addCellData ( flags, "flags" );
+    vtkwriter.addCellData ( curvatureSet, "curvature" );
+
 
 
     for ( std::size_t number = 0; ; number++ )
@@ -213,54 +234,29 @@ try {
       double timeValue;
       binaryStream >> timeValue;
 
-      //uh.read( binaryStream );
+      uh.read( binaryStream );
       uh.communicate();
-
-
 
       // Rebuild flags and reconstruction
       // --------------------------------
-
-      using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-      ReconstructionSet reconstructions( gridView );
-
-      using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
-      Stencils stencils( gridView );
-
-      const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
-      auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
-
-      using Flags = Dune::VoF::Flags< GridView >;
-      Flags flags = Dune::VoF::flags( gridView );
-      ColorFunction dfFlags ( gridView );
-
       flags.reflag( uh, eps );
       reconstruction( uh, reconstructions, flags );
-
-      using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, Flags >;
-      CurvatureOperator curvatureOperator ( gridView, stencils );
-      using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
-      CurvatureSet curvatureSet( gridView );
       curvatureOperator( reconstructions, flags, curvatureSet );
 
       // Write data to vtk file
       // ----------------------
-      using DataWriter = Dune::VTKSequenceWriter< GridView >;
-
-      DataWriter vtkwriter ( gridView, "vof", seriesName.str(), "" );
-      vtkwriter.addCellData ( uh, "celldata" );
-      vtkwriter.addCellData ( flags, "flags" );
-      vtkwriter.addCellData ( curvatureSet, "curvature" );
-
-      vtkwriter.write( number );
+      std::stringstream vtkfile;
+      vtkfile.fill('0');
+      vtkfile << dataOutputParameters.prefix() << std::setw(5) << number;
+      vtkwriter.pwrite( vtkfile.str(), dataOutputParameters.path(), "" );
       dataPVDWriter.addDataSet( dataOutputParameters.prefix(), number, timeValue );
 
       // Write reconstruction to vtu file
       // --------------------------------
       using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
-      using RecOutputType = ReconstructionWriter< GridView, ReconstructionSet, RecOutputParameters, Polygon >;
+      using RecOutputType = ReconstructionWriter< GridView, ReconstructionSet, Flags, RecOutputParameters, Polygon >;
 
-      RecOutputType recOutput ( gridView, reconstructions, recOutputParameters );
+      RecOutputType recOutput ( gridView, reconstructions, flags, recOutputParameters );
       recOutput.write();
 
       recPVDWriter.addDataSet( recOutputParameters.prefix(), number, timeValue );

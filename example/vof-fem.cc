@@ -17,33 +17,27 @@
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-fem includes
-#include <dune/fem/io/file/dataoutput.hh>
 #include <dune/fem/misc/mpimanager.hh>
 
 // dune-vof includes
-#include <dune/vof/femdfwrapper.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
-#include <dune/vof/reconstructedfunction.hh>
-#include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/reconstruction.hh>
+#include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
 
-#include <dune/vof/test/average.hh>
-#include <dune/vof/test/colorfunction.hh>
-#include <dune/vof/test/errors.hh>
-
-// local includes
-#include "binarywriter.hh"
-#include "polygon.hh"
-#include "reconstructionwriter.hh"
-#include "velocity.hh"
-#include "../problems/linearwall.hh"
-#include "../problems/rotatingcircle.hh"
-#include "../problems/sflow.hh"
-#include "../problems/slottedcylinder.hh"
-
+#include "../dune/vof/test/colorfunction.hh"
+#include "../dune/vof/test/average.hh"
+#include "../dune/vof/test/errors.hh"
+#include "../dune/vof/test/velocity.hh"
+#include "../dune/vof/test/binarywriter.hh"
+#include "../dune/vof/test/polygon.hh"
+#include "../dune/vof/test/reconstructionwriter.hh"
+#include "../dune/vof/test/problems/linearwall.hh"
+#include "../dune/vof/test/problems/rotatingcircle.hh"
+#include "../dune/vof/test/problems/sflow.hh"
+#include "../dune/vof/test/problems/slottedcylinder.hh"
 
 
 template < class GridPart, class Velocity, class Flags >
@@ -103,44 +97,44 @@ double algorithm ( Grid &grid, ColorFunction& uh, P& problem, int level, double 
   Velocity velocity( problem, start );
 
   // Create and initialize time provider
-  using TimeProviderType = Dune::Fem::TimeProvider< typename Grid::CollectiveCommunication >;
-  TimeProviderType timeProvider( start, cfl, gridView.comm() );
-  timeProvider.init( initTimeStep( gridView, velocity, flags ) );
+  double time = start;
+  double deltaT = initTimeStep( gridView, velocity, flags );
 
   // Create data output
   using DataOutputType = BinaryWriter;
-  DataOutputType dataOutput( level, timeProvider );
+  DataOutputType dataOutput( level, time );
 
   // Calculate and write initial data
-  if ( writeData ) dataOutput.write( grid, uh, timeProvider );
+  if ( writeData )
+    dataOutput.write( grid, uh, time );
 
   ColorFunction update( gridView );
 
   // Time Iteration
-  for( ; timeProvider.time() <= end; )
+  for( ; time <= end; )
   {
     if( Dune::Fem::Parameter::verbose() )
-      std::cerr << "time step = " << timeProvider.timeStep() << ", "
-                << "time = " << timeProvider.time() << ", "
-                << "dt = " << timeProvider.deltaT() << std::endl;
+      std::cerr << "time = " << time<< ", "
+                << "dt = " << deltaT << std::endl;
 
                 // Create velocity object
-    Velocity velocity( problem, timeProvider.time() );
+    Velocity velocity( problem, time );
 
     flags.reflag( uh, eps );
     reconstruction( uh, reconstructions, flags );
-    double dtEst = evolution( reconstructions, flags, velocity, timeProvider.deltaT(), update );
+    double dtEst = evolution( reconstructions, flags, velocity, deltaT, update );
 
     update.communicate();
     uh.axpy( 1.0, update );
 
-    timeProvider.provideTimeStepEstimate( dtEst );
-    timeProvider.next();
+    time += deltaT;
+    deltaT = dtEst * cfl;
 
-    if ( writeData ) dataOutput.write( grid, uh, timeProvider );
+    if ( writeData )
+      dataOutput.write( grid, uh, time );
   }
 
-  return Dune::VoF::l1error( gridView, reconstructions, flags, problem, timeProvider.time() );
+  return Dune::VoF::l1error( gridView, reconstructions, flags, problem, time );
 }
 
 
@@ -170,7 +164,7 @@ try {
   // Create Grid
   // ===========
   std::stringstream gridFile;
-  gridFile << Grid::dimension << "dgrid.dgf";
+  gridFile << "../dune/vof/test/" << Grid::dimension << "dgrid.dgf";
 
   Dune::GridPtr< Grid > gridPtr( gridFile.str() );
   gridPtr->loadBalance();
@@ -201,7 +195,7 @@ try {
     {
       // Use initial data of problem.
       Dune::VoF::average( uh, problem, 0.0 );
-    }/*
+    }
     else
     {
       // Use given data in binary file.
@@ -224,7 +218,7 @@ try {
         uh.read( binaryStream );
         std::cout << "Restarted in file " << filename << std::endl;
       }
-    }*/
+    }
 
     uh.communicate();
 

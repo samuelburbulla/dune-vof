@@ -6,8 +6,12 @@
 #include <iostream>
 #include <sstream>
 
-// dune includes
+// dune-common includes
+#include <dune/common/path.hh>
+
+// dune-fem includes
 #include <dune/fem/io/io.hh>
+#include <dune/fem/io/streams/binarystreams.hh>
 
 
 // BinaryDataWriter
@@ -17,27 +21,25 @@ class BinaryWriter
 public:
   using BinaryStream = Dune::Fem::BinaryFileOutStream;
 
-  template < class TP >
-  BinaryWriter ( const std::size_t level, const TP& timeProvider ) : level_( level )
+  BinaryWriter ( const std::size_t level, double time ) : level_( level )
   {
-    saveTime_ = timeProvider.time();
+    saveTime_ = time;
     path_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
     prefix_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-fem" );
-    saveStep_ = std::max( Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 ), timeProvider.deltaT() );
+    saveStep_ = Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 );
     Dune::Fem::createDirectory ( path_ );
   }
 
-  template < class TimeProviderType >
-  const bool willWrite ( const TimeProviderType &timeProvider )
+  const bool willWrite ( double time )
   {
-    return timeProvider.time() - saveTime_ >= -0.5 * saveStep_;
+    return time - saveTime_ >= -0.5 * saveStep_;
   }
 
-  template < class Grid, class DF, class TP >
-  const void write ( const Grid& grid, const DF &uh, const TP& timeProvider, const bool forced = false )
+  template < class Grid, class DF >
+  const void write ( const Grid& grid, const DF &uh, double time, const bool forced = false )
   {
 
-    if ( willWrite( timeProvider ) || forced )
+    if ( willWrite( time ) || forced )
     {
       std::stringstream name;
       name.fill('0');
@@ -47,8 +49,8 @@ public:
       std::stringstream dfname;
       dfname << name.str() << ".bin";
       BinaryStream binaryStream ( Dune::concatPaths( path_, dfname.str() ) );
-      binaryStream << timeProvider.time();
-      //uh.write( binaryStream );
+      binaryStream << time;
+      uh.write( binaryStream );
 
       saveTime_ += saveStep_;
       writeStep_++;

@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <vector>
-#include <dune/vof/mcmgmapper.hh>
 
 namespace Dune
 {
