@@ -14,60 +14,60 @@ namespace Dune
     // Capabilities from dune-grid
     // ---------------------------
 
-    template< class HostGrid >
-    struct hasSingleGeometryType< InterfaceGrid< HostGrid > >
+    template< class Reconstruction >
+    struct hasSingleGeometryType< VoF::InterfaceGrid< Reconstruction > >
     {
-      static const bool v = hasSingleGeometryType< HostGrid >::v;
-      static const unsigned int topologyId = hasSingleGeometryType< HostGrid >::topologyId;
+      static const bool v = false;
+      static const unsigned int topologyId = ~static_cast< unsigned int >( 0u );
     };
 
 
-    template< class HostGrid >
-    struct isCartesian< InterfaceGrid< HostGrid > >
-    {
-      static const bool v = isCartesian< HostGrid >::v;
-    };
-
-
-    template< class HostGrid, int codim >
-    struct hasEntity< InterfaceGrid< HostGrid >, codim >
-    {
-      static const bool v = hasEntity< HostGrid, codim >::v;
-    };
-
-    template< class HostGrid, int codim >
-    struct canCommunicate< InterfaceGrid< HostGrid >, codim >
-    {
-      static const bool v = canCommunicate< HostGrid, codim >::v;
-    };
-
-
-    template< class HostGrid >
-    struct hasBackupRestoreFacilities< InterfaceGrid< HostGrid > >
-    {
-      static const bool v = hasBackupRestoreFacilities< HostGrid >::v;
-    };
-
-    template< class HostGrid >
-    struct isLevelwiseConforming< InterfaceGrid< HostGrid > >
-    {
-      static const bool v = isLevelwiseConforming< HostGrid >::v;
-    };
-
-    template< class HostGrid >
-    struct isLeafwiseConforming< InterfaceGrid< HostGrid > >
-    {
-      static const bool v = isLeafwiseConforming< HostGrid >::v;
-    };
-
-    template< class HostGrid >
-    struct threadSafe< InterfaceGrid< HostGrid > >
+    template< class Reconstruction >
+    struct isCartesian< VoF::InterfaceGrid< Reconstruction > >
     {
       static const bool v = false;
     };
 
-    template< class HostGrid >
-    struct viewThreadSafe< InterfaceGrid< HostGrid > >
+
+    template< class Reconstruction, int codim >
+    struct hasEntity< VoF::InterfaceGrid< Reconstruction >, codim >
+    {
+      static const bool v = true;
+    };
+
+    template< class Reconstruction, int codim >
+    struct canCommunicate< VoF::InterfaceGrid< Reconstruction >, codim >
+    {
+      static const bool v = canCommunicate< Reconstruction, 0 >::v;
+    };
+
+
+    template< class Reconstruction >
+    struct hasBackupRestoreFacilities< VoF::InterfaceGrid< Reconstruction > >
+    {
+      static const bool v = false;
+    };
+
+    template< class Reconstruction >
+    struct isLevelwiseConforming< VoF::InterfaceGrid< Reconstruction > >
+    {
+      static const bool v = true;
+    };
+
+    template< class Reconstruction >
+    struct isLeafwiseConforming< VoF::InterfaceGrid< Reconstruction > >
+    {
+      static const bool v = true;
+    };
+
+    template< class Reconstruction >
+    struct threadSafe< VoF::InterfaceGrid< Reconstruction > >
+    {
+      static const bool v = false;
+    };
+
+    template< class Reconstruction >
+    struct viewThreadSafe< VoF::InterfaceGrid< Reconstruction > >
     {
       static const bool v = false;
     };

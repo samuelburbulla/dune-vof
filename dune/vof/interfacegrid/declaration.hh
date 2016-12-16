@@ -7,7 +7,7 @@ namespace Dune
   namespace VoF
   {
 
-    template< class HostGrid >
+    template< class Reconstruction >
     class InterfaceGrid;
 
   } // namespace VoF

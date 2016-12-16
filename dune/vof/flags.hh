@@ -149,6 +149,8 @@ namespace Dune
         color.gridView().grid().communicate( exchange2, Dune::All_All_Interface, Dune::ForwardCommunication );
       }
 
+      const GridView &gridView () const { return gridView_; }
+
     private:
       template< class _Range >
       bool inRange ( const Entity& en, _Range = {} ) const
@@ -159,7 +161,6 @@ namespace Dune
       template< class Reduce >
       Exchange< Reduce > makeExchange ( Reduce reduce ) { return Exchange< Reduce >( *this, std::move( reduce ) ); }
 
-      const GridView &gridView () const { return gridView_; }
       const IndexSet& indexSet () const { return gridView().indexSet(); }
       Index index ( const Entity &entity ) const { return indexSet().index( entity ); }
 
