@@ -161,7 +161,7 @@ namespace Dune
       const GridView &gridView () const { return gridView_; }
       const auto &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
 
-      const GridView &gridView_;
+      GridView gridView_;
       const Stencils &stencils_;
     };
 

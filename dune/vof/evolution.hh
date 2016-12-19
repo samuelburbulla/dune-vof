@@ -40,7 +40,7 @@ namespace Dune
       using ctype = typename Entity::Geometry::ctype;
 
     public:
-      explicit Evolution ( const GridView& gridView ) : gridView_( gridView ) {}
+      explicit Evolution ( GridView gridView ) : gridView_( gridView ) {}
 
       /**
        * \brief (gobal) operator application
@@ -157,7 +157,7 @@ namespace Dune
 
       const GridView& gridView() const { return gridView_; }
 
-      const GridView& gridView_;
+      GridView gridView_;
     };
 
     // evolution

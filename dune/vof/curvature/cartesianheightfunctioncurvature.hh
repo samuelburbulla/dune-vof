@@ -37,7 +37,7 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:
-      explicit CartesianHeightFunctionCurvature ( const GridView &gridView, const Stencils &stencils )
+      explicit CartesianHeightFunctionCurvature ( GridView gridView, const Stencils &stencils )
        : gridView_( gridView ), stencils_( stencils )
       {}
 
@@ -140,7 +140,7 @@ namespace Dune
       const GridView &gridView () const { return gridView_; }
       const auto &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
 
-      const GridView &gridView_;
+      GridView gridView_;
       const Stencils &stencils_;
     };
 
