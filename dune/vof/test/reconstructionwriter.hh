@@ -55,12 +55,12 @@ struct ReconstructionWriter
 
     std::stringstream name;
     name.fill('0');
-    name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) <<  Dune::Fem::MPIManager::rank()
+    name << "s" << std::setw(4) << gridView_.grid().comm().size() << "-p" << std::setw(4) <<  gridView_.grid().comm().rank()
       << "-" << dataParameters_.prefix() << std::setw(5) << count_ << ".vtu";
 
     vtuwriter.write( Dune::concatPaths( dataParameters_.path(), name.str() ) );
 
-    if ( Dune::Fem::MPIManager::rank() == 0 )
+    if ( gridView_.grid().comm().rank() == 0 )
       writeRecPVTUFile();
 
     count_++;
@@ -69,7 +69,7 @@ struct ReconstructionWriter
 private:
   void writeRecPVTUFile() const
   {
-    const std::size_t size = Dune::Fem::MPIManager::size();
+    const std::size_t size = gridView_.grid().comm().size();
 
     std::stringstream name;
     name.fill('0');
@@ -95,7 +95,7 @@ private:
 )";
 
     for ( std::size_t i = 0; i < size; ++i )
-      content << "      <Piece  Source=\"s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << i << "-" << dataParameters_.prefix()
+      content << "      <Piece  Source=\"s" << std::setw(4) << size << "-p" << std::setw(4) << i << "-" << dataParameters_.prefix()
         << std::setw(5) << count_ << ".vtu\"/>" << std::endl;
 
     content <<

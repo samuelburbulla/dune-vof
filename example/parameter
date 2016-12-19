@@ -1,22 +1,19 @@
-# select parallel process for verbose output (-1 = verbosity off)
-fem.verboserank: -1
+[grid]
+level = 3
+repeats = 0
 
-#### Parameters for output ####
-fem.io.path: data
-fem.io.outputformat: vtk-cell
-fem.io.subsamplinglevel: 1
-fem.io.savestep: 0.1
-fem.io.prefix: vof-fem
-fem.io.recprefix: vof-rec
+[scheme]
+start = 0
+end = 10.0
+cfl = 0.25
+eps = 1e-6
 
-#### Parameters for program ####
-start: 0.0
-end: 2.0
-
-level: 3
-repeats: 0
-
-cfl: 0.25
-eps: 1e-6
-
+[io]
 restartStep: -1
+verboserank = -1
+writeData = 1
+savestep = 0.1
+path = data
+prefix = vof
+recprefix: vof-rec
+

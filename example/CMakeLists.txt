@@ -16,7 +16,7 @@ endforeach()
 
 
 set( EXECUTABLES
-  vof-fem
+  vof
   bin2vtk
 )
 

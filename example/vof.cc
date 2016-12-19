@@ -12,6 +12,7 @@
 
 // dune-common includes
 #include <dune/common/exceptions.hh>
+#include <dune/common/parametertreeparser.hh>
 
 // dune-grid include
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
@@ -71,7 +72,7 @@ double initTimeStep( const GridPart& gridPart, Velocity &velocity, const Flags &
 // ---------
 
 template< class Grid, class ColorFunction, class P >
-double algorithm ( Grid &grid, ColorFunction& uh, P& problem, int level, double start, double end, double cfl, double eps, const bool writeData = true )
+double algorithm ( Grid &grid, ColorFunction& uh, P& problem, const Dune::ParameterTree &parameters, int level, double start, double end, double cfl, double eps, const bool verbose = false, const bool writeData = true )
 {
   using GridView = typename Grid::LeafGridView;
   GridView gridView( grid.leafGridView() );
@@ -102,7 +103,7 @@ double algorithm ( Grid &grid, ColorFunction& uh, P& problem, int level, double 
 
   // Create data output
   using DataOutputType = BinaryWriter;
-  DataOutputType dataOutput( level, time );
+  DataOutputType dataOutput( parameters, level, time );
 
   // Calculate and write initial data
   if ( writeData )
@@ -113,11 +114,11 @@ double algorithm ( Grid &grid, ColorFunction& uh, P& problem, int level, double 
   // Time Iteration
   for( ; time <= end; )
   {
-    if( Dune::Fem::Parameter::verbose() )
+    if ( verbose )
       std::cerr << "time = " << time<< ", "
                 << "dt = " << deltaT << std::endl;
 
-                // Create velocity object
+    // Create velocity object
     Velocity velocity( problem, time );
 
     flags.reflag( uh, eps );
@@ -141,21 +142,24 @@ double algorithm ( Grid &grid, ColorFunction& uh, P& problem, int level, double 
 int main(int argc, char** argv)
 try {
 
-  Dune::Fem::MPIManager::initialize( argc, argv );
+  Dune::MPIHelper::instance( argc, argv );
 
   // Read Parameter File
   // ===================
-  Dune::Fem::Parameter::append( argc, argv );
-  Dune::Fem::Parameter::append( "parameter" );
+  Dune::ParameterTree parameters;
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
+  Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  const int level = Dune::Fem::Parameter::getValue< int >( "level", 0 );
-  const int repeats = Dune::Fem::Parameter::getValue< int >( "repeats", 2 );
-  double startTime = Dune::Fem::Parameter::getValue< double >( "start", 0.0 );
-  const double endTime = Dune::Fem::Parameter::getValue< double >( "end", 2.5 );
-  const double cfl = Dune::Fem::Parameter::getValue< double >( "cfl", 1.0 );
-  const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
-  const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
-  const int restartStep = Dune::Fem::Parameter::getValue< int >( "restartStep", -1 );
+  int level = parameters.get< int >( "grid.level", 0 );
+  int repeats = parameters.get< int >( "grid.repeats", 0 );
+  double start = parameters.get< double >( "scheme.start", 0.0 );
+  double end = parameters.get< double >( "scheme.end", 2.5 );
+  double cfl = parameters.get< double >( "scheme.cfl", 1.0 );
+  double eps = parameters.get< double >( "scheme.eps", 1e-9 );
+  std::string path = parameters.get< std::string >( "fem.io.path", "data" );
+  int restartStep = parameters.get< int >( "io.restartStep", -1 );
+  int verboserank = parameters.get< int >( "io.verboserank", -1 );
+  bool writeData = parameters.get< bool >( "io.writeData", true );
 
   using Grid = Dune::GridSelector::GridType;
   using GridView = typename Grid::LeafGridView;
@@ -201,8 +205,8 @@ try {
       // Use given data in binary file.
       std::stringstream namedata;
       namedata.fill('0');
-      namedata << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
-        << "-vof-fem-" << std::to_string( step ) << "-" << std::setw(5) << restartStep << ".bin";
+      namedata << "s" << std::setw(4) << grid.comm().size() << "-p" << std::setw(4) << grid.comm().rank()
+        << "-vof-" << std::to_string( step ) << "-" << std::setw(5) << restartStep << ".bin";
       const auto filename = Dune::concatPaths( path, namedata.str() );
       if ( !Dune::Fem::fileExists( filename ) )
       {
@@ -214,7 +218,7 @@ try {
         Dune::Fem::BinaryFileInStream binaryStream ( filename );
         double timestamp;
         binaryStream >> timestamp;
-        startTime = timestamp;
+        start = timestamp;
         uh.read( binaryStream );
         std::cout << "Restarted in file " << filename << std::endl;
       }
@@ -222,11 +226,13 @@ try {
 
     uh.communicate();
 
+    bool verbose = ( verboserank == grid.comm().rank() );
+
     // Run Algorithm
-    double error = algorithm( grid, uh, problem, step, startTime, endTime, cfl, eps );
+    double error = algorithm( grid, uh, problem, parameters, step, start, end, cfl, eps, verbose, writeData );
 
 
-    if ( Dune::Fem::MPIManager::rank() == 0 )
+    if ( grid.comm().rank() == 0 )
     {
       const double l1eoc = log( oldError / error ) / M_LN2;
       std::cout << "L1-Error =" << std::setw( 16 ) << error << std::endl;
