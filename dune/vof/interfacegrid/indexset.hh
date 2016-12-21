@@ -7,12 +7,11 @@
 #include <type_traits>
 #include <vector>
 
-#include <dune/common/typetraits.hh>
-
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/indexidset.hh>
 
 #include <dune/vof/interfacegrid/declaration.hh>
+#include <dune/vof/mixedcellmapper.hh>
 
 namespace Dune
 {
@@ -20,33 +19,60 @@ namespace Dune
   namespace VoF
   {
 
-    // InterfaceGridIndexSet
-    // --------------
+    // InterfaceGridIndexSetTraits
+    // ---------------------------
 
     template< class Grid >
-    class InterfaceGridIndexSet
-      : public IndexSet< Grid, InterfaceGridIndexSet< Grid >, std::size_t >
+    struct InterfaceGridIndexSetTraits
     {
-      typedef InterfaceGridIndexSet< Grid > This;
-      typedef IndexSet< Grid, InterfaceGridIndexSet< Grid >, std::size_t > Base;
+      typedef typename std::remove_const_t< Grid >::Traits GridTraits;
 
-      typedef typename std::remove_const_t< Grid >::Traits Traits;
+      typedef typename GridTraits::Reconstruction Reconstruction;
 
-      typedef typename Traits::Reconstruction Reconstruction;
+      static const int dimension = GridTraits::dimension;
 
-    public:
-      static const int dimension = Traits::dimension;
+      typedef VoF::Flags< typename Reconstruction::GridView > Flags;
 
-      typedef typename Base::IndexType IndexType;
+      typedef MixedCellMapper< typename Reconstruction::GridView > Indices;
+
+      typedef typename Indices::Index IndexType;
 
       typedef std::array< GeometryType, 1 > Types;
 
-      explicit InterfaceGridIndexSet ( const Flags< typename Reconstruction::GridView > &flags )
-        : hostIndexSet_( flags.gridView().indexSet() ),
-          indices_( hostIndexSet_.size( 0 ) )
+      template< int codim >
+      struct Codim
       {
-        update( flags );
-      }
+        typedef typename GridTraits::template Codim< codim >::Entity Entity;
+      };
+    };
+
+
+
+    // InterfaceGridIndexSet
+    // ---------------------
+
+    template< class Grid >
+    class InterfaceGridIndexSet
+      : public IndexSet< Grid, InterfaceGridIndexSet< Grid >, typename InterfaceGridIndexSetTraits< Grid >::IndexType >
+    {
+      typedef InterfaceGridIndexSet< Grid > This;
+      typedef IndexSet< Grid, InterfaceGridIndexSet< Grid >, typename InterfaceGridIndexSetTraits< Grid >::IndexType > Base;
+
+      typedef typename InterfaceGridIndexSetTraits< Grid >::Indices Indices;
+
+    public:
+      static const int dimension = InterfaceGridIndexSetTraits< Grid >::dimension;
+
+      typedef typename InterfaceGridIndexSetTraits< Grid >::Flags Flags;
+
+      typedef typename InterfaceGridIndexSetTraits< Grid >::IndexType IndexType;
+
+      typedef typename InterfaceGridIndexSetTraits< Grid >::Types Types;
+
+      template< int codim >
+      using Codim = InterfaceGridIndexSetTraits< Grid >::template Codim< codim >;
+
+      explicit InterfaceGridIndexSet ( const Flags &flags ) : indices_( flags ) {}
 
       template< class Entity >
       IndexType index ( const Entity &entity ) const
@@ -55,9 +81,10 @@ namespace Dune
       }
 
       template< int cd >
-      IndexType index ( const typename Traits::template Codim< cd >::Entity &entity ) const
+      IndexType index ( const typename Codim< cd >::Entity &entity ) const
       {
-        // ...
+        // TODO: extend to (dimension == 2), i.e., the 3d case
+        return index ( entity, Dune::Codim< cd >() );
       }
 
       template< class Entity >
@@ -67,9 +94,10 @@ namespace Dune
       }
 
       template< int cd >
-      IndexType subIndex ( const typename Traits::template Codim< cd >::Entity &entity, int i, unsigned int codim ) const
+      IndexType subIndex ( const typename Codim< cd >::Entity &entity, int i, unsigned int codim ) const
       {
-        // ...
+        // TODO: extend to (dimension == 2), i.e., the 3d case
+        return subIndex( entity, i, codim, Dune::Codim< cd >() );
       }
 
       IndexType size ( GeometryType type ) const
@@ -80,39 +108,53 @@ namespace Dune
 
       IndexType size ( int codim ) const
       {
-        // ....
+        // TODO: extend to (dimension == 2), i.e., the 3d case
+        assert( dimension == 1 );
+
+        assert( (codim >= 0) && (codim <= dimension) )
+        return (codim+1) * size_;
       }
 
       template< class Entity >
       bool contains ( const Entity &entity ) const
       {
-        // ...
+        return true;
       }
 
-      Types types( int codim ) const
+      Types types ( int codim ) const
       {
         assert( (codim >= 0) && (codim <= dimension) );
         const int mydim = dimension - codim;
         return {{ GeometryType( (mydim < 2 ? GeometryType::cube, GeometryType::none), mydim ) }};
       }
 
-      void update ( const Flags< typename Reconstruction::GridView > &flags )
-      {
-        std::size_t size_;
-        for( const auto &element : elements( flags.gridView(), Partition::all ) )
-        {
-          if( !flags.isMixed( element ) )
-            continue;
-
-          const std::size_t gtIndex = LocalGeometryTypeIndex::index( element.type() );
-          indices_[ gtIndex ][ hostIndexSet_.index( element ) ] = size_++;
-        }
-      }
+      void update ( const Flags &flags ) { indices_.upate( flags ); }
 
     private:
-      const HostIndexSet &hostIndexSet_;
-      IndexType size_;
-      std::array< std::vector< IndexType >, LocalGeometryTypeIndex::size( dimension+1 ) > indices_;
+      IndexType index ( const typename Codim< 0 >::Entity &entity, Dune::Codim< 0 > ) const
+      {
+        return indices_.index( Grid::getRealImplementation( entity ).hostElement() );
+      }
+
+      IndexType index ( const typename Codim< 1 >::Entity &entity, Dune::Codim< 1 > ) const
+      {
+        return 2*indices_.index( Grid::getRealImplementation( entity ).hostElement() ) + Grid::getRealImplementation( entity ).subEntity();
+      }
+
+      IndexType subIndex ( const typename Codim< 0 >::Entity &entity, int i, unsigned int codim, Dune::Codim< 0 > ) const
+      {
+        assert( codim <= static_cast< unsigned int >( dimension ) );
+        assert( (i >= 0) && (i < static_cast< int >( codim+1 )) );
+        return (codim+1)*indices_.index( Grid::getRealImplementation( entity ).hostElement() ) + i;
+      }
+
+      IndexType subIndex ( const typename Codim< 1 >::Entity &entity, int i, unsigned int codim, Dune::Codim< 1 > ) const
+      {
+        assert( (codim == 1u) && (i == 0) );
+        return index( entity, Dune::Codim< 1 >() );
+      }
+
+      Indices indices_;
     };
 
   } // namespace VoF
