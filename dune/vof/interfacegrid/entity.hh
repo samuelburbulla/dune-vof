@@ -7,6 +7,8 @@
 #include <dune/grid/common/exceptions.hh>
 #include <dune/grid/common/entity.hh>
 
+#include <dune/vof/interfacegrid/entityseed.hh>
+
 namespace Dune
 {
 
@@ -30,7 +32,7 @@ namespace Dune
       static const int dimension = Traits::dimension;
       static const int mydimension = dimension - codimension;
 
-      typedef typename Traits::template Codim< codimension >::EntitySeed EntitySeed;
+      typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef typename Traits::template Codim< codimension >::Geometry Geometry;
 
       typedef typename Traits::Reconstruction::GridView::template Codim< 0 >::Entity HostElement;
@@ -56,10 +58,7 @@ namespace Dune
 
       PartitionType partitionType () const { return hostElement().partitionType(); }
 
-      EntitySeed seed () const
-      {
-        // TODO: Please implement me
-      }
+      EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement_.seed(), subEntity_ ); }
 
       unsigned int subEntities ( unsigned int codim )
       {
@@ -97,7 +96,7 @@ namespace Dune
       static const int dimension = Traits::dimension;
       static const int mydimension = dimension - codimension;
 
-      typedef typename Traits::template Codim< codimension >::EntitySeed EntitySeed;
+      typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef typename Traits::template Codim< codimension >::LocalGeometry LocalGeometry;
       typedef typename Traits::template Codim< codimension >::Geometry Geometry;
 
@@ -154,10 +153,7 @@ namespace Dune
 
       PartitionType partitionType () const { return hostElement().partitionType(); }
 
-      EntitySeed seed () const
-      {
-        // TODO: Please implement me
-      }
+      EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement_.seed() ); }
 
       template< int codim >
       typename Codim< codim >::Entity subEntity ( int i ) const

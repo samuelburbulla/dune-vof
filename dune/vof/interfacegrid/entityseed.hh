@@ -11,37 +11,66 @@ namespace Dune
   namespace VoF
   {
 
-    template< int codim, class Grd >
+    // InterfaceGridEntitySeed
+    // -----------------------
+
+    template< int codim, class Grid >
     class InterfaceGridEntitySeed
     {
-      typedef typename remove_const< Grd >::type::Traits Traits;
+      typedef typename remove_const< Grid >::type::Traits Traits;
 
     public:
       static const int codimension = codim;
       static const int dimension = Traits::dimension;
       static const int mydimension = dimension - codimension;
-      static const int dimensionworld = Traits::dimensionworld;
 
-      typedef typename Traits::Grid Grid;
-      typedef typename Traits::template Codim< codim >::Entity Entity;
+      typedef typename Traits::Reconstruction::GridView::Grid::template Codim< 0 >::EntitySeed HostElementSeed;
 
-      typedef typename Traits::HostGrid HostGrid;
-      typedef typename HostGrid::template Codim< codim >::EntitySeed HostEntitySeed;
+      InterfaceGridEntitySeed () = default;
 
-      explicit InterfaceGridEntitySeed ( const HostEntitySeed &hostEntitySeed )
-        : hostEntitySeed_( hostEntitySeed )
+      InterfaceGridEntitySeed ( const HostElementSeed &hostElementSeed, int subEntity )
+        : hostElementSeed_( hostElementSeed ), subEntity_( subEntity )
       {}
 
-      InterfaceGridEntitySeed ()
-        : hostEntitySeed_()
-      {}
+      bool isValid () const { return hostElementSeed_.isValid(); }
 
-      bool isValid() const { return hostEntitySeed_.isValid(); }
-
-      const HostEntitySeed &hostEntitySeed () const { return hostEntitySeed_; }
+      const HostElementSeed &hostElementSeed () const { return hostElementSeed_; }
+      const int subEntity () const { return subEntity_; }
 
     private:
-      HostEntitySeed hostEntitySeed_;
+      HostElementSeed hostElementSeed_;
+      int subEntity_;
+    };
+
+
+
+    // InterfaceGridEntitySeed for codimension 0
+    // -----------------------------------------
+
+    template< class Grid >
+    class InterfaceGridEntitySeed< 0, Grid >
+    {
+      typedef typename remove_const< Grid >::type::Traits Traits;
+
+    public:
+      static const int codimension = 0;
+      static const int dimension = Traits::dimension;
+      static const int mydimension = dimension - codimension;
+
+      typedef typename Traits::Reconstruction::GridView::Grid::template Codim< 0 >::EntitySeed HostElementSeed;
+
+      InterfaceGridEntitySeed () = default;
+
+      explicit InterfaceGridEntitySeed ( const HostElementSeed &hostElementSeed )
+        : hostElementSeed_( hostElementSeed )
+      {}
+
+      bool isValid () const { return hostElementSeed_.isValid(); }
+
+      const HostElementSeed &hostElementSeed () const { return hostElementSeed_; }
+
+    private:
+      HostElementSeed hostElementSeed_;
     };
 
   } // namespace VoF
