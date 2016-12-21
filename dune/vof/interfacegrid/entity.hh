@@ -15,6 +15,14 @@ namespace Dune
   namespace VoF
   {
 
+    // External Forward Declarations
+    // -----------------------------
+
+    template< class Grid >
+    class InterfaceGridHierarchicIterator;
+
+
+
     // InterfaceGridEntity
     // -------------------
 
@@ -106,7 +114,7 @@ namespace Dune
         typedef Dune::Entity< codim, dimension, Grid, InterfaceGridEntity > Entity;
       }
 
-      typedef typename Traits::HierarchicIterator HierarchicIterator;
+      typedef Dune::EntityIterator< 0, Grid, InterfaceGridHierarchicIterator< Grid > > HierarchicIterator;
 
       typedef typename Traits::Reconstruction::GridView::template Codim< 0 >::Entity HostElement;
 
@@ -134,15 +142,8 @@ namespace Dune
       bool hasBoundaryIntersections () const { return true; }
       bool hasFather () const { return false; }
 
-      HierarchicIterator hbegin ( int maxLevel ) const
-      {
-        // TODO: Please implement me
-      }
-
-      HierarchicIterator hend ( int maxLevel ) const
-      {
-        // TODO: Please implement me
-      }
+      HierarchicIterator hbegin ( int maxLevel ) const { return InterfaceGridHierarchicIterator< Grid >(); }
+      HierarchicIterator hend ( int maxLevel ) const { return InterfaceGridHierarchicIterator< Grid >(); }
 
       bool isLeaf () const { return true; }
       bool isNew () const { return false; }
