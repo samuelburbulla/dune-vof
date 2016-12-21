@@ -17,9 +17,6 @@
 // dune-grid include
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
-// dune-fem includes
-#include <dune/fem/misc/mpimanager.hh>
-
 // dune-vof includes
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flags.hh>
@@ -156,7 +153,7 @@ try {
   double end = parameters.get< double >( "scheme.end", 2.5 );
   double cfl = parameters.get< double >( "scheme.cfl", 1.0 );
   double eps = parameters.get< double >( "scheme.eps", 1e-9 );
-  std::string path = parameters.get< std::string >( "fem.io.path", "data" );
+  std::string path = parameters.get< std::string >( "io.path", "data" );
   int restartStep = parameters.get< int >( "io.restartStep", -1 );
   int verboserank = parameters.get< int >( "io.verboserank", -1 );
   bool writeData = parameters.get< bool >( "io.writeData", true );
