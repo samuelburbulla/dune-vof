@@ -19,9 +19,14 @@ include(DuneMacros)
 dune_project()
 dune_enable_all_packages()
 add_subdirectory("dune")
-add_subdirectory("example")
 add_subdirectory("doc/doxygen")
 add_subdirectory("cmake/modules")
+
+if(EXCLUDE_EXAMPLES_FROM_ALL)
+  add_subdirectory("examples" EXCLUDE_FROM_ALL)
+else()
+  add_subdirectory("examples")
+endif()
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
