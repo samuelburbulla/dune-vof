@@ -16,6 +16,7 @@
 // dune-grid include
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
+#include <dune/common/parametertreeparser.hh>
 
 // dune-fem includes
 #include <dune/fem/io/file/dataoutput.hh>
@@ -42,7 +43,10 @@ struct DataOutputParameters
 : public Dune::Fem::LocalParameter< Dune::Fem::DataOutputParameters, DataOutputParameters >
 {
   DataOutputParameters ( const int level, const int savecount )
-   : level_ ( level ), savecount_ ( savecount ) {}
+   : level_ ( level ), savecount_ ( savecount )
+  {
+    Dune::ParameterTreeParser::readINITree( "parameter", parameters_ );
+  }
 
   virtual bool willWrite ( bool write ) const { return true; }
 
@@ -50,7 +54,7 @@ struct DataOutputParameters
 
   virtual std::string prefix () const
   {
-    std::string prefix = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-data" );
+    std::string prefix = parameters_.get< std::string >( "io.prefix", "vof-data" );
     std::stringstream s;
     s << prefix << "-" << level_ << "-";
     return s.str();
@@ -58,11 +62,12 @@ struct DataOutputParameters
 
   virtual std::string path() const
   {
-    return Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+    return parameters_.get< std::string >( "io.path", "data" );
   }
 
 private:
   int level_, savecount_;
+  Dune::ParameterTree parameters_;
 };
 
 
@@ -73,7 +78,10 @@ struct RecOutputParameters
 : public Dune::Fem::LocalParameter< Dune::Fem::DataOutputParameters, RecOutputParameters >
 {
   RecOutputParameters ( const int level, const int savecount )
-   : level_ ( level ), savecount_ ( savecount ) {}
+   : level_ ( level ), savecount_ ( savecount )
+   {
+     Dune::ParameterTreeParser::readINITree( "parameter", parameters_ );
+   }
 
   virtual bool willWrite ( bool write ) const { return true; }
 
@@ -81,7 +89,7 @@ struct RecOutputParameters
 
   virtual std::string prefix () const
   {
-    std::string prefix = Dune::Fem::Parameter::getValue< std::string >( "fem.io.recprefix", "vof-rec" );
+    std::string prefix = parameters_.get< std::string >( "io.recprefix", "vof-rec" );
     std::stringstream s;
     s << prefix << "-" << level_ << "-";
     return s.str();
@@ -89,11 +97,13 @@ struct RecOutputParameters
 
   virtual std::string path() const
   {
-    return Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
+    return parameters_.get< std::string >( "io.path", "data" );
   }
 
 private:
   int level_, savecount_;
+  Dune::ParameterTree parameters_;
+
 };
 
 
@@ -113,11 +123,11 @@ struct PVDWriter
     file.close();
   }
 
-  void addDataSet ( const std::string& prefix, const std::size_t number, const double timeValue )
+  void addDataSet ( const std::size_t size, const std::string& prefix, const std::size_t number, const double timeValue )
   {
     std::stringstream pvtu;
     pvtu.fill('0');
-    pvtu << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-" << prefix << std::setw(5) << number << ".pvtu";
+    pvtu << "s" << std::setw(4) << size<< "-" << prefix << std::setw(5) << number << ".pvtu";
     content_ << "    <DataSet timestep=\"" << timeValue << "\" group=\"\" part=\"0\" file=\"" << pvtu.str() << "\"/>" << std::endl;
   }
 
@@ -134,19 +144,19 @@ private:
 
 int main( int argc, char** argv )
 try {
-  Dune::Fem::MPIManager::initialize( argc, argv );
+  Dune::MPIHelper::instance( argc, argv );
 
   // read parameter file
-  Dune::Fem::Parameter::append( argc, argv );
-  Dune::Fem::Parameter::append( "parameter" );
+  Dune::ParameterTree parameters;
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
+  Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
   // Create filename
   // ---------------
-  const std::string name ( "vof-fem" );
-  std::size_t level ( Dune::Fem::Parameter::getValue< std::size_t >( "level", 0 ) );
-  std::size_t repeats ( Dune::Fem::Parameter::getValue< std::size_t >( "repeats", 0 ) );
-  const std::string path = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
-
+  const std::string name ( "vof" );
+  std::size_t level ( parameters.get< std::size_t >( "grid.level", 0 ) );
+  std::size_t repeats ( parameters.get< std::size_t >( "grid.repeats", 0 ) );
+  const std::string path = parameters.get< std::string >( "io.path", "data" );
 
   if ( argc > 1 )
   {
@@ -157,13 +167,6 @@ try {
   const std::size_t maxLevel = level + repeats;
   for ( ; level <= maxLevel; ++level )
   {
-    std::stringstream seriesName;
-    seriesName.fill('0');
-    seriesName << "./" << path << "/" << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-vof-fem-" << level;
-
-    PVDWriter dataPVDWriter ( seriesName.str() + "-data.pvd" );
-    PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd" );
-
     // Create grid
     // -----------
     using GridType = Dune::GridSelector::GridType;
@@ -179,6 +182,13 @@ try {
     grid.globalRefine( level * refineStepsForHalf );
 
 
+    std::stringstream seriesName;
+    seriesName.fill('0');
+    seriesName << "./" << path << "/" << "s" << std::setw(4) << grid.comm().size() << "-vof-" << level;
+
+    PVDWriter dataPVDWriter ( seriesName.str() + "-data.pvd" );
+    PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd" );
+
     // Create discrete function
     // ------------------------
     using GridView = typename GridType::LeafGridView;
@@ -193,7 +203,7 @@ try {
     using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
     Stencils stencils( gridView );
 
-    const double eps = Dune::Fem::Parameter::getValue< double >( "eps", 1e-9 );
+    const double eps = parameters.get< double >( "scheme.eps", 1e-9 );
     auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
 
     using Flags = Dune::VoF::Flags< GridView >;
@@ -223,7 +233,7 @@ try {
       // ---------------------
       std::stringstream filename;
       filename.fill('0');
-      filename  << "./" << path << "/"  << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+      filename  << "./" << path << "/"  << "s" << std::setw(4) << grid.comm().size() << "-p" << std::setw(4) << grid.comm().rank()
         << "-" << dataOutputParameters.prefix() << std::setw(5) << number;
 
       if ( !std::ifstream ( filename.str() + ".bin" ) ) break;
@@ -249,7 +259,7 @@ try {
       vtkfile.fill('0');
       vtkfile << dataOutputParameters.prefix() << std::setw(5) << number;
       vtkwriter.pwrite( vtkfile.str(), dataOutputParameters.path(), "" );
-      dataPVDWriter.addDataSet( dataOutputParameters.prefix(), number, timeValue );
+      dataPVDWriter.addDataSet( grid.comm().size(), dataOutputParameters.prefix(), number, timeValue );
 
       // Write reconstruction to vtu file
       // --------------------------------
@@ -259,7 +269,7 @@ try {
       RecOutputType recOutput ( gridView, reconstructions, flags, recOutputParameters );
       recOutput.write();
 
-      recPVDWriter.addDataSet( recOutputParameters.prefix(), number, timeValue );
+      recPVDWriter.addDataSet( grid.comm().size(), recOutputParameters.prefix(), number, timeValue );
     }
 
   }

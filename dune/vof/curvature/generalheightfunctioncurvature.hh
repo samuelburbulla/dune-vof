@@ -106,10 +106,18 @@ namespace Dune
             Atb += tmp * ( ( un2 - ue ) * ( xn1 - xe ) - ( un1 - ue ) * ( xn2 - xe ) );
           }
         }
-        double dxu = Btb / BtB;
-        double dx2u = Atb / AtA;
 
-        curvatureSet[ entity ] = - dx2u / std::pow( 1.0 + dxu * dxu, 3.0 / 2.0 );
+        if ( AtA > 0.0 )
+        {
+          double dxu = Btb / BtB;
+          double dx2u = Atb / AtA;
+
+          curvatureSet[ entity ] = - dx2u / std::pow( 1.0 + dxu * dxu, 3.0 / 2.0 );
+        }
+        else
+          // Inkreisradius
+          curvatureSet[ entity ] = 1.0 / std::sqrt( entity.geometry().volume() );
+
       }
 
       const GridView &gridView () const { return gridView_; }

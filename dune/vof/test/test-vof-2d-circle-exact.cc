@@ -81,7 +81,7 @@ class TimeProvider
     time_ += dt_;
     step_++;
 
-    const auto& comm = Dune::Fem::MPIManager::comm();
+    const auto& comm = Dune::MPIHelper::comm();
     dt_ = comm.min( dtEst_ );
     dtEst_ = std::numeric_limits< double >::max();
   }
@@ -238,7 +238,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 int main(int argc, char** argv)
 try {
-  Dune::Fem::MPIManager::initialize( argc, argv );
+  Dune::MPIHelper::initialize( argc, argv );
 
   using GridType = Dune::GridSelector::GridType;
 
@@ -269,10 +269,10 @@ try {
     // start time integration
     double singleL1Error = algorithm( grid.leafGridView(), parameters );
 
-    const auto& comm = Dune::Fem::MPIManager::comm();
+    const auto& comm = Dune::MPIHelper::comm();
     double L1Error = comm.sum( singleL1Error );
 
-    if ( Dune::Fem::MPIManager::rank() == 0 )
+    if ( Dune::MPIHelper::rank() == 0 )
     {
       // print errors and eoc
       if ( level > 0 )

@@ -21,12 +21,12 @@ class BinaryWriter
 public:
   using BinaryStream = Dune::Fem::BinaryFileOutStream;
 
-  BinaryWriter ( const std::size_t level, double time ) : level_( level )
+  BinaryWriter ( const Dune::ParameterTree parameters, int level, double time ) : level_( level )
   {
     saveTime_ = time;
-    path_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.path", "data" );
-    prefix_ = Dune::Fem::Parameter::getValue< std::string >( "fem.io.prefix", "vof-fem" );
-    saveStep_ = Dune::Fem::Parameter::getValue< double >( "fem.io.savestep", 0.1 );
+    saveStep_ = parameters.get< double >( "io.savestep", 0.1 );
+    path_ = parameters.get< std::string >( "io.path", "data" );
+    prefix_ = parameters.get< std::string >( "io.prefix", "vof" );
     Dune::Fem::createDirectory ( path_ );
   }
 
@@ -43,7 +43,7 @@ public:
     {
       std::stringstream name;
       name.fill('0');
-      name << "s" << std::setw(4) << Dune::Fem::MPIManager::size() << "-p" << std::setw(4) << Dune::Fem::MPIManager::rank()
+      name << "s" << std::setw(4) << grid.comm().size() << "-p" << std::setw(4) << grid.comm().rank()
         << "-" << prefix_ << "-" << std::to_string( level_ ) << "-" << std::setw(5) << std::to_string( writeStep_ );
 
       std::stringstream dfname;
