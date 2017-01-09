@@ -67,11 +67,12 @@ void filterReconstruction( const GridView &gridView, const ReconstructionSet &re
 // TimeProvider
 // ------------
 
+template < class Comm >
 class TimeProvider
 {
  public:
-  TimeProvider ( const double cfl, const double dt, const double start )
-   : cfl_ ( cfl ), dt_( dt * cfl_ ), time_( start ), dtEst_ ( std::numeric_limits< double >::max() ) {}
+  TimeProvider ( const double cfl, const double dt, const double start, const Comm &comm )
+   : cfl_ ( cfl ), dt_( dt * cfl_ ), time_( start ), dtEst_ ( std::numeric_limits< double >::max() ), comm_( comm ) {}
 
   double time() const { return time_; }
 
@@ -80,9 +81,7 @@ class TimeProvider
   void next() {
     time_ += dt_;
     step_++;
-
-    const auto& comm = Dune::MPIHelper::comm();
-    dt_ = comm.min( dtEst_ );
+    dt_ = comm_.min( dtEst_ );
     dtEst_ = std::numeric_limits< double >::max();
   }
 
@@ -94,6 +93,7 @@ class TimeProvider
  private:
   double cfl_, dt_, time_, dtEst_;
   int step_ = 0;
+  Comm comm_;
 };
 
 // initTimeStep
@@ -191,8 +191,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     vtkwriter.write( 0 );
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
-
-  TimeProvider tp ( parameters.get< double >( "scheme.cflFactor" ), dt, startTime );
+  const auto comm = gridView.grid().comm();
+  TimeProvider< decltype( comm ) > tp ( parameters.get< double >( "scheme.cflFactor" ), dt, startTime, comm );
   double error = 0;
 
   while ( tp.time() < endTime )
@@ -238,7 +238,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 int main(int argc, char** argv)
 try {
-  Dune::MPIHelper::initialize( argc, argv );
+  Dune::MPIHelper::instance( argc, argv );
 
   using GridType = Dune::GridSelector::GridType;
 
@@ -269,10 +269,9 @@ try {
     // start time integration
     double singleL1Error = algorithm( grid.leafGridView(), parameters );
 
-    const auto& comm = Dune::MPIHelper::comm();
-    double L1Error = comm.sum( singleL1Error );
+    double L1Error = grid.comm().sum( singleL1Error );
 
-    if ( Dune::MPIHelper::rank() == 0 )
+    if ( grid.comm().rank() == 0 )
     {
       // print errors and eoc
       if ( level > 0 )
