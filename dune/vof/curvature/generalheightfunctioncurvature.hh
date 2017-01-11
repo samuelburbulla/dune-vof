@@ -59,10 +59,10 @@ namespace Dune
       template< class CurvatureSet >
       void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
       {
-        double AtA = 0.0;
-        double Atb = 0.0;
-        double BtB = 0.0;
-        double Btb = 0.0;
+        double dx2uSum = 0.0;
+        double dx2uw = 0.0;
+        double dxuSum = 0.0;
+        double dxuw = 0.0;
 
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate centroidEn = interfaceEn.centroid();
@@ -83,9 +83,10 @@ namespace Dune
           double xn1 = normalOrth * centroidNb1;
           double un1 = normalEn * centroidNb1;
 
-          double dx = ( xn1 - xe );
-          BtB += dx * dx;
-          Btb += dx * ( un1 - ue );
+          double dxu = ( un1 - ue ) / ( xn1 - xe );
+          const double weight = interfaceNb1.volume();
+          dxuSum += dxu * weight;
+          dxuw += weight;
 
           for( const auto& neighbor2 : stencil( entity ) )
           {
@@ -102,21 +103,17 @@ namespace Dune
             double un2 = normalEn * centroidNb2;
 
             double tmp = 0.5 * ( xn2 - xn1 ) * ( xn2 - xe ) * ( xn1 - xe );
-            AtA += tmp * tmp;
-            Atb += tmp * ( ( un2 - ue ) * ( xn1 - xe ) - ( un1 - ue ) * ( xn2 - xe ) );
+            const double dx2u = ( ( un2 - ue ) * ( xn1 - xe ) - ( un1 - ue ) * ( xn2 - xe ) ) / tmp;
+            const double weight = interfaceNb2.volume() * interfaceNb1.volume();
+            dx2uSum += dx2u * weight;
+            dx2uw += weight;
           }
         }
 
-        if ( AtA > 0.0 )
-        {
-          double dxu = Btb / BtB;
-          double dx2u = Atb / AtA;
+        double dxu = dxuSum / dxuw;
+        double dx2u = dx2uSum / dx2uw;
 
-          curvatureSet[ entity ] = - dx2u / std::pow( 1.0 + dxu * dxu, 3.0 / 2.0 );
-        }
-        else
-          // Inkreisradius
-          curvatureSet[ entity ] = 1.0 / std::sqrt( entity.geometry().volume() );
+        curvatureSet[ entity ] = dx2u / std::pow( 1.0 + dxu * dxu, 3.0 / 2.0 );
 
       }
 

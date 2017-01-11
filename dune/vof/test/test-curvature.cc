@@ -24,9 +24,10 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/heightfunctionstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
-#include <dune/vof/curvature/generalheightfunctioncurvature.hh>
+#include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
 
 //- local includes
 #include "average.hh"
@@ -127,8 +128,10 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // build domain references for each cell
   Stencils stencils( gridView );
 
-  using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
-  CurvatureOperator curvatureOperator ( gridView, stencils );
+  using CurvatureStencils = Dune::VoF::HeightFunctionStencil< GridView >;
+  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, CurvatureStencils, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  CurvatureStencils curvatureStencils( gridView );
+  CurvatureOperator curvatureOperator ( gridView, curvatureStencils, stencils );
   CurvatureSet curvatureSet( gridView );
   ColorFunction curvatureError( gridView );
 
@@ -171,7 +174,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Initial reconstruction
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
-  curvatureOperator( reconstructionSet, flags, curvatureSet );
+  curvatureOperator( colorFunction, reconstructionSet, flags, curvatureSet );
 
   double error = Dune::VoF::curvatureError( curvatureSet, flags, reconstructionSet, problem, curvatureError );
 

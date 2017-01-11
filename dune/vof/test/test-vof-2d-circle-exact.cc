@@ -23,11 +23,15 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
+#include <dune/vof/stencil/heightfunctionstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/curvature/generalheightfunctioncurvature.hh>
+#include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
 
 //- local includes
 #include "average.hh"
+#include "../curvatureSet.hh"
 #include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
@@ -40,14 +44,17 @@
 // filterReconstruction
 // --------------------
 
-template < class GridView, class ReconstructionSet, class Polygon >
-void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
+template < class GridView, class ReconstructionSet, class Flags, class Polygon >
+void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, const Flags &flags, std::vector< Polygon > &io )
 {
   using Coord = typename Polygon::Position;
 
   io.clear();
   for ( const auto& entity : elements( gridView ) )
   {
+    if ( !flags.isMixed( entity ) )
+      continue;
+
     auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
     auto intersection = static_cast< typename decltype( is )::Result > ( is );
 
@@ -127,6 +134,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
   using Flags = Dune::VoF::Flags< GridView >;
+  using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
+
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -164,12 +173,25 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
   auto evolution = Dune::VoF::evolution( gridView );
 
+
+  using CurvatureStencils = Dune::VoF::HeightFunctionStencil< GridView >;
+  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, CurvatureStencils, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  CurvatureStencils curvatureStencils( gridView );
+  CurvatureOperator curvatureOperator ( gridView, curvatureStencils, stencils );
+  CurvatureSet curvatureSet( gridView );
+
   std::stringstream path;
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
+  ColorFunction normalX( gridView );
+  ColorFunction normalY( gridView );
+
   DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
+  vtkwriter.addCellData ( curvatureSet, "curvature" );
+  vtkwriter.addCellData ( normalX, "nX" );
+  vtkwriter.addCellData ( normalY, "nY" );
 
   std::vector< Polygon > recIO;
   VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
@@ -185,9 +207,16 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   flags.reflag( colorFunction, eps );
   reconstruction( colorFunction, reconstructionSet, flags );
 
+  curvatureOperator( colorFunction, reconstructionSet, flags, curvatureSet );
+  for ( auto entity : elements( gridView ) )
+  {
+    normalX[ entity ] = reconstructionSet[ entity ].innerNormal()[ 0 ];
+    normalY[ entity ] = reconstructionSet[ entity ].innerNormal()[ 1 ];
+  }
+
   if ( writeData )
   {
-    filterReconstruction( gridView, reconstructionSet, recIO );
+    filterReconstruction( gridView, reconstructionSet, flags, recIO );
     vtkwriter.write( 0 );
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
@@ -201,6 +230,28 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
     reconstruction( colorFunction, reconstructionSet, flags );
 
+    curvatureOperator( colorFunction, reconstructionSet, flags, curvatureSet );
+    for ( auto entity : elements( gridView ) )
+    {
+      normalX[ entity ] = reconstructionSet[ entity ].innerNormal()[ 0 ];
+      normalY[ entity ] = reconstructionSet[ entity ].innerNormal()[ 1 ];
+    }
+
+    if ( writeData && 2.0 * tp.time() > nextSaveTime - 0.5 * tp.deltaT() )
+    {
+      vtkwriter.write( tp.time() );
+
+      filterReconstruction( gridView, reconstructionSet, flags, recIO );
+      std::stringstream name_;
+      name_.fill('0');
+      name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
+      vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
+
+
+      nextSaveTime += saveInterval;
+      ++saveNumber;
+    }
+
     Velocity velocity( circle, tp.time() );
     double dtEst = evolution( reconstructionSet, flags, velocity, tp.deltaT(), update );
 
@@ -212,22 +263,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     tp.next();
 
     error += dt * Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
-
-    if ( writeData && 2.0 * tp.time() > nextSaveTime - 0.5 * tp.deltaT() )
-    {
-      vtkwriter.write( tp.time() );
-
-      filterReconstruction( gridView, reconstructionSet, recIO );
-      std::stringstream name_;
-      name_.fill('0');
-      name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
-      vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
-
-
-      nextSaveTime += saveInterval;
-      ++saveNumber;
-    }
-
   }
 
   if ( tp.time() == startTime )

@@ -10,6 +10,8 @@
 template< class ctype, int dim >
 struct Ellipse
 {
+  static_assert( dim == 2, "Ellipse is only implemented for 2d." );
+
   using DomainType = Dune::FieldVector< ctype, dim >;
   using RangeType = Dune::FieldVector< ctype, 1 >;
 
@@ -61,21 +63,12 @@ struct Ellipse
 
   double curvature ( const DomainType& x ) const
   {
-    double curv = 0.0;
+    double radius = 0.0;
+    radius += std::pow( axis_[ 0 ] * ( x - DomainType( 0.5 ) ), 2 ) * std::pow( radii_[ 1 ], 4 );
+    radius += std::pow( axis_[ 1 ] * ( x - DomainType( 0.5 ) ), 2 ) * std::pow( radii_[ 0 ], 4 );
+    radius = std::pow( radius, 3 );
 
-    const auto tmp = axis_[ 0 ] * ( x - DomainType( 0.5 ) );
-    curv += tmp * tmp * radii_[ 1 ] * radii_[ 1 ] * radii_[ 1 ] * radii_[ 1 ];
-
-    const auto tmp2 = axis_[ 1 ] * ( x - DomainType( 0.5 ) );
-    curv += tmp2 * tmp2 * radii_[ 0 ] * radii_[ 0 ] * radii_[ 0 ] * radii_[ 0 ];
-
-    curv = curv * curv * curv;
-    curv = std::sqrt( curv );
-
-    for( int i = 0; i < dimDomain; ++i )
-      curv /= radii_[ i ] * radii_[ i ] * radii_[ i ] * radii_[ i ];
-
-    return - 1.0 / curv;
+    return std::pow( radii_[ 0 ] * radii_[ 1 ], 4 ) / std::sqrt( radius );
   }
 
   std::array< DomainType, dim > axis_;

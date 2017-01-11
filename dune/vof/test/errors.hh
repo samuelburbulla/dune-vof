@@ -85,8 +85,6 @@ namespace Dune
     static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem, DF &curvatureError )
     {
       double error = 0.0;
-      int n = 0;
-
       for ( auto entity : elements( curvatureError.gridView(), Partitions::interior ) )
       {
         if ( !flags.isMixed( entity ) )
@@ -99,15 +97,13 @@ namespace Dune
         auto it = intersect( polygon, reconstructions[ entity ].boundary() );
         auto interface = static_cast< typename decltype( it )::Result > ( it );
         auto point = interface.centroid();
-        //auto point = entity.geometry().center();
 
         double localError = std::abs( problem.curvature( point ) - curvature[ entity ] );
-        error += localError;
+        error += localError * interface.volume();
         curvatureError[ entity ] = localError;
-        n++;
       }
 
-      return error / n;
+      return error;
     }
 
   } // namespace VoF

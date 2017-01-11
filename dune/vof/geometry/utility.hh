@@ -191,6 +191,7 @@ namespace Dune
     // --------------------
     template< class Entity, class ReconstructionSet >
     auto interface( const Entity &entity, const ReconstructionSet &reconstructions )
+     -> typename decltype( intersect( makePolytope( entity.geometry() ), reconstructions[ entity ].boundary() ) )::Result
     {
       auto polygon = makePolytope( entity.geometry() );
       auto it = intersect( polygon, reconstructions[ entity ].boundary() );
