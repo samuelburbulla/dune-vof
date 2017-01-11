@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_CIRCLEINTERPOLATIONCURVATURE_HH
-#define DUNE_VOF_CIRCLEINTERPOLATIONCURVATURE_HH
+#ifndef DUNE_VOF_PARABOLAINTERPOLATIONCURVATURE_HH
+#define DUNE_VOF_PARABOLAINTERPOLATIONCURVATURE_HH
 
 #include <algorithm>
 #include <cmath>
@@ -14,7 +14,7 @@ namespace Dune
   namespace VoF
   {
 
-    // Calculate the curvature of the inferface in each mixed cell by an interpolation of a circle.
+    // Calculate the curvature of the inferface in each mixed cell by an interpolation of a parabola.
 
     /**
      * \ingroup Method
@@ -26,7 +26,7 @@ namespace Dune
      * \tparam  FL  flags
      */
     template< class GV, class ST, class DF, class RS, class FL >
-    struct CircleInterpolationCurvature
+    struct ParabolaInterpolationCurvature
     {
       using GridView = GV;
       using Stencils = ST;
@@ -36,13 +36,12 @@ namespace Dune
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
-      static constexpr int dim = Coordinate::dimension;
       using ctype = typename Coordinate::value_type;
-      using Matrix = FieldMatrix< ctype, dim, dim >;
-      using Vector = FieldVector< ctype, dim >;
+      using Matrix = FieldMatrix< ctype, 2, 2 >;
+      using Vector = FieldVector< ctype, 2 >;
 
     public:
-      explicit CircleInterpolationCurvature ( GridView gridView, const Stencils &stencils )
+      explicit ParabolaInterpolationCurvature ( GridView gridView, const Stencils &stencils )
        : gridView_( gridView ), stencils_( stencils )
       {}
 
@@ -65,38 +64,60 @@ namespace Dune
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature )
       {
         Matrix AtA( 0.0 );
-        Coordinate Atb( 0.0 );
-        std::vector< Coordinate > points;
+        Vector Atb( 0.0 );
 
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate centroidEn = interfaceEn.centroid();
+        Coordinate normalEn = reconstructions[ entity ].innerNormal();
 
-        for( const auto& neighbor : stencil( entity ) )
+        /*
+        Vector p ( { 0, 0 } );
+        const ctype weight = 1.0;
+        p *= weight;
+        AtA += outerProduct( p, p );
+        Atb.axpy( 0.0, p );
+        */
+
+        // with normal
+        Coordinate n = reconstructions[ entity ].innerNormal();
+        Vector p2 ( { 2.0 * 0.0, 1.0 } );
+        const ctype weight = interfaceEn.volume();
+        AtA.axpy( weight, outerProduct( p2, p2 ) );
+        Atb.axpy( weight * ( - ( n * generalizedCrossProduct( normalEn ) ) / ( n * normalEn ) ), p2 );
+
+        for( const auto& neighbor : stencils_[ entity ] )
         {
           if ( !flags.isMixed( neighbor ) )
-            continue;
+           continue;
 
           auto interfaceNb = interface( neighbor, reconstructions );
           Coordinate centroidNb = interfaceNb.centroid();
 
-          points.push_back( centroidNb );
-        }
+          Coordinate diffC = centroidNb - centroidEn;
 
-        for ( const auto &point : points )
-        {
-          Coordinate p = point;
-          p -= centroidEn;
-          p *= 2.0;
-          const ctype weight = 1.0 / p.two_norm2();
+          double dx = generalizedCrossProduct( normalEn ) * diffC;
+          double dy = normalEn * diffC;
+
+          /*
+          // fit centroids
+          Vector p ( { dx * dx, dx } );
+          const ctype weight = 1.0 / diffC.two_norm();
           AtA.axpy( weight, outerProduct( p, p ) );
-          Atb.axpy( weight * ( point.two_norm2() - centroidEn.two_norm2() ), p );
-        }
-        Coordinate centerOfCircle;
-        AtA.solve( centerOfCircle, Atb );
+          Atb.axpy( weight * dy, p );
+          */
 
-        double radius = ( centerOfCircle - centroidEn ).two_norm();
-        double sign = - 1 + 2 * ( 0 < ( centerOfCircle - centroidEn ) * reconstructions[ entity ].innerNormal() );
-        curvature[ entity ] = - sign / radius;
+          // with normal
+          Coordinate n = reconstructions[ neighbor ].innerNormal();
+          Vector p2 ( { 2.0 * dx, 1.0 } );
+          const ctype weight = interfaceNb.volume();;
+          AtA.axpy( weight, outerProduct( p2, p2 ) );
+          Atb.axpy( weight * ( - ( n * generalizedCrossProduct( normalEn ) ) / ( n * normalEn ) ), p2 );
+
+        }
+        Vector abc;
+        AtA.solve( abc, Atb );
+
+        curvature[ entity ] = - 2.0 * abc[0] / std::pow( 1.0 + abc[1] * abc[1], 3.0 / 2.0 );
       }
 
       const GridView &gridView () const { return gridView_; }
@@ -110,4 +131,4 @@ namespace Dune
 
 } // namespace Dune
 
-#endif // #ifndef DUNE_VOF_CIRCLEINTERPOLATIONCURVATURE_HH
+#endif // #ifndef DUNE_VOF_PARABOLAINTERPOLATIONCURVATURE_HH
