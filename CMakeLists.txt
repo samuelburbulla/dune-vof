@@ -23,9 +23,9 @@ add_subdirectory("doc/doxygen")
 add_subdirectory("cmake/modules")
 
 if(EXCLUDE_EXAMPLES_FROM_ALL)
-  add_subdirectory("examples" EXCLUDE_FROM_ALL)
+  add_subdirectory("example" EXCLUDE_FROM_ALL)
 else()
-  add_subdirectory("examples")
+  add_subdirectory("example")
 endif()
 
 # finalize the dune project, e.g. generating config.h etc.
