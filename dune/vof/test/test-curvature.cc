@@ -128,7 +128,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // build domain references for each cell
   Stencils stencils( gridView );
 
-  using CurvatureStencils = Dune::VoF::HeightFunctionStencil< GridView >;
+  using CurvatureStencils = Dune::VoF::HeightFunctionStencils< GridView >;
   using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, CurvatureStencils, Stencils, ColorFunction, ReconstructionSet, Flags >;
   CurvatureStencils curvatureStencils( gridView );
   CurvatureOperator curvatureOperator ( gridView, curvatureStencils, stencils );

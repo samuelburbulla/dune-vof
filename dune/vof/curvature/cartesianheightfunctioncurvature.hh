@@ -79,51 +79,41 @@ namespace Dune
       template< class CurvatureSet >
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, CurvatureSet &curvature )
       {
-        double tol = std::numeric_limits< double >::epsilon();
+        const Coordinate &normal = reconstructions[ entity ].innerNormal();
+        auto stencil = heightFunctionStencil( normal, entity );
 
-        Coordinate normal = reconstructions[ entity ].innerNormal();
-        Coordinate center = entity.geometry().center();
+        Dune::FieldVector< double, decltype( stencil )::noc > heights ( 0.0 );
 
-        std::size_t directionAxis = ( std::abs( normal[ 0 ] ) > std::abs( normal[ 1 ] ) ) ? 0 : 1;
-        Coordinate direction ( 0.0 );
-        direction[ directionAxis ] = 1.0;
+        for( int i = stencil.cMin(); i < stencil.cMax(); ++i )
+          for( int t = -stencil.tdown(); t <= stencil.tup(); ++t )
+          {
+            double u = uh[ stencil( i, t ) ];
 
-        double left = 0.0, right = 0.0;
-        double middle = uh[ entity ];
-        double dx = std::numeric_limits< double >::max();
-        for( const auto& neighbor : stencil( directionAxis, entity ) )
-        {
-          Coordinate d = center - neighbor.geometry().center();
+            // local monotonic variation
+            if ( t < 0 )
+            {
+              if ( u < uh[ stencil( i, t+1 ) ] )
+                u = 1.0;
+            }
+            else if ( t > 0 )
+            {
+              if ( u > uh[ stencil( i, t-1 ) ] )
+                u = 0.0;
+            }
 
-          Coordinate delta = d;
-          delta.axpy( - ( d * direction ), direction );
+            heights[ i - stencil.cMin() ] += u;
+          }
 
-          double distance = delta[ 1 - directionAxis ];
-
-          if ( std::abs( distance ) < tol )
-            middle += uh[ neighbor ];
-          else if ( distance > 0 )
-            left += uh[ neighbor ];
-          else if ( distance < 0 )
-            right += uh[ neighbor ];
-
-          if ( 0 < std::abs( distance ) && std::abs( distance ) < dx )
-            dx = std::abs( distance );
-        }
-
-        right *= dx;
-        left *= dx;
-        middle *= dx;
-
-        if ( 3.0 * dx < middle && middle < 4.0 * dx )
+        if ( stencil.tdown() < heights[ 1 ] && heights[ 1 ] < stencil.tdown() + 1 )
         {
           satisfiesConstraint( entity ) = 1;
 
-          if ( right < tol || left < tol )
-            return;
+          for( std::size_t i = 0; i < stencil.columns(); ++i )
+            if ( heights[ i ] == 0.0 )
+              return;
 
-          double Hx = ( right - left ) / ( 2 * dx );
-          double Hxx = ( right - 2 * middle + left ) / ( dx * dx );
+          double Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;
+          double Hxx = ( heights[ 2 ] - 2 * heights[ 1 ] + heights[ 0 ] ) / stencils_.deltaX();
 
           curvature[ entity ] = - Hxx / std::pow( 1.0 + Hx * Hx, 3.0 / 2.0 );
         }
@@ -151,7 +141,7 @@ namespace Dune
 
       const auto index ( const Entity &entity ) const { return indexSet_.index( entity ); }
 
-      const auto &stencil ( const std::size_t d, const Entity &entity ) const { return stencils_( d, entity ); }
+      const auto &heightFunctionStencil ( const Coordinate &normal, const Entity &entity ) const { return stencils_( normal, entity ); }
 
       const auto &vertexNeighborStencil ( const Entity &entity ) const { return vertexNeighborStencils_[ entity ]; }
 
