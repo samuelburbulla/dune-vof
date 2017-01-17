@@ -1,9 +1,11 @@
 #ifndef DUNE_VOF_INTERFACEGRID_GRIDVIEW_HH
 #define DUNE_VOF_INTERFACEGRID_GRIDVIEW_HH
 
+#include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/gridview.hh>
 
 #include <dune/vof/interfacegrid/datahandle.hh>
+#include <dune/vof/interfacegrid/entity.hh>
 #include <dune/vof/interfacegrid/indexset.hh>
 #include <dune/vof/interfacegrid/intersection.hh>
 #include <dune/vof/interfacegrid/intersectioniterator.hh>
@@ -12,212 +14,154 @@
 namespace Dune
 {
 
-  // Internal Forward Declarations
-  // -----------------------------
-
-  template< class HostGridView, PartitionIteratorType pitype >
-  class InterfaceGridView;
-
-
-  // InterfaceGridView
-  // ----------
-
-  template< class GVTraits >
-  class InterfaceGridViewBasic
+  namespace VoF
   {
-    typedef InterfaceGridViewBasic< GVTraits > This;
 
-  public:
-    typedef GVTraits Traits;
+    // InterfaceGridView
+    // -----------------
 
-    typedef typename Traits::HostGridView HostGridView;
+    template< class Reconstruction >
+    class InterfaceGridView;
 
-    typedef typename Traits::Grid Grid;
+    
 
-    typedef typename Traits::IndexSet IndexSet;
+    // InterfaceGridViewTraits
+    // -----------------------
 
-    typedef typename Traits::Intersection Intersection;
-
-    typedef typename Traits::IntersectionIterator IntersectionIterator;
-
-    typedef typename Traits::CollectiveCommunication CollectiveCommunication;
-
-    template< int codim >
-    struct Codim
-    : public Traits::template Codim< codim >
-    {};
-
-    static const bool conforming = Traits :: conforming;
-    static const PartitionIteratorType pitype = Traits :: pitype;
-
-    InterfaceGridViewBasic ( const Grid &grid, const HostGridView &hostGridView )
-    : grid_( &grid ),
-      hostGridView_( hostGridView )
-    {}
-
-    const Grid &grid () const
+    template< class Reconstruction >
+    struct InterfaceGridViewTraits
     {
-      assert( grid_ );
-      return *grid_;
-    }
+      typedef InterfaceGridView< Reconstruction > GridViewImp;
 
-    const IndexSet &indexSet () const
-    {
-      if( !indexSet_ )
-        indexSet_ = IndexSet( hostGridView().indexSet() );
-      return indexSet_;
-    }
+      typedef InterfaceGrid< Reconstruction > Grid;
 
-    int size ( int codim ) const
-    {
-      return hostGridView().size( codim );
-    }
+      static const int dimension = Reconstruction::GridView::dimension-1;
+      static const int dimensionworld = Reconstruction::GridView::dimensionworld;
 
-    int size ( const GeometryType &type ) const
-    {
-      return hostGridView().size( type );
-    }
+      typedef InterfaceGridIndexSet< const Grid > IndexSet;
 
-    template< int codim >
-    typename Codim< codim >::Iterator begin () const
-    {
-      return begin< codim, pitype >();
-    }
+      typedef Dune::Intersection< const Grid, InterfaceGridIntersection< const Grid > > Intersection;
 
-    template< int codim, PartitionIteratorType pit >
-    typename Codim< codim >::template Partition< pit >::Iterator begin () const
-    {
-      typedef typename Traits::template Codim< codim >::template Partition< pit >::IteratorImpl Impl;
-      return Impl( grid().extraData(), hostGridView().template begin< codim, pit >() );
-    }
+      typedef Dune::IntersectionIterator< const Grid, InterfaceGridIntersectionIterator< const Grid >, InterfaceGridIntersection< const Grid > > IntersectionIterator;
 
-    template< int codim >
-    typename Codim< codim >::Iterator end () const
-    {
-      return end< codim, pitype >();
-    }
+      typedef typename Reconstruction::GridView::CollectiveCommunication CollectiveCommunication;
 
-    template< int codim, PartitionIteratorType pit >
-    typename Codim< codim >::template Partition< pit >::Iterator end () const
-    {
-      typedef typename Traits::template Codim< codim >::template Partition< pit >::IteratorImpl Impl;
-      return Impl( grid().extraData(), hostGridView().template end< codim, pit >() );
-    }
+      template< PartitionIteratorType pitype >
+      using HostIterator = typename Reconstruction::GridView::template Codim< 0 >::template Partition< pitype >::Iterator;
 
-    IntersectionIterator ibegin ( const typename Codim< 0 >::Entity &entity ) const
-    {
-      typedef typename Traits::IntersectionIteratorImpl IntersectionIteratorImpl;
-      return IntersectionIteratorImpl( grid().extraData(), hostGridView().ibegin( Grid::getRealImplementation( entity ).hostEntity() ) );
-    }
-
-    IntersectionIterator iend ( const typename Codim< 0 >::Entity &entity ) const
-    {
-      typedef typename Traits::IntersectionIteratorImpl IntersectionIteratorImpl;
-      return IntersectionIteratorImpl( grid().extraData(), hostGridView().iend( Grid::getRealImplementation( entity ).hostEntity() ) );
-    }
-
-    const CollectiveCommunication &comm () const
-    {
-      return hostGridView().comm();
-    }
-
-    int overlapSize ( int codim ) const
-    {
-      return hostGridView().overlapSize( codim );
-    }
-
-    int ghostSize ( int codim ) const
-    {
-      return hostGridView().ghostSize( codim );
-    }
-
-    template< class DataHandle, class Data >
-    void communicate ( CommDataHandleIF< DataHandle, Data > &dataHandle,
-                       InterfaceType interface,
-                       CommunicationDirection direction ) const
-    {
-      typedef CommDataHandleIF< DataHandle, Data > DataHandleIF;
-      typedef InterfaceGridDataHandle< Grid, DataHandleIF > WrappedDataHandle;
-
-      WrappedDataHandle wrappedDataHandle( grid().extraData(), dataHandle );
-      hostGridView().communicate( wrappedDataHandle, interface, direction );
-    }
-
-    const HostGridView &hostGridView () const { return hostGridView_; }
-
-  protected:
-    const Grid *grid_;
-    HostGridView hostGridView_;
-    mutable IndexSet indexSet_;
-  };
-
-  // InterfaceGridViewTraits
-  // ----------------
-
-  template< class HGV, PartitionIteratorType ptype >
-  struct InterfaceGridViewTraits
-  {
-    static const PartitionIteratorType pitype = ptype;
-
-    friend class InterfaceGridView< HGV, pitype >;
-
-    typedef HGV HostGridView;
-
-    typedef typename HostGridView::Grid HostGrid;
-
-    typedef InterfaceGridView< HostGridView, pitype > GridViewImp;
-
-    typedef InterfaceGrid< HostGrid > Grid;
-
-    typedef InterfaceGridIndexSet< const Grid, typename HostGridView::IndexSet > IndexSet;
-
-    typedef InterfaceGridIntersection< const Grid, typename HostGridView::Intersection > IntersectionImpl;
-    typedef Dune::Intersection< const Grid, IntersectionImpl > Intersection;
-
-    typedef InterfaceGridIntersectionIterator< const Grid, typename HostGridView::IntersectionIterator > IntersectionIteratorImpl;
-    typedef Dune::IntersectionIterator< const Grid, IntersectionIteratorImpl, IntersectionImpl > IntersectionIterator;
-
-    typedef typename HostGridView::CollectiveCommunication CollectiveCommunication;
-
-    template< int codim >
-    struct Codim
-    {
-      typedef typename Grid::Traits::template Codim< codim >::Entity Entity;
-      typedef Entity  EntityPointer ;
-
-      typedef typename Grid::template Codim< codim >::Geometry Geometry;
-      typedef typename Grid::template Codim< codim >::LocalGeometry LocalGeometry;
-
-      template< PartitionIteratorType pit >
-      struct Partition
+      template< int codim >
+      struct Codim
       {
-        typedef typename HostGridView::template Codim< codim >::template Partition< pit > HostPartition;
+        typedef Dune::Entity< codim, dimension, const Grid, InterfaceGridEntity > Entity;
 
-        typedef InterfaceGridIterator< const Grid, typename HostPartition::Iterator > IteratorImpl;
-        typedef Dune::EntityIterator< codim, const Grid, IteratorImpl > Iterator;
+        typedef Dune::Geometry< dimension - codim, dimensionworld, const Grid, InterfaceGridGeometry > Geometry;
+        typedef Dune::Geometry< dimension - codim, dimension, const Grid, InterfaceGridGeometry > LocalGeometry;
+
+        template< PartitionIteratorType pitype >
+        struct Partition
+        {
+          typedef Dune::EntityIterator< codim, const Grid, InterfaceGridIterator< codim, const Grid, HostIterator< pitype > > > Iterator;
+        };
+
+        typedef typename Partition< All_Partition >::Iterator Iterator;
       };
 
-      typedef typename Partition< pitype >::Iterator Iterator;
+      static const bool conforming = true;
     };
 
-    static const bool conforming = HostGridView::conforming;
-  };
 
 
-  template< class HGV, PartitionIteratorType pitype >
-  class InterfaceGridView : public InterfaceGridViewBasic< InterfaceGridViewTraits< HGV, pitype > >
-  {
-    typedef InterfaceGridView< HGV, pitype > This;
-    typedef InterfaceGridViewBasic< InterfaceGridViewTraits< HGV, pitype > > Base;
+    // InterfaceGridView
+    // -----------------
 
-  public:
-    typedef typename Base::HostGridView HostGridView;
-    typedef typename Base::Grid Grid;
+    template< class Reconstruction >
+    class InterfaceGridView
+    {
+      typedef InterfaceGridView< Reconstruction > This;
 
-    InterfaceGridView ( const Grid &grid, const HostGridView &hostGridView )
-    : Base( grid, hostGridView )
-    {}
-  };
+      typedef InterfaceGridViewTraits< Reconstruction > Traits;
+
+    public:
+      typedef typename Traits::Grid Grid;
+
+      typedef typename Traits::IndexSet IndexSet;
+
+      typedef typename Traits::Intersection Intersection;
+      typedef typename Traits::IntersectionIterator IntersectionIterator;
+
+      typedef typename Traits::CollectiveCommunication CollectiveCommunication;
+
+      template< int codim >
+      struct Codim
+        : public Traits::template Codim< codim >
+      {};
+
+      static const bool conforming = Traits::conforming;
+
+      explicit InterfaceGridView ( const Grid &grid ) : grid_( &grid ) {}
+
+      const Grid &grid () const { assert( grid_ ); return *grid_; }
+
+      const IndexSet &indexSet () const { return grid().leafIndexSet(); }
+ 
+      int size ( int codim ) const { return indexSet().size( codim ); }
+
+      int size ( const GeometryType &type ) const { return indexSet().size( type ); }
+
+      template< int codim, PartitionIteratorType pitype >
+      typename Codim< codim >::template Partition< pitype >::Iterator begin () const
+      {
+        typedef InterfaceGridIterator< codim, const Grid, typename Traits::template HostIterator< pitype > > Impl;
+        return Impl( grid().flags(), hostGridView().template begin< 0, pitype >(), hostGridView().template end< 0, pitype >() );
+      }
+
+      template< int codim >
+      typename Codim< codim >::Iterator begin () const
+      {
+        return begin< codim, All_Partition >();
+      }
+
+      template< int codim, PartitionIteratorType pitype >
+      typename Codim< codim >::template Partition< pitype >::Iterator end () const
+      {
+        typedef InterfaceGridIterator< codim, const Grid, typename Traits::template HostIterator< pitype > > Impl;
+        return Impl( grid().flags(), hostGridView().template end< 0, pitype >() );
+      }
+
+      template< int codim >
+      typename Codim< codim >::Iterator end () const
+      {
+        return end< codim, All_Partition >();
+      }
+
+      IntersectionIterator ibegin ( const typename Codim< 0 >::Entity &entity ) const
+      {
+        return InterfaceGridIntersectionIterator< const Grid >( entity, 0 );
+      }
+
+      IntersectionIterator iend ( const typename Codim< 0 >::Entity &entity ) const
+      {
+        return InterfaceGridIntersectionIterator< const Grid >( entity, entity.subEntities( 1 ) );
+      }
+
+      const CollectiveCommunication &comm () const { return grid().comm(); }
+
+      int overlapSize ( int codim ) const { return hostGridView().overlapSize( codim ); }
+      int ghostSize ( int codim ) const { return hostGridView().ghostSize( codim ); }
+
+      template< class DataHandle, class Data >
+      void communicate ( CommDataHandleIF< DataHandle, Data > &dataHandle, InterfaceType interface, CommunicationDirection direction ) const
+      {
+        // TODO: Please implement me
+      }
+
+    protected:
+      decltype( auto ) hostGridView () const { return grid().reconstruction().gridView(); }
+
+      const Grid *grid_ = nullptr;
+    };
+
+  } // namespace VoF
 
 } // namespace Dune
 

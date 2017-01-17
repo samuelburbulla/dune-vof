@@ -79,7 +79,7 @@ namespace Dune
 
         typedef typename Reconstruction::GridView::CollectiveCommunication CollectiveCommunication;
 
-        typedef Dune::GridView< InterfaceGridViewTraits< Grid > > LeafGridView;
+        typedef Dune::GridView< InterfaceGridViewTraits< Reconstruction > > LeafGridView;
         typedef LeafGridView LevelGridView;
       };
     };
@@ -107,6 +107,8 @@ namespace Dune
 
     public:
       typedef R Reconstruction;
+
+      typedef VoF::Flags< typename Reconstruction::GridView > Flags;
 
       typedef typename Reconstruction::ColorFunction ColorFunction;
 
@@ -144,7 +146,6 @@ namespace Dune
       {
         if( !globalIdSet_ )
           globalIdSet_ = GlobalIdSet( hostGrid().globalIdSet() );
-        assert( globalIdSet_ );
         return globalIdSet_;
       }
 
@@ -152,34 +153,11 @@ namespace Dune
       {
         if( !localIdSet_ )
           localIdSet_ = LocalIdSet( hostGrid().localIdSet() );
-        assert( localIdSet_ );
         return localIdSet_;
       }
 
       const LevelIndexSet &levelIndexSet ( int level ) const { assert( level == 0 ); return leafIndexSet(); }
       const LeafIndexSet &leafIndexSet () const { return leafIndexSet_; }
-
-#if 0
-      int overlapSize ( int codim ) const
-      {
-        return hostGrid().overlapSize( codim );
-      }
-
-      int ghostSize( int codim ) const
-      {
-        return hostGrid().ghostSize( codim );
-      }
-
-      int overlapSize ( int level, int codim ) const
-      {
-        return hostGrid().overlapSize( level, codim );
-      }
-
-      int ghostSize ( int level, int codim ) const
-      {
-        return hostGrid().ghostSize( level, codim );
-      }
-#endif
 
       template< class DataHandle, class Data >
       void communicate ( CommDataHandleIF< DataHandle, Data > &dataHandle, InterfaceType interface, CommunicationDirection direction, int level ) const
@@ -197,14 +175,12 @@ namespace Dune
 
       LevelGridView levelGridView ( int level ) const
       {
-        typedef typename LevelGridView::GridViewImp ViewImp;
-        return LevelGridView( ViewImp( *this, hostGrid().levelGridView( level ) ) );
+        return LevelGridView( InterfaceGridView< Reconstruction >( *this ) );
       }
 
       LeafGridView leafGridView () const
       {
-        typedef typename LeafGridView::GridViewImp ViewImp;
-        return LeafGridView( ViewImp( *this, hostGrid().leafGridView() ) );
+        return LeafGridView( InterfaceGridView< Reconstruction >( *this ) );
       }
 
       template< class EntitySeed >
@@ -215,6 +191,7 @@ namespace Dune
       }
 
       const Reconstruction &reconstruction () { return reconstruction_; }
+      const Flags &flags () const { return flags_; }
 
       void update ( const ColorFunction &colorFunction )
       {
@@ -229,11 +206,11 @@ namespace Dune
 
       Reconstruction reconstruction_;
       typename Reconstruction::ReconstructionSet reconstructions_;
-      Flags< typename Reconstruction::GridView > flags_;
+      Flags flags_;
 
       LeafIndexSet leafIndexSet_;
       LocalIdSet localIdSet_;
-      std::unique_ptr< GlobalIdSet > globalIdSet_;
+      GlobalIdSet globalIdSet_;
     };
 
   } // namespace VoF
