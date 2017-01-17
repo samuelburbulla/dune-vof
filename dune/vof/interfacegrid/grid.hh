@@ -35,6 +35,8 @@ namespace Dune
         static const int dimension = Reconstruction::GridView::dimension-1;
         static const int dimensionworld = Reconstruction::GridView::dimensionworld;
 
+        typedef typename Reconstruction::GridView::ctype ctype;
+
         typedef Dune::Intersection< const Grid, InterfaceGridIntersection< const Grid > > LeafIntersection;
         typedef LeafIntersection LevelIntersection;
 

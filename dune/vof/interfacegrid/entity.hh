@@ -31,7 +31,7 @@ namespace Dune
     {
       typedef InterfaceGridEntity< cd, dim, Grid > This;
 
-      typedef typename std::remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
       static_assert( dim == Traits::dimension, "Internal Dune Error" );
 
@@ -95,7 +95,7 @@ namespace Dune
     {
       typedef InterfaceGridEntity< cd, dim, Grid > This;
 
-      typedef typename std::remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
       static_assert( dim == Traits::dimension, "Internal Dune Error" );
 

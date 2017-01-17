@@ -1,7 +1,13 @@
 #ifndef DUNE_VOF_INTERFACEGRID_INTERSECTION_HH
 #define DUNE_VOF_INTERFACEGRID_INTERSECTION_HH
 
-#include <dune/vof/interfacegrid/declaration.hh>
+#include <cstddef>
+
+#include <type_traits>
+
+#include <dune/grid/common/intersection.hh>
+
+#include <dune/vof/interfacegrid/entity.hh>
 
 namespace Dune
 {
@@ -10,127 +16,95 @@ namespace Dune
   {
 
     // InterfaceGridIntersection
-    // ------------------
+    // -------------------------
 
-    template< class Grid, class HostIntersection >
+    template< class Grid >
     class InterfaceGridIntersection
     {
-    protected:
-      typedef typename remove_const< Grid >::type::Traits Traits;
+      typedef InterfaceGridIntersection< Grid > This;
 
-      typedef typename Traits :: ExtraData ExtraData ;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
     public:
-      typedef typename Traits::ctype ctype;
-
       static const int dimension = Traits::dimension;
+      static const int mydimension = dimension-1;
       static const int dimensionworld = Traits::dimensionworld;
 
-      typedef typename Traits::template Codim< 0 >::Entity         Entity;
-      typedef typename Traits::template Codim< 0 >::EntityImpl     EntityImpl;
+      typedef typename Traits::ctype ctype;
+
+      typedef Dune::Entity< 0, dimension, Grid, InterfaceGridEntity > Entity;
       typedef typename Traits::template Codim< 1 >::Geometry       Geometry;
       typedef typename Traits::template Codim< 1 >::LocalGeometry  LocalGeometry;
 
-    public:
-      InterfaceGridIntersection ()
-      : hostIntersection_(),
-        data_()
-      {}
+      typedef FieldVector< ctype, mydimension > LocalCoordinate;
+      typedef FieldVector< ctype, dimensionworld > GlobalCoordinate;
 
-      explicit InterfaceGridIntersection ( ExtraData data )
-      : hostIntersection_(),
-        data_( data )
-      {}
+      InterfaceGridIntersection () = default;
 
-      InterfaceGridIntersection ( ExtraData data, const HostIntersection &hostIntersection )
-      : hostIntersection_( hostIntersection ),
-        data_( data )
-      {}
+      InterfaceGridIntersection ( const Entity &inside, int indexInInside ) : inside_( inside ), indexInInside_( indexInInside ) {}
 
-      // template the other intersection here since it could be leaf or level
-      // intersection and we don't want to specify this here
-      template < class IntersectionImpl >
-      bool equals ( const IntersectionImpl& other ) const
+      bool equals ( const This &other ) const { return (inside_ == other.inside_) && (indexInInside_ == other.indexInInside_); }
+
+      Entity inside () const { return inside_; }
+      Entity outside () const { return Entity(); }
+
+      bool boundary () const { return true; }
+      bool conforming () const { return true; }
+      bool neighbor () const { return false; }
+
+      int boundaryId () const { return 1; }
+
+      std::size_t boundarySegmentIndex () const
       {
-        return hostIntersection() == other.hostIntersection();
-      }
-
-      Entity inside () const
-      {
-        return Entity( EntityImpl( data(), hostIntersection().inside() ) );
-      }
-
-      Entity outside () const
-      {
-        return Entity( EntityImpl( data(), hostIntersection().outside() ) );
-      }
-
-      bool boundary () const { return hostIntersection().boundary(); }
-
-      bool conforming () const { return hostIntersection().conforming(); }
-
-      bool neighbor () const { return hostIntersection().neighbor(); }
-
-      int boundaryId () const { return hostIntersection().boundaryId(); }
-
-      size_t boundarySegmentIndex () const
-      {
-        return hostIntersection().boundarySegmentIndex();
+        // TODO: Please implement me
       }
 
       LocalGeometry geometryInInside () const
       {
-        return LocalGeometry( hostIntersection().geometryInInside() );
+        // TODO: Please implement me
       }
 
       LocalGeometry geometryInOutside () const
       {
-        return LocalGeometry( hostIntersection().geometryInOutside() );
+        // TODO: Please implement me
       }
 
       Geometry geometry () const
       {
-        return Geometry( hostIntersection().geometry() );
+        // TODO: Please implement me
       }
 
-      GeometryType type () const { return hostIntersection().type(); }
-
-      int indexInInside () const { return hostIntersection().indexInInside(); }
-      int indexInOutside () const { return hostIntersection().indexInOutside(); }
-
-      FieldVector< ctype, dimensionworld >
-      integrationOuterNormal ( const FieldVector< ctype, dimension-1 > &local ) const
+      GeometryType type () const
       {
-        return hostIntersection().integrationOuterNormal( local );
+        GeometryType( (mydimension < 2 ? GeometryType::cube, GeometryType::none), mydimension );
       }
 
-      FieldVector< ctype, dimensionworld >
-      outerNormal ( const FieldVector< ctype, dimension-1 > &local ) const
+      int indexInInside () const { return indexInInside_; }
+      int indexInOutside () const { return -1; }
+
+      GlobalCoordinate integrationOuterNormal ( const LocalCoordinate &local ) const
       {
-        return hostIntersection().outerNormal( local );
+        // TODO: Please implement me
       }
 
-      FieldVector< ctype, dimensionworld >
-      unitOuterNormal ( const FieldVector< ctype, dimension-1 > &local ) const
+      GlobalCoordinate outerNormal ( const LocalCoordinate &local ) const
       {
-        return hostIntersection().unitOuterNormal( local );
+        // TODO: Please implement me
       }
 
-      FieldVector< ctype, dimensionworld > centerUnitOuterNormal () const
+      GlobalCoordinate unitOuterNormal ( const LocalCoordinate &local ) const
       {
-        return hostIntersection().centerUnitOuterNormal();
+        // TODO: Please implement me
       }
 
-      const HostIntersection &hostIntersection () const
+      GlobalCoordinate centerUnitOuterNormal () const
       {
-        return hostIntersection_;
+        // TODO: Please implement me
       }
-
-      ExtraData data() const { return data_; }
 
     protected:
-      HostIntersection hostIntersection_;
-      ExtraData  data_;
+      Entity inside_;
+      int indexInInside_ = -1;
     };
 
   } // namespace VoF

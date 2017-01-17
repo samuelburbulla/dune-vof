@@ -1,6 +1,11 @@
 #ifndef DUNE_VOF_INTERFACEGRID_INTERSECTIONITERATOR_HH
 #define DUNE_VOF_INTERFACEGRID_INTERSECTIONITERATOR_HH
 
+#include <type_traits>
+
+#include <dune/grid/common/intersectioniterator.hh>
+
+#include <dune/vof/interfacegrid/entity.hh>
 #include <dune/vof/interfacegrid/intersection.hh>
 
 namespace Dune
@@ -10,62 +15,34 @@ namespace Dune
   {
 
     // InterfaceGridIntersectionIterator
-    // --------------------------
+    // ---------------------------------
 
-    template< class Grid, class HostIntersectionIterator >
+    template< class Grid >
     class InterfaceGridIntersectionIterator
     {
-    protected:
-      typedef InterfaceGridIntersectionIterator< Grid, HostIntersectionIterator > This;
+      typedef InterfaceGridIntersectionIterator< Grid > This;
 
-      typedef typename remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
-      static const bool isLeafIntersection =
-        is_same< HostIntersectionIterator,
-                 typename Grid::HostGrid::Traits::LeafIntersectionIterator > :: value ;
     public:
-      typedef typename conditional< isLeafIntersection,
-                                    typename Traits :: LeafIntersection,
-                                    typename Traits :: LevelIntersection > :: type  Intersection ;
-      typedef typename Intersection :: Implementation IntersectionImpl ;
+      static const int dimension = Traits::dimension;
 
-      typedef typename Traits :: ExtraData ExtraData;
+      typedef Dune::Intersection< Grid, InterfaceGridIntersection< Grid > > Intersection;
+      typedef Dune::Entity< 0, dimension, Grid, InterfaceGridEntity > Entity;
 
-      InterfaceGridIntersectionIterator ()
-       : hostIterator_(),
-         data_()
-      {}
+      InterfaceGridIntersectionIterator () = default;
 
-      InterfaceGridIntersectionIterator ( ExtraData data, const HostIntersectionIterator &hostIterator )
-       : hostIterator_( hostIterator ),
-         data_( data )
-      {}
+      InterfaceGridIntersectionIterator ( const Entity &inside, int indexInInside ) : inside_( inside ), indexInInside_( indexInInside ) {}
 
-      InterfaceGridIntersectionIterator ( const This &other )
-       : hostIterator_( other.hostIterator_ ),
-         data_( other.data() )
-      {}
+      bool equals ( const This &other ) const { return (inside_ == other.inside_) && (indexInInside_ == other.indexInInside_); }
 
-      bool equals ( const This &other ) const
-      {
-        return (hostIterator_ == other.hostIterator_);
-      }
+      void increment () { ++indexInInside_; }
 
-      void increment ()
-      {
-        ++hostIterator_;
-      }
-
-      Intersection dereference () const
-      {
-        return IntersectionImpl( data(), *hostIterator_ );
-      }
-
-      ExtraData data() const { return data_; }
+      Intersection dereference () const { return InterfaceGridIntersection< Grid >( inside_, indexInInside_ ); }
 
     protected:
-      HostIntersectionIterator hostIterator_;
-      ExtraData data_;
+      Entity inside_;
+      int indexInInside_ = -1;
     };
 
   } // namespace VoF

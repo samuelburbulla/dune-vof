@@ -32,11 +32,11 @@ namespace Dune
     {
       typedef InterfaceGridIterator< 0, Grid, HostElementIterator > This;
 
-      typedef typename std::remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
     public:
       static const int codimension = 0;
-      static const int dimension = std::remove_const< Grid >::type::dimension;
+      static const int dimension = Traits::dimension;
 
       typedef Dune::Entity< codimension, dimension, Grid, InterfaceGridEntity > Entity;
 
@@ -85,11 +85,11 @@ namespace Dune
     {
       typedef InterfaceGridIterator< codim, Grid, HostIterator > This;
 
-      typedef typename std::remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
     public:
       static const int codimension = codim;
-      static const int dimension = std::remove_const< Grid >::type::dimension;
+      static const int dimension = Traits::dimension;
 
       typedef Dune::Entity< codimension, dimension, Grid, InterfaceGridEntity > Entity;
 
@@ -139,9 +139,11 @@ namespace Dune
     {
       typedef InterfaceGridHierarchicIterator< Grid > This;
 
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
+
     public:
       static const int codimension = 0;
-      static const int dimension = std::remove_const< Grid >::type::dimension;
+      static const int dimension = Traits::dimension;
 
       typedef Dune::Entity< codimension, dimension, Grid, InterfaceGridEntity > Entity;
 

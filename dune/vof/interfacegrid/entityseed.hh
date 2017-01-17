@@ -1,7 +1,7 @@
 #ifndef DUNE_VOF_INTERFACEGRID_ENTITYSEED_HH
 #define DUNE_VOF_INTERFACEGRID_ENTITYSEED_HH
 
-#include <dune/common/typetraits.hh>
+#include <type_traits>
 
 #include <dune/grid/common/entityseed.hh>
 
@@ -17,7 +17,7 @@ namespace Dune
     template< int codim, class Grid >
     class InterfaceGridEntitySeed
     {
-      typedef typename remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
     public:
       static const int codimension = codim;
@@ -50,7 +50,7 @@ namespace Dune
     template< class Grid >
     class InterfaceGridEntitySeed< 0, Grid >
     {
-      typedef typename remove_const< Grid >::type::Traits Traits;
+      typedef typename std::remove_const_t< Grid >::Traits Traits;
 
     public:
       static const int codimension = 0;
