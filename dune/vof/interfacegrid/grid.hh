@@ -100,7 +100,6 @@ namespace Dune
 
       template< int, int, class > friend class InterfaceGridEntity;
       template< class, class > friend class InterfaceGridIntersection;
-      template< class, class > friend class InterfaceGridIntersectionIterator;
       template< class, class > friend class InterfaceGridIdSet;
       template< class, class > friend class InterfaceGridIndexSet;
       template< class > friend class HostGridAccess;
