@@ -1,9 +1,13 @@
 #ifndef DUNE_VOF_INTERFACEGRID_GEOMETRY_HH
 #define DUNE_VOF_INTERFACEGRID_GEOMETRY_HH
 
+#include <cassert>
+#include <cstddef>
+
 #include <type_traits>
 
 #include <dune/geometry/affinegeometry.hh>
+#include <dune/geometry/referenceelements.hh>
 
 #include <dune/grid/common/geometry.hh>
 
@@ -27,9 +31,15 @@ namespace Dune
       typedef AffineGeometry< typename std::remove_const_t< Grid >::Traits::ctype, 0, cdim > Base;
 
     public:
-      InterfaceGridGeometry ( const HostGeometry &hostGeometry )
-      : Base( hostGeometry )
-      {}
+      typedef typename Base::ctype ctype;
+
+      typedef typename Base::GlobalCoordinate GlobalCoordinate;
+
+      InterfaceGridGeometry ( const GlobalCoordinate *cbegin, std::size_t csize )
+        : Base( ReferenceElements< ctype, 0 >::cube(), cbegin[ 0 ], {} )
+      {
+        assert( csize == 1u );
+      }
     };
 
     template< int cdim, class Grid >
@@ -40,9 +50,15 @@ namespace Dune
       typedef AffineGeometry< typename std::remove_const_t< Grid >::Traits::ctype, 1, cdim > Base;
 
     public:
-      InterfaceGridGeometry ( const HostGeometry &hostGeometry )
-      : Base( hostGeometry )
-      {}
+      typedef typename Base::ctype ctype;
+
+      typedef typename Base::GlobalCoordinate GlobalCoordinate;
+
+      InterfaceGridGeometry ( const GlobalCoordinate *cbegin, std::size_t csize )
+        : Base( ReferenceElements< ctype, 1 >::cube(), cbegin[ 0 ], { cbegin[ 1 ] - cbegin[ 0 ] } ) 
+      {
+        assert( csize == 2u );
+      }
     };
 
     template< int cdim, class Grid >
@@ -62,30 +78,19 @@ namespace Dune
       typedef FieldMatrix< ctype, mydimension, coorddimension > JacobianTransposed;
       typedef FieldMatrix< ctype, coorddimension, mydimension > JacobianInverseTransposed;
 
-      InterfaceGridGeometry ( ... )
+      InterfaceGridGeometry ( const GlobalCoordinate *cbegin, std::size_t csize )
+        : cbegin_( cbegin ), csize_( csize )
       {
-        // TODO: Please implement me
+        assert( csize >= 3u );
       }
 
-      int corners () const
-      {
-        // TODO: Please implement me
-      }
+      int corners () const { return csize_; }
 
-      GlobalCoordinate corner ( int i ) const
-      {
-        // TODO: Please implement me
-      }
+      const GlobalCoordinate &corner ( int i ) const { assert( (i >= 0) && (i < corners) ); return cbegin_[ i ]; }
 
-      GlobalCoordinate center () const
-      {
-        // TODO: Please implement me
-      }
+      GlobalCoordinate center () const { return polygonBaryCenter( rotate_, cbegin_, cbegin_ + csize_ ); }
 
-      ctype volume () const
-      {
-        // TODO: Please implement me
-      }
+      ctype volume () const { return polygonVolume( rotate_, cbegin_, cbegin_ + csize_ ); }
 
       GeometryType type () const noexcept { return GeometryType( GeometryType::none, mydimension ); }
 
@@ -120,6 +125,8 @@ namespace Dune
       }
 
     private:
+      const GlobalCoordinate *cbegin_;
+      std::size_t csize_;
     }
 
   } // namespace VoF

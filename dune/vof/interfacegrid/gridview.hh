@@ -112,7 +112,7 @@ namespace Dune
       typename Codim< codim >::template Partition< pitype >::Iterator begin () const
       {
         typedef InterfaceGridIterator< codim, const Grid, typename Traits::template HostIterator< pitype > > Impl;
-        return Impl( grid().flags(), hostGridView().template begin< 0, pitype >(), hostGridView().template end< 0, pitype >() );
+        return Impl( grid().dataSet(), hostGridView().template begin< 0, pitype >(), hostGridView().template end< 0, pitype >() );
       }
 
       template< int codim >
@@ -125,7 +125,7 @@ namespace Dune
       typename Codim< codim >::template Partition< pitype >::Iterator end () const
       {
         typedef InterfaceGridIterator< codim, const Grid, typename Traits::template HostIterator< pitype > > Impl;
-        return Impl( grid().flags(), hostGridView().template end< 0, pitype >() );
+        return Impl( grid().dataSet(), hostGridView().template end< 0, pitype >() );
       }
 
       template< int codim >
@@ -156,7 +156,7 @@ namespace Dune
       }
 
     protected:
-      decltype( auto ) hostGridView () const { return grid().reconstruction().gridView(); }
+      decltype( auto ) hostGridView () const { return grid().dataSet().gridView(); }
 
       const Grid *grid_ = nullptr;
     };

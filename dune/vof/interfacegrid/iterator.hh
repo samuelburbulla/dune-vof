@@ -7,7 +7,7 @@
 
 #include <dune/grid/common/entityiterator.hh>
 
-#include <dune/vof/flags.hh>
+#include <dune/vof/interfacegrid/dataset.hh>
 #include <dune/vof/interfacegrid/entity.hh>
 
 namespace Dune
@@ -40,39 +40,39 @@ namespace Dune
 
       typedef Dune::Entity< codimension, dimension, Grid, InterfaceGridEntity > Entity;
 
-      typedef VoF::Flags< typename Traits::Reconstruction::GridView > Flags;
+      typedef InterfaceGridDataSet< typename Traits::Reconstruction > DataSet;
 
       InterfaceGridIterator () = default;
 
-      InterfaceGridIterator ( const Flags &flags, const HostElementIterator &hostElementBegin, const HostElementIterator &hostElementEnd )
-        : flags_( &flags ), hostElementIterator_( hostElementBegin ), hostElementEnd_( hostElementEnd )
+      InterfaceGridIterator ( const DataSet &dataSet, const HostElementIterator &hostElementBegin, const HostElementIterator &hostElementEnd )
+        : dataSet_( &dataSet ), hostElementIterator_( hostElementBegin ), hostElementEnd_( hostElementEnd )
       {
-        for( ; (hostElementIterator_ != hostElementEnd_) && !flags.isMixed( *hostElementIterator_ ); ++hostElementIterator_ )
+        for( ; (hostElementIterator_ != hostElementEnd_) && !dataSet.flags().isMixed( *hostElementIterator_ ); ++hostElementIterator_ )
           continue;
       }
 
-      InterfaceGridIterator ( const Flags &flags, const HostElementIterator &hostElementEnd )
-        : flags_( &flags ), hostElementIterator_( hostElementEnd ), hostElementEnd_( hostElementEnd )
+      InterfaceGridIterator ( const DataSet &dataSet, const HostElementIterator &hostElementEnd )
+        : dataSet_( &dataSet ), hostElementIterator_( hostElementEnd ), hostElementEnd_( hostElementEnd )
       {}
 
-      operator bool () const { return flags_ && (hostElementIterator_ != hostElementEnd_); }
+      operator bool () const { return dataSet_ && (hostElementIterator_ != hostElementEnd_); }
 
       bool equals ( const This &other ) const { return (hostElementIterator_ == other.hostElementIterator_); }
 
-      Entity dereference () const { return InterfaceGridEntity< codimension, dimension, Grid >( *hostElementIterator() ); }
+      Entity dereference () const { return InterfaceGridEntity< codimension, dimension, Grid >( dataSet(), *hostElementIterator() ); }
 
       void increment ()
       {
-        for( ++hostElementIterator_; (hostElementIterator_ != hostElementEnd_) && !flags().isMixed( *hostElementIterator_ ); ++hostElementIterator_ )
+        for( ++hostElementIterator_; (hostElementIterator_ != hostElementEnd_) && !dataSet().flags().isMixed( *hostElementIterator_ ); ++hostElementIterator_ )
           continue;
       }
 
-      const Flags &flags () const { assert( flags_ ); return *flags_; }
-      const HostIterator &hostElementIterator() const { return hostElementIterator_; }
+      const DataSet &dataSet () const { assert( dataSet_ ); return *dataSet_; }
+      const HostElementIterator &hostElementIterator() const { return hostElementIterator_; }
 
     protected:
-      const Flags *flags_;
-      HostIterator hostElementIterator_, hostElementEnd_;
+      const DataSet *dataSet_;
+      HostElementIterator hostElementIterator_, hostElementEnd_;
     };
 
 
@@ -83,9 +83,11 @@ namespace Dune
     template< int codim, class Grid, class HostElementIterator >
     class InterfaceGridIterator
     {
-      typedef InterfaceGridIterator< codim, Grid, HostIterator > This;
+      typedef InterfaceGridIterator< codim, Grid, HostElementIterator > This;
 
       typedef typename std::remove_const_t< Grid >::Traits Traits;
+
+      typedef InterfaceGridIterator< 0, Grid, HostElementIterator > ElementIterator;
 
     public:
       static const int codimension = codim;
@@ -93,40 +95,41 @@ namespace Dune
 
       typedef Dune::Entity< codimension, dimension, Grid, InterfaceGridEntity > Entity;
 
-      typedef VoF::Flags< typename Traits::Reconstruction::GridView > Flags;
+      typedef typename ElementIterator::DataSet DataSet;
 
       InterfaceGridIterator () = default;
 
-      InterfaceGridIterator ( const Flags &flags, const HostElementIterator &hostElementBegin, const HostElementIterator &hostElementEnd )
-        : elementIterator_( flags, hostElementBegin, hostElementEnd )
+      InterfaceGridIterator ( const DataSet &dataSet, const HostElementIterator &hostElementBegin, const HostElementIterator &hostElementEnd )
+        : elementIterator_( dataSet, hostElementBegin, hostElementEnd ),
+          subEntities_(*this ? dataSet.numVertices( *hostElementIterator() ) : 0)
       {}
 
-      InterfaceGridIterator ( const Flags &flags, const HostElementIterator &hostElementEnd )
-        : elementIterator_( flags, hostElementEnd )
+      InterfaceGridIterator ( const DataSet &dataSet, const HostElementIterator &hostElementEnd )
+        : elementIterator_( dataSet, hostElementEnd )
       {}
 
       operator bool () const { return static_cast< bool >( elementIterator_ ); }
 
       bool equals ( const This &other ) const { return elementIterator_.equals( other.elementIterator_) && (subEntity_ == other.subEntity_); }
 
-      Entity dereference () const { return InterfaceGridEntity< codimension, dimension, Grid >( *hostElementIterator(), subEntity_ ); }
+      Entity dereference () const { return InterfaceGridEntity< codimension, dimension, Grid >( dataSet(), *hostElementIterator(), subEntity_ ); }
 
       void increment ()
       {
-        // TODO: extend to (dimension == 2), i.e., the 3d case
-        if( ++subEntity < 2 )
+        if( ++subEntity_ < subEntities_ )
           return;
 
-        subEntity = 0;
+        subEntity_ = 0;
+        subEntities_ = (*this ? dataSet().numVertices( *hostElementIterator() ) : 0);
         elementIterator_.increment();
       }
 
-      const Flags &flags () const { return elementIterator_.flags(); }
+      const DataSet &dataSet () const { return elementIterator_.dataSet(); }
       const HostElementIterator &hostElementIterator() const { return elementIterator_.hostElementIterator(); }
 
     private:
       ElementIterator elementIterator_;
-      int subEntity_ = 0;
+      int subEntity_ = 0, subEntities_ = 0;
     };
 
 

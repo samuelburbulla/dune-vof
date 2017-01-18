@@ -7,6 +7,7 @@
 
 #include <dune/vof/interfacegrid/capabilities.hh>
 #include <dune/vof/interfacegrid/datahandle.hh>
+#include <dune/vof/interfacegrid/dataset.hh>
 #include <dune/vof/interfacegrid/declaration.hh>
 #include <dune/vof/interfacegrid/entity.hh>
 #include <dune/vof/interfacegrid/entityseed.hh>
@@ -43,14 +44,16 @@ namespace Dune
         typedef Dune::IntersectionIterator< const Grid, InterfaceGridIntersectionIterator< const Grid >, InterfaceGridIntersection< const Grid > > LeafIntersectionIterator;
         typedef LeafIntersectionIterator LevelIntersectionIterator;
 
-        typedef InterfaceGridIterator< const Grid, typename HostGrid::HierarchicIterator > HierarchicIteratorImpl;
-        typedef Dune::EntityIterator< 0, const Grid, HierarchicIteratorImpl > HierarchicIterator;
+        typedef Dune::EntityIterator< 0, const Grid, InterfaceGridHierarchicIterator< const Grid > > HierarchicIterator;
+
+        typedef Dune::GridView< InterfaceGridViewTraits< Reconstruction > > LeafGridView;
+        typedef LeafGridView LevelGridView;
 
         template< int codim >
         struct Codim
         {
           typedef Dune::Geometry< dimension-codim, dimensionworld, const Grid, InterfaceGridGeometry > Geometry;
-          typedef Dune::Geometry< dimension-codim, dimension, const Grid, InterfaceGridLocalGeometry > LocalGeometry;
+          typedef Dune::Geometry< dimension-codim, dimension, const Grid, InterfaceGridGeometry > LocalGeometry;
 
           typedef Dune::Entity< codim, dimension, const Grid, InterfaceGridEntity > Entity;
           typedef Dune::EntitySeed< const Grid, InterfaceGridEntitySeed< codim, const Grid > > EntitySeed;
@@ -58,13 +61,8 @@ namespace Dune
           template< PartitionIteratorType pitype >
           struct Partition
           {
-            typedef typename HostGrid::template Codim< codim >::template Partition< pitype > HostPartition;
-
-            typedef InterfaceGridIterator< const Grid, typename HostPartition::LeafIterator > LeafIteratorImpl;
-            typedef Dune::EntityIterator< codim, const Grid, LeafIteratorImpl > LeafIterator;
-
-            typedef InterfaceGridIterator< const Grid, typename HostPartition::LevelIterator > LevelIteratorImpl;
-            typedef Dune::EntityIterator< codim, const Grid, LevelIteratorImpl > LevelIterator;
+            typedef typename LeafGridView::template Codim< codim >::template Partition< pitype >::Iterator LeafIterator;
+            typedef typename LevelGridView::template Codim< codim >::template Partition< pitype >::Iterator LevelIterator;
           };
 
           typedef typename Partition< All_Partition >::LeafIterator LeafIterator;
@@ -74,13 +72,10 @@ namespace Dune
         typedef InterfaceGridIndexSet< const Grid > LeafIndexSet;
         typedef LeafIndexSet LevelIndexSet;
 
-        typedef InterfaceGridGlobalIdSet< const Grid > GlobalIdSet;
-        typedef InterfaceGridLocalIdSet< const Grid > LocalIdSet;
+        typedef InterfaceGridIdSet< const Grid, typename Reconstruction::GridView::Grid::GlobalIdSet > GlobalIdSet;
+        typedef InterfaceGridIdSet< const Grid, typename Reconstruction::GridView::Grid::LocalIdSet > LocalIdSet;
 
         typedef typename Reconstruction::GridView::CollectiveCommunication CollectiveCommunication;
-
-        typedef Dune::GridView< InterfaceGridViewTraits< Reconstruction > > LeafGridView;
-        typedef LeafGridView LevelGridView;
       };
     };
 
@@ -96,8 +91,6 @@ namespace Dune
       typedef InterfaceGrid< R > Grid;
       typedef GridDefaultImplementation< R::GridView::dimension-1, R::GridView::dimensionworld, typename R::GridView::ctype, InterfaceGridFamily< R > > Base;
 
-      typedef InterfaceGridFamily< R >::Traits Traits;
-
       template< int, int, class > friend class InterfaceGridEntity;
       template< class, class > friend class InterfaceGridIntersection;
       template< class, class > friend class InterfaceGridIdSet;
@@ -105,11 +98,16 @@ namespace Dune
       template< class > friend class HostGridAccess;
 
     public:
+      typedef InterfaceGridFamily< R > GridFamily;
+
+      typedef typename GridFamily::Traits Traits;
+
       typedef R Reconstruction;
 
-      typedef VoF::Flags< typename Reconstruction::GridView > Flags;
+      typedef InterfaceGridDataSet< Reconstruction > DataSet;
 
-      typedef typename Reconstruction::ColorFunction ColorFunction;
+      typedef typename DataSet::ColorFunction ColorFunction;
+      typedef typename DataSet::Flags Flags;
 
       typedef typename Traits::LevelGridView LevelGridView;
       typedef typename Traits::LeafGridView LeafGridView;
@@ -124,12 +122,8 @@ namespace Dune
 
       template< class... Args >
       explicit InterfaceGrid ( const ColorFunction &colorFunction, Args &&... args )
-        : reconstruction_( std::forward< Args >( args )... ),
-          flags_( reconstruction_.gridView() ),
-          reconstructionSet_( reconstruction_.gridView() )
-      {
-        update( colorFunction );
-      }
+        : leafIndexSet_( colorFunction, std::forward< Args >( args )... )
+      {}
 
       int maxLevel () const { return 0; }
 
@@ -144,14 +138,14 @@ namespace Dune
       const GlobalIdSet &globalIdSet () const
       {
         if( !globalIdSet_ )
-          globalIdSet_ = GlobalIdSet( hostGrid().globalIdSet() );
+          globalIdSet_ = GlobalIdSet( dataSet().gridView().grid().globalIdSet() );
         return globalIdSet_;
       }
 
       const LocalIdSet &localIdSet () const
       {
         if( !localIdSet_ )
-          localIdSet_ = LocalIdSet( hostGrid().localIdSet() );
+          localIdSet_ = LocalIdSet( dataSet().gridView().grid().localIdSet() );
         return localIdSet_;
       }
 
@@ -170,7 +164,7 @@ namespace Dune
         leafGridView().communicate( dataHandle, interface, direction );
       }
 
-      const CollectiveCommunication &comm () const { return reconstruction().gridView().comm(); }
+      const CollectiveCommunication &comm () const { return dataSet().gridView().comm(); }
 
       LevelGridView levelGridView ( int level ) const
       {
@@ -189,27 +183,19 @@ namespace Dune
         return EntityImpl( extraData(), hostGrid().entity( seed.impl().hostEntitySeed() ) );
       }
 
-      const Reconstruction &reconstruction () { return reconstruction_; }
-      const Flags &flags () const { return flags_; }
+      const DataSet &dataSet () const { return leafIndexSet().dataSet(); }
 
-      void update ( const ColorFunction &colorFunction )
-      {
-        flags_.reflag( colorFunction, 1e-6 );
-        reconstruction_( colorFunction, reconstructions_, flags_ );
+      const Reconstruction &reconstruction () const { return dataSet().reconstruction(); }
+      const Flags &flags () const { return dataSet().flags(); }
 
-        // further updates
-      }
+      void update ( const ColorFunction &colorFunction ) { leafIndexSet_.update( colorFunction ); }
 
     protected:
       using Base::getRealImplementation;
 
-      Reconstruction reconstruction_;
-      typename Reconstruction::ReconstructionSet reconstructions_;
-      Flags flags_;
-
       LeafIndexSet leafIndexSet_;
-      LocalIdSet localIdSet_;
-      GlobalIdSet globalIdSet_;
+      mutable LocalIdSet localIdSet_;
+      mutable GlobalIdSet globalIdSet_;
     };
 
   } // namespace VoF

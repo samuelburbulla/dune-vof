@@ -10,6 +10,7 @@
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/indexidset.hh>
 
+#include <dune/vof/interfacegrid/dataset.hh>
 #include <dune/vof/interfacegrid/declaration.hh>
 #include <dune/vof/mixedcellmapper.hh>
 
@@ -27,11 +28,13 @@ namespace Dune
     {
       typedef typename std::remove_const_t< Grid >::Traits GridTraits;
 
-      typedef typename GridTraits::Reconstruction Reconstruction;
-
       static const int dimension = GridTraits::dimension;
 
-      typedef VoF::Flags< typename Reconstruction::GridView > Flags;
+      typedef typename GridTraits::Reconstruction Reconstruction;
+
+      typedef InterfaceGridDataSet< Reconstruction > DataSet;
+
+      typedef typename DataSet::ColorFunction ColorFunction;
 
       typedef MixedCellMapper< typename Reconstruction::GridView > Indices;
 
@@ -63,7 +66,9 @@ namespace Dune
     public:
       static const int dimension = InterfaceGridIndexSetTraits< Grid >::dimension;
 
-      typedef typename InterfaceGridIndexSetTraits< Grid >::Flags Flags;
+      typedef typename InterfaceGridIndexSetTraits< Grid >::DataSet DataSet;
+
+      typedef typename InterfaceGridIndexSetTraits< Grid >::ColorFunction ColorFunction;
 
       typedef typename InterfaceGridIndexSetTraits< Grid >::IndexType IndexType;
 
@@ -72,7 +77,9 @@ namespace Dune
       template< int codim >
       using Codim = InterfaceGridIndexSetTraits< Grid >::template Codim< codim >;
 
-      explicit InterfaceGridIndexSet ( const Flags &flags ) : indices_( flags ) {}
+      explicit InterfaceGridIndexSet ( const ColorFunction &colorFunction, Args &&... args )
+        : dataSet_( colorFunction, std::forward< Args >( args )... ), indices_( dataSet_.flags() )
+      {}
 
       template< class Entity >
       IndexType index ( const Entity &entity ) const
@@ -128,7 +135,13 @@ namespace Dune
         return {{ GeometryType( (mydim < 2 ? GeometryType::cube, GeometryType::none), mydim ) }};
       }
 
-      void update ( const Flags &flags ) { indices_.upate( flags ); }
+      void update ( const ColorFunction &colorFunction )
+      {
+        dataSet_.update( colorFunction );
+        indices_.update( dataSet_.flags() );
+      }
+
+      const DataSet &dataSet () const { return dataSet_; }
 
     private:
       IndexType index ( const typename Codim< 0 >::Entity &entity, Dune::Codim< 0 > ) const
@@ -154,6 +167,7 @@ namespace Dune
         return index( entity, Dune::Codim< 1 >() );
       }
 
+      DataSet dataSet_;
       Indices indices_;
     };
 
