@@ -24,6 +24,7 @@
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/interpolation.hh>
 
 //- local includes
 #include "average.hh"
@@ -33,7 +34,6 @@
 #include "polygon.hh"
 #include "io.hh"
 #include "problems/rotatingcircle.hh"
-#include "utility.hh"
 #include "vtu.hh"
 
 // filterReconstruction

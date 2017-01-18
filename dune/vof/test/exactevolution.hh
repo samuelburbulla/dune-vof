@@ -9,9 +9,9 @@
 #include <dune/geometry/referenceelements.hh>
 
 //- local includes
-#include "utility.hh"
 #include <dune/vof/geometry/upwindpolygon.hh>
 #include <dune/vof/geometry/utility.hh>
+#include <dune/vof/interpolation.hh>
 
 
 namespace Dune

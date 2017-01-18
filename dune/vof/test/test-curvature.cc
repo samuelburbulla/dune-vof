@@ -28,6 +28,7 @@
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
+#include <dune/vof/interpolation.hh>
 
 //- local includes
 #include "average.hh"
@@ -38,7 +39,6 @@
 #include "problems/ellipse.hh"
 #include "problems/rotatingcircle.hh"
 #include "problems/slope.hh"
-#include "utility.hh"
 #include "vtu.hh"
 
 // filterReconstruction

@@ -10,8 +10,8 @@
 //- Dune includes
 #include <dune/geometry/quadraturerules.hh>
 
-//- local includes
-#include "utility.hh"
+#include <dune/vof/interpolation.hh>
+
 
 namespace Dune
 {

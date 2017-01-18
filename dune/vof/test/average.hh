@@ -7,11 +7,12 @@
 
 #include <dune/geometry/quadraturerules.hh>
 
+#include <dune/vof/interpolation.hh>
+
 #include "problems/ellipse.hh"
 #include "problems/slope.hh"
 #include "../geometry/intersect.hh"
 #include "../geometry/halfspace.hh"
-#include "utility.hh"
 
 namespace Dune
 {
