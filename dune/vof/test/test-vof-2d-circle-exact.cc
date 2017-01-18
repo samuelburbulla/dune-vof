@@ -174,7 +174,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   auto evolution = Dune::VoF::evolution( gridView );
 
 
-  using CurvatureStencils = Dune::VoF::HeightFunctionStencil< GridView >;
+  using CurvatureStencils = Dune::VoF::HeightFunctionStencils< GridView >;
   using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, CurvatureStencils, Stencils, ColorFunction, ReconstructionSet, Flags >;
   CurvatureStencils curvatureStencils( gridView );
   CurvatureOperator curvatureOperator ( gridView, curvatureStencils, stencils );
