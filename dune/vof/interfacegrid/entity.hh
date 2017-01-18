@@ -2,7 +2,9 @@
 #define DUNE_VOF_INTERFACEGRID_ENTITY_HH
 
 #include <cassert>
+#include <cstddef>
 
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -26,11 +28,11 @@ namespace Dune
 
 
 
-    // InterfaceGridEntity
-    // -------------------
+    // BasicInterfaceGridEntity
+    // ------------------------
 
     template< int cd, int dim, class Grid >
-    class InterfaceGridEntity< cd, dim, Grid >
+    class BasicInterfaceGridEntity
     {
       typedef InterfaceGridEntity< cd, dim, Grid > This;
 
@@ -43,20 +45,62 @@ namespace Dune
       static const int dimension = Traits::dimension;
       static const int mydimension = dimension - codimension;
 
+      typedef InterfaceGridDataSet< typename Traits::Reconstruction > DataSet;
+      typedef typename Traits::Reconstruction::GridView::template Codim< 0 >::Entity HostElement;
+
+      BasicInterfaceGridEntity () = default;
+
+      BasicInterfaceGridEntity ( const DataSet &dataSet, const HostElement &hostElement )
+        : dataSet_( &dataSet ), hostElement_( hostElement )
+      {}
+
+      BasicInterfaceGridEntity ( const DataSet &dataSet, HostElement &&hostElement )
+        : dataSet_( &dataSet ), hostElement_( std::move( hostElement ) )
+      {}
+
+      int level () const { return 0; }
+
+      PartitionType partitionType () const { return hostElement().partitionType(); }
+
+      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube, GeometryType::none), mydimension ); }
+
+      const DataSet &dataSet () const { assert( dataSet_ ); return *dataSet_; }
+      const HostElement &hostElement () const { return hostElement_; }
+
+    private:
+      const DataSet *dataSet_ = nullptr;
+      HostElement hostElement_;
+    };
+
+
+
+    // InterfaceGridEntity
+    // -------------------
+
+    template< int cd, int dim, class Grid >
+    class InterfaceGridEntity
+      : public BasicInterfaceGridEntity< cd, dim, Grid >
+    {
+      typedef InterfaceGridEntity< cd, dim, Grid > This;
+      typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
+
+    public:
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef typename Traits::template Codim< codimension >::Geometry Geometry;
 
-      typedef InterfaceGridDataSet< typename Traits::Reconstruction > DataSet;
-      typedef typename Traits::Reconstruction::GridView::template Codim< 0 >::Entity HostElement;
+      typedef typename Base::DataSet DataSet;
+      typedef typename Base::HostElement HostElement;
+
+      using Base::hostElement;
 
       InterfaceGridEntity () = default;
 
       InterfaceGridEntity ( const DataSet &dataSet, const HostElement &hostElement, int subEntity )
-        : dataSet_( &dataSet ), hostElement_( hostElement ), subEntity_( subEntity )
+        : Base( dataSet, hostElement ), subEntity_( subEntity )
       {}
 
       InterfaceGridEntity ( const DataSet &dataSet, HostElement &&hostElement, int subEntity )
-        : dataSet_( &dataSet ), hostElement_( std::move( hostElement ) ), subEntity_( subEntity )
+        : Base( dataSet, std::move( hostElement ) ), subEntity_( subEntity )
       {}
 
       bool equals ( const This &other ) const { return (hostElement() == other.hostElement()) && (subEntity() == other.subEntity()); }
@@ -66,11 +110,7 @@ namespace Dune
         // TODO: Please implement me
       }
 
-      int level () const { return 0; }
-
-      PartitionType partitionType () const { return hostElement().partitionType(); }
-
-      EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement_.seed(), subEntity_ ); }
+      EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement().seed(), subEntity() ); }
 
       unsigned int subEntities ( unsigned int codim )
       {
@@ -78,16 +118,9 @@ namespace Dune
         return 1;
       }
 
-      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube, GeometryType::none), mydimension ); }
-
-      const DataSet &dataSet () const { assert( dataSet_ ); return *dataSet_; }
-      const HostElement &hostElement () const { return hostElement_; }
-
       int subEntity () const { return subEntity_; }
 
     private:
-      const DataSet *dataSet_ = nullptr;
-      HostElement hostElement_;
       int subEntity_;
     };
 
@@ -98,18 +131,12 @@ namespace Dune
 
     template< int dim, class Grid >
     class InterfaceGridEntity< 0, dim, Grid >
+      : public BasicInterfaceGridEntity< 0, dim, Grid >
     {
       typedef InterfaceGridEntity< cd, dim, Grid > This;
-
-      typedef typename std::remove_const_t< Grid >::Traits Traits;
-
-      static_assert( dim == Traits::dimension, "Internal Dune Error" );
+      typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
 
     public:
-      static const int codimension = 0;
-      static const int dimension = Traits::dimension;
-      static const int mydimension = dimension - codimension;
-
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef typename Traits::template Codim< codimension >::LocalGeometry LocalGeometry;
       typedef typename Traits::template Codim< codimension >::Geometry Geometry;
@@ -122,20 +149,23 @@ namespace Dune
 
       typedef Dune::EntityIterator< 0, Grid, InterfaceGridHierarchicIterator< Grid > > HierarchicIterator;
 
-      typedef InterfaceGridDataSet< typename Traits::Reconstruction > DataSet;
-      typedef typename Traits::Reconstruction::GridView::template Codim< 0 >::Entity HostElement;
+      typedef Base::DataSet DataSet;
+      typedef Base::HostElement HostElement;
+
+      using Base::dataSet;
+      using Base::hostElement;
 
       InterfaceGridEntity () = default;
 
-      explicit InterfaceGridEntity ( const HostElement &hostElement )
-        : hostElement_( hostElement )
+      InterfaceGridEntity ( const DataSet &dataSet, const HostElement &hostElement )
+        : Base( dataSet, hostElement )
       {}
 
-      explicit InterfaceGridEntity ( HostElement &&hostElement )
-        : hostElement_( std::move( hostElement ) )
+      InterfaceGridEntity ( const DataSet &dataSet, HostElement &&hostElement )
+        : Base( dataSet, hostElement )
       {}
 
-      bool equals ( const This &other ) const { return (hostElement() == other.hostElement()) && (subEntity() == other.subEntity()); }
+      bool equals ( const This &other ) const { return (hostElement() == other.hostElement()); }
 
       typename Codim< 0 >::Entity father () const { DUNE_THROW( GridError, "InterfaceGrid consists of only one level" ); }
 
@@ -157,10 +187,6 @@ namespace Dune
       bool isRegular () const { return true; }
       bool mightVanish () const { return false; }
 
-      int level () const { return 0; }
-
-      PartitionType partitionType () const { return hostElement().partitionType(); }
-
       EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement_.seed() ); }
 
       template< int codim >
@@ -177,11 +203,6 @@ namespace Dune
         return (codim+1);
       }
 
-      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube, GeometryType::none), mydimension ); }
-
-      const DataSet &dataSet () const { assert( dataSet_ ); return *dataSet_; }
-      const HostElement &hostElement () const { return hostElement_; }
-
     private:
       typename Codim< 0 >::Entity subEntity ( int i, Dune::Codim< 0 > ) const { return *this; }
 
@@ -190,9 +211,6 @@ namespace Dune
       {
         return InterfaceGridEntity< codim, dimension, Grid >( dataSet(), hostElement(), i );
       }
-
-      const DataSet *dataSet_ = nullptr;
-      HostElement hostElement_;
     };
 
   } // namespace VoF
