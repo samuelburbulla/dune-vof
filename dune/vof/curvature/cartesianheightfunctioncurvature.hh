@@ -108,7 +108,7 @@ namespace Dune
         {
           satisfiesConstraint( entity ) = 1;
 
-          for( std::size_t i = 0; i < stencil.columns(); ++i )
+          for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
             if ( heights[ i ] == 0.0 )
               return;
 
