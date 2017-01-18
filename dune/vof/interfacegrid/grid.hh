@@ -133,7 +133,7 @@ namespace Dune
       int size ( int level, GeometryType type ) const { return levelGridView( level ).size( type ); }
       int size ( GeometryType type ) const { return leafGridView().size( type ); }
 
-      std::size_t numBoundarySegments () const { return leafIndexSet().size( 1 ); }
+      std::size_t numBoundarySegments () const { return dataSet().offsets()[ dataSet().indices().size() ]; }
 
       const GlobalIdSet &globalIdSet () const
       {

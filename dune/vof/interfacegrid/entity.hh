@@ -88,6 +88,7 @@ namespace Dune
       typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
 
     public:
+      using Base::mydimension;
       using Base::codimension;
       using Base::dimension;
 
@@ -111,10 +112,7 @@ namespace Dune
 
       bool equals ( const This &other ) const { return (hostElement() == other.hostElement()) && (subEntity() == other.subEntity()); }
 
-      Geometry geometry () const
-      {
-        // TODO: Please implement me
-      }
+      Geometry geometry () const { return geometry( std::make_index_sequence< mydimension+1 >() ); }
 
       EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement().seed(), subEntity() ); }
 
@@ -127,6 +125,16 @@ namespace Dune
       int subEntity () const { return subEntity_; }
 
     private:
+      template< std::size_t... i >
+      Geometry geometry ( std::index_sequence< i... > ) const
+      {
+        typedef InterfaceGridGeometry< mydimension, dimensionworld, Grid > Impl;
+        const auto elementIndex = dataSet().indices().index( hostElement() );
+        const std::size_t index = dataSet().offsets()[ elementIndex ];
+        const std::size_t size = dataSet().offsets()[ elementIndex + 1 ] - index;
+        return Impl( dataSet().vertices()[ index + (static_cast< std::size_t >( subEntity() ) + i) % size ]... );
+      }
+
       int subEntity_;
     };
 

@@ -37,7 +37,7 @@ namespace Dune
       typedef FieldMatrix< ctype, mydimension, coorddimension > JacobianTransposed;
       typedef FieldMatrix< ctype, coorddimension, mydimension > JacobianInverseTransposed;
 
-      InterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
+      PolygonGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
         : normal_( normal ), cbegin_( cbegin ), csize_( csize )
       {
         assert( csize >= 3u );
@@ -135,11 +135,9 @@ namespace Dune
 
       typedef typename Base::GlobalCoordinate GlobalCoordinate;
 
-      InterfaceGridGeometry ( const GlobalCoordinate *cbegin, std::size_t csize )
-        : Base( ReferenceElements< ctype, 0 >::cube(), cbegin[ 0 ], {} )
-      {
-        assert( csize == 1u );
-      }
+      InterfaceGridGeometry ( const GlobalCoordinate &x )
+        : Base( ReferenceElements< ctype, 0 >::cube(), x, {} )
+      {}
     };
 
     template< int cdim, class Grid >
@@ -154,15 +152,15 @@ namespace Dune
 
       typedef typename Base::GlobalCoordinate GlobalCoordinate;
 
-      InterfaceGridGeometry ( const GlobalCoordinate *cbegin, std::size_t csize )
-        : Base( ReferenceElements< ctype, 1 >::cube(), cbegin[ 0 ], { cbegin[ 1 ] - cbegin[ 0 ] } ) 
+      InterfaceGridGeometry ( const GlobalCoordinate &x, const GlobalCoordinate &y )
+        : Base( ReferenceElements< ctype, 1 >::cube(), x, { y - x } ) 
+      {}
+
+      InterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
+        : This( cbegin[ 0 ], cbegin[ 1 ] )
       {
         assert( csize == 2u );
       }
-
-      InterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
-        : This( cbegin, csize )
-      {}
     };
 
     template< int cdim, class Grid >

@@ -56,7 +56,8 @@ namespace Dune
 
       std::size_t boundarySegmentIndex () const
       {
-        // TODO: Please implement me
+        const IndexType elementIndex = dataSet().indices().index( Grid::getRealImplementation( entity ).hostElement() );
+        return dataSet().offsets()[ elementIndex ] + static_cast< std::size_t >( indexInInside() );
       }
 
       LocalGeometry geometryInInside () const
@@ -87,15 +88,8 @@ namespace Dune
         // TODO: Please implement me
       }
 
-      GlobalCoordinate outerNormal ( const LocalCoordinate &local ) const
-      {
-        // TODO: Please implement me
-      }
-
-      GlobalCoordinate unitOuterNormal ( const LocalCoordinate &local ) const
-      {
-        // TODO: Please implement me
-      }
+      GlobalCoordinate outerNormal ( const LocalCoordinate & ) const { return centerUnitOuterNormal(); }
+      GlobalCoordinate unitOuterNormal ( const LocalCoordinate & ) const { return centerUnitOuterNormal(); }
 
       GlobalCoordinate centerUnitOuterNormal () const
       {
