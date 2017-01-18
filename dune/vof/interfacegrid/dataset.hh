@@ -70,6 +70,8 @@ namespace Dune
       using Base::reconstructionSet;
 
       typedef MixedCellMapper< typename R::GridView > Indices;
+      typedef std::vector< typename ReconstructionSet::DataType::Coordinate > Vertices;
+      typedef std::vector< std::size_t > Offsets;
 
       template< class... Args >
       explicit InterfaceGridDataSet ( const ColorFunction &colorFunction, Args &&... args )
@@ -86,11 +88,13 @@ namespace Dune
       }
 
       const Indices &indices () const { return indices_; }
+      const Vertices &vertices () const { return vertices_; }
+      const Offsets &offsets () const { return offsets_; }
 
     private:
       Indices indices_;
-      std::vector< typename ReconstructionSet::DataType::Coordinate > vertices_;
-      std::vector< std::size_t > offsets_;
+      Vertices vertices_;
+      Offsets offsets_;
     };
 
   } // namespace VoF

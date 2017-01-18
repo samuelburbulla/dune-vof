@@ -40,6 +40,9 @@ namespace Dune
 
       static_assert( dim == Traits::dimension, "Internal Dune Error" );
 
+    protected:
+      static const int dimensionworld = Traits::dimensionworld;
+
     public:
       static const int codimension = cd;
       static const int dimension = Traits::dimension;
@@ -139,13 +142,17 @@ namespace Dune
       typedef InterfaceGridEntity< cd, dim, Grid > This;
       typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
 
+    protected:
+      using Base::dimensionworld;
+
     public:
       using Base::codimension;
+      using Base::mydimension;
       using Base::dimension;
 
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
+      typedef Dune::Geometry< mydimension, dimensionworld, Grid, InterfaceGridGeometry > Geometry;
       typedef typename Traits::template Codim< codimension >::LocalGeometry LocalGeometry;
-      typedef typename Traits::template Codim< codimension >::Geometry Geometry;
 
       template< int codim >
       struct Codim
@@ -154,6 +161,8 @@ namespace Dune
       }
 
       typedef Dune::EntityIterator< 0, Grid, InterfaceGridHierarchicIterator< Grid > > HierarchicIterator;
+
+      typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
       typedef Base::DataSet DataSet;
       typedef Base::HostElement HostElement;
@@ -177,7 +186,11 @@ namespace Dune
 
       Geometry geometry () const
       {
-        // TODO: Please implement me
+        typedef InterfaceGridGeometry< mydimension, dimensionworld, Grid > Impl;
+        const auto elementIndex = dataSet().indices().index( hostElement() );
+        const std::size_t index = dataSet().offsets()[ elementIndex ];
+        const std::size_t size = dataSet().offsets()[ elementIndex + 1 ] - index;
+        return Impl( normal(), dataSet().vertices().data() + index, size );
       }
 
       LocalGeometry geometryInFather () const { DUNE_THROW( GridError, "InterfaceGrid consists of only one level" ); }
@@ -213,6 +226,8 @@ namespace Dune
         else
           return 1;
       }
+
+      GlobalCoordinate normal () const { return dataSet().reconstructionSet()[ hostElement() ].innerNormal(); }
 
     private:
       typename Codim< 0 >::Entity subEntity ( int i, Dune::Codim< 0 > ) const { return *this; }
