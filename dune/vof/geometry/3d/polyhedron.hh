@@ -146,9 +146,13 @@ namespace Dune {
 
         const std::vector< std::size_t >& nodeIds () const { return nodeIds_; }
 
-        const std::size_t& nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
+        std::size_t nodeId ( const std::size_t index ) const { return nodeIds_[ index ]; }
+
+        std::size_t size ( int codim = 2 ) const { return (codim == 0) ? 1 : nodeIds().size(); }
 
         const Coordinate& node ( const std::size_t index ) const { return parent_->node( nodeIds_[ index ] ); }
+
+        const Coordinate& vertex ( const std::size_t index ) const { return parent_->node( nodeIds_[ index ] ); }
 
 
         const bool operator== ( const Face& other ) const
