@@ -23,7 +23,7 @@ namespace Dune
     template< class ct, int cdim >
     struct PolygonGeometry;
 
-    template< class ct, int cdim >
+    template< class ct >
     struct PolygonGeometry< ct, 3 >
     {
       typedef ct ctype;
@@ -55,7 +55,7 @@ namespace Dune
         {
           const GlobalCoordinate &x = cbegin_[ i ];
           const GlobalCoordinate &y = cbegin_[ (i+1) % csize_ ];
-          const ctype weight = det( x, y, normal );
+          const ctype weight = det( x, y, normal_ );
           center.axpy( weight, x + y );
           volume += weight;
         }
@@ -68,7 +68,7 @@ namespace Dune
 
         ctype volume = 0;
         for( std::size_t i = 0; i < csize_; ++i )
-          volume += det( cbegin_[ i ], cbegin_[ (i+1) % csize_ ], normal );
+          volume += det( cbegin_[ i ], cbegin_[ (i+1) % csize_ ], normal_ );
         return abs( volume / ctype( 2 ) );
       }
 
@@ -113,7 +113,66 @@ namespace Dune
       GlobalCoordinate normal_;
       const GlobalCoordinate *cbegin_;
       std::size_t csize_;
-    }
+    };
+
+
+
+    // BasicInterfaceGridGeometry
+    // --------------------------
+
+    template< class ctype, int mydim, int cdim >
+    class BasicInterfaceGridGeometry;
+
+    template< class ctype, int cdim >
+    class BasicInterfaceGridGeometry< ctype, 0, cdim >
+      : public AffineGeometry< ctype, 0, cdim >
+    {
+      typedef BasicInterfaceGridGeometry< ctype, 0, cdim > This;
+      typedef AffineGeometry< ctype, 0, cdim > Base;
+
+    public:
+      typedef typename Base::GlobalCoordinate GlobalCoordinate;
+
+      explicit BasicInterfaceGridGeometry ( const GlobalCoordinate &x )
+        : Base( ReferenceElements< ctype, 0 >::cube(), x, {} )
+      {}
+    };
+
+    template< class ctype, int cdim >
+    class BasicInterfaceGridGeometry< ctype, 1, cdim >
+      : public AffineGeometry< ctype, 1, cdim >
+    {
+      typedef BasicInterfaceGridGeometry< ctype, 1, cdim > This;
+      typedef AffineGeometry< ctype, 1, cdim > Base;
+
+    public:
+      typedef typename Base::GlobalCoordinate GlobalCoordinate;
+
+      BasicInterfaceGridGeometry ( const GlobalCoordinate &x, const GlobalCoordinate &y )
+        : Base( ReferenceElements< ctype, 1 >::cube(), x, { y - x } ) 
+      {}
+
+      BasicInterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
+        : This( cbegin[ 0 ], cbegin[ 1 ] )
+      {
+        assert( csize == 2u );
+      }
+    };
+
+    template< class ctype, int cdim >
+    class BasicInterfaceGridGeometry< ctype, 2, cdim >
+      : public PolygonGeometry< ctype, cdim >
+    {
+      typedef BasicInterfaceGridGeometry< ctype, 2, cdim > This;
+      typedef PolygonGeometry< ctype, cdim > Base;
+
+    public:
+      typedef typename Base::GlobalCoordinate GlobalCoordinate;
+
+      BasicInterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
+        : Base( normal, cbegin, csize )
+      {}
+    };
 
 
 
@@ -121,64 +180,7 @@ namespace Dune
     // ---------------------
 
     template< int mydim, int cdim, class Grid >
-    class InterfaceGridGeometry;
-
-    template< int cdim, class Grid >
-    class InterfaceGridGeometry< 0, cdim, Grid >
-      : public AffineGeometry< typename std::remove_const_t< Grid >::Traits::ctype, 0, cdim >
-    {
-      typedef InterfaceGridGeometry< 0, cdim, Grid > This;
-      typedef AffineGeometry< typename std::remove_const_t< Grid >::Traits::ctype, 0, cdim > Base;
-
-    public:
-      typedef typename Base::ctype ctype;
-
-      typedef typename Base::GlobalCoordinate GlobalCoordinate;
-
-      InterfaceGridGeometry ( const GlobalCoordinate &x )
-        : Base( ReferenceElements< ctype, 0 >::cube(), x, {} )
-      {}
-    };
-
-    template< int cdim, class Grid >
-    class InterfaceGridGeometry< 1, cdim, Grid >
-      : public AffineGeometry< typename std::remove_const_t< Grid >::Traits::ctype, 1, cdim >
-    {
-      typedef InterfaceGridGeometry< 1, cdim, Grid > This;
-      typedef AffineGeometry< typename std::remove_const_t< Grid >::Traits::ctype, 1, cdim > Base;
-
-    public:
-      typedef typename Base::ctype ctype;
-
-      typedef typename Base::GlobalCoordinate GlobalCoordinate;
-
-      InterfaceGridGeometry ( const GlobalCoordinate &x, const GlobalCoordinate &y )
-        : Base( ReferenceElements< ctype, 1 >::cube(), x, { y - x } ) 
-      {}
-
-      InterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
-        : This( cbegin[ 0 ], cbegin[ 1 ] )
-      {
-        assert( csize == 2u );
-      }
-    };
-
-    template< int cdim, class Grid >
-    class InterfaceGridGeometry< 2, cdim, Grid >
-      : public PolygonGeometry< typename std::remove_const_t< Grid >::Traits::ctype, cdim >
-    {
-      typedef InterfaceGridGeometry< 2, cdim, Grid > This;
-      typedef PolygonGeometry< typename std::remove_const_t< Grid >::Traits::ctype, cdim > Base;
-
-    public:
-      typedef typename Base::ctype ctype;
-
-      typedef typename Base::GlobalCoordinate GlobalCoordinate;
-
-      InterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
-        : Base( normal, cbegin, csize )
-      {}
-    };
+    using InterfaceGridGeometry = BasicInterfaceGridGeometry< typename std::remove_const_t< Grid >::Traits::ctype, mydim, cdim >;
 
   } // namespace VoF
 

@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+#include <dune/geometry/dimension.hh>
+
 #include <dune/grid/common/intersection.hh>
 
 #include <dune/vof/interfacegrid/entity.hh>
@@ -33,8 +35,8 @@ namespace Dune
       typedef typename Traits::ctype ctype;
 
       typedef Dune::Entity< 0, dimension, Grid, InterfaceGridEntity > Entity;
-      typedef typename Traits::template Codim< 1 >::Geometry       Geometry;
-      typedef typename Traits::template Codim< 1 >::LocalGeometry  LocalGeometry;
+      typedef Dune::Geometry< mydimension, dimensionworld, Grid, InterfaceGridGeometry > Geometry;
+      typedef Dune::Geometry< mydimension, dimension, Grid, InterfaceGridGeometry > LocalGeometry;
 
       typedef FieldVector< ctype, mydimension > LocalCoordinate;
       typedef FieldVector< ctype, dimensionworld > GlobalCoordinate;
@@ -62,17 +64,20 @@ namespace Dune
 
       LocalGeometry geometryInInside () const
       {
-        // TODO: Please implement me
+        if( mydimension > 0 )
+          DUNE_THROW( InvalidStateException, "Intersection::geometryInInside does not make for arbitrary polytopes." );
+        else
+          return LocalGeometry( InterfaceGridGeometry< mydimension, dimension, Grid >( FieldVector< ctype, dimension >{ ctype( indexInInside() ) } ) );
       }
 
       LocalGeometry geometryInOutside () const
       {
-        // TODO: Please implement me
+        DUNE_THROW( InvalidStateException, "Intersection::geometryInOutside does not make for arbitrary polytopes." );
       }
 
       Geometry geometry () const
       {
-        // TODO: Please implement me
+        return Geometry( dataSet().geometry( Grid::getRealImplementation( inside_ ).hostElement(), indexInInside(), Dune::Dim< mydimension >() ) );
       }
 
       GeometryType type () const
@@ -85,7 +90,8 @@ namespace Dune
 
       GlobalCoordinate integrationOuterNormal ( const LocalCoordinate &local ) const
       {
-        // TODO: Please implement me
+        GlobalCoordinate normal = centerUnitOuterNormal();
+        return normal *= geometry().integrationElement( local );
       }
 
       GlobalCoordinate outerNormal ( const LocalCoordinate & ) const { return centerUnitOuterNormal(); }

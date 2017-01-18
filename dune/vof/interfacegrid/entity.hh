@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <dune/geometry/dimension.hh>
+
 #include <dune/grid/common/exceptions.hh>
 #include <dune/grid/common/entity.hh>
 
@@ -93,7 +95,7 @@ namespace Dune
       using Base::dimension;
 
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
-      typedef typename Traits::template Codim< codimension >::Geometry Geometry;
+      typedef Dune::Geometry< mydimension, dimensionworld, Grid, InterfaceGridGeometry > Geometry;
 
       typedef typename Base::DataSet DataSet;
       typedef typename Base::HostElement HostElement;
@@ -112,7 +114,7 @@ namespace Dune
 
       bool equals ( const This &other ) const { return (hostElement() == other.hostElement()) && (subEntity() == other.subEntity()); }
 
-      Geometry geometry () const { return geometry( std::make_index_sequence< mydimension+1 >() ); }
+      Geometry geometry () const { return Geometry( dataSet().geometry( hostElement(), subEntity(), Dune::Dim< mydimension >() ) ); }
 
       EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement().seed(), subEntity() ); }
 
@@ -125,16 +127,6 @@ namespace Dune
       int subEntity () const { return subEntity_; }
 
     private:
-      template< std::size_t... i >
-      Geometry geometry ( std::index_sequence< i... > ) const
-      {
-        typedef InterfaceGridGeometry< mydimension, dimensionworld, Grid > Impl;
-        const auto elementIndex = dataSet().indices().index( hostElement() );
-        const std::size_t index = dataSet().offsets()[ elementIndex ];
-        const std::size_t size = dataSet().offsets()[ elementIndex + 1 ] - index;
-        return Impl( dataSet().vertices()[ index + (static_cast< std::size_t >( subEntity() ) + i) % size ]... );
-      }
-
       int subEntity_;
     };
 
@@ -198,7 +190,7 @@ namespace Dune
         const auto elementIndex = dataSet().indices().index( hostElement() );
         const std::size_t index = dataSet().offsets()[ elementIndex ];
         const std::size_t size = dataSet().offsets()[ elementIndex + 1 ] - index;
-        return Impl( normal(), dataSet().vertices().data() + index, size );
+        return Geometry( Impl( normal(), dataSet().vertices().data() + index, size ) );
       }
 
       LocalGeometry geometryInFather () const { DUNE_THROW( GridError, "InterfaceGrid consists of only one level" ); }
@@ -225,12 +217,9 @@ namespace Dune
 
       unsigned int subEntities ( unsigned int codim ) const
       {
+        assert( codim <= static_cast< unsigned int >( dimension ) );
         if( codim > 0u )
-        {
-          assert( codim <= static_cast< unsigned int >( dimension ) );
-          const auto elementIndex = dataSet().indices().index( hostElement() );
-          return (dataSet().offsets()[ elementIndex + 1 ] - dataSet().offsets()[ elementIndex ]);
-        }
+          return dataSet().numVertices( hostElement() );
         else
           return 1;
       }
