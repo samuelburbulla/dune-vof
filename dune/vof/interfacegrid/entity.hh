@@ -85,6 +85,9 @@ namespace Dune
       typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
 
     public:
+      using Base::codimension;
+      using Base::dimension;
+
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef typename Traits::template Codim< codimension >::Geometry Geometry;
 
@@ -112,10 +115,10 @@ namespace Dune
 
       EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement().seed(), subEntity() ); }
 
-      unsigned int subEntities ( unsigned int codim )
+      unsigned int subEntities ( unsigned int codim ) const
       {
         assert( (codim >= static_cast< unsigned int >( codimension )) && (codim <= static_cast< unsigned int >( dimension )) );
-        return 1;
+        return (codim - static_cast< unsigned int >( codimension ) + 1u);
       }
 
       int subEntity () const { return subEntity_; }
@@ -137,6 +140,9 @@ namespace Dune
       typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
 
     public:
+      using Base::codimension;
+      using Base::dimension;
+
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef typename Traits::template Codim< codimension >::LocalGeometry LocalGeometry;
       typedef typename Traits::template Codim< codimension >::Geometry Geometry;
@@ -196,11 +202,16 @@ namespace Dune
         return subEntity( i, Dune::Codim< codim >() );
       }
 
-      unsigned int subEntities ( unsigned int codim )
+      unsigned int subEntities ( unsigned int codim ) const
       {
-        // TODO: extend to (dimension == 2), i.e., the 3d case
-        assert( (codim >= static_cast< unsigned int >( codimension )) && (codim <= static_cast< unsigned int >( dimension )) );
-        return (codim+1);
+        if( codim > 0u )
+        {
+          assert( codim <= static_cast< unsigned int >( dimension ) );
+          const auto elementIndex = dataSet().indices().index( hostElement() );
+          return (dataSet().offsets()[ elementIndex + 1 ] - dataSet().offsets()[ elementIndex ]);
+        }
+        else
+          return 1;
       }
 
     private:

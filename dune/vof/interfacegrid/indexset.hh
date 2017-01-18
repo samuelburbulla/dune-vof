@@ -12,7 +12,6 @@
 
 #include <dune/vof/interfacegrid/dataset.hh>
 #include <dune/vof/interfacegrid/declaration.hh>
-#include <dune/vof/mixedcellmapper.hh>
 
 namespace Dune
 {
@@ -35,10 +34,7 @@ namespace Dune
       typedef InterfaceGridDataSet< Reconstruction > DataSet;
 
       typedef typename DataSet::ColorFunction ColorFunction;
-
-      typedef MixedCellMapper< typename Reconstruction::GridView > Indices;
-
-      typedef typename Indices::Index IndexType;
+      typedef typename DataSet::Indices::Index IndexType;
 
       typedef std::array< GeometryType, 1 > Types;
 
@@ -61,8 +57,6 @@ namespace Dune
       typedef InterfaceGridIndexSet< Grid > This;
       typedef IndexSet< Grid, InterfaceGridIndexSet< Grid >, typename InterfaceGridIndexSetTraits< Grid >::IndexType > Base;
 
-      typedef typename InterfaceGridIndexSetTraits< Grid >::Indices Indices;
-
     public:
       static const int dimension = InterfaceGridIndexSetTraits< Grid >::dimension;
 
@@ -75,10 +69,11 @@ namespace Dune
       typedef typename InterfaceGridIndexSetTraits< Grid >::Types Types;
 
       template< int codim >
-      using Codim = InterfaceGridIndexSetTraits< Grid >::template Codim< codim >;
+      using Codim = typename InterfaceGridIndexSetTraits< Grid >::template Codim< codim >;
 
+      template< class... Args >
       explicit InterfaceGridIndexSet ( const ColorFunction &colorFunction, Args &&... args )
-        : dataSet_( colorFunction, std::forward< Args >( args )... ), indices_( dataSet_.flags() )
+        : dataSet_( colorFunction, std::forward< Args >( args )... )
       {}
 
       template< class Entity >
@@ -90,7 +85,6 @@ namespace Dune
       template< int cd >
       IndexType index ( const typename Codim< cd >::Entity &entity ) const
       {
-        // TODO: extend to (dimension == 2), i.e., the 3d case
         return index ( entity, Dune::Codim< cd >() );
       }
 
@@ -103,23 +97,22 @@ namespace Dune
       template< int cd >
       IndexType subIndex ( const typename Codim< cd >::Entity &entity, int i, unsigned int codim ) const
       {
-        // TODO: extend to (dimension == 2), i.e., the 3d case
+        assert( (static_cast< unsigned int >( cd ) <= codim) && (codim <= static_cast< unsigned int >( dimension )) );
+        assert( (i >= 0) && (static_cast< unsigned int >( i ) < entity.subEntities( codim )) );
         return subIndex( entity, i, codim, Dune::Codim< cd >() );
       }
 
       IndexType size ( GeometryType type ) const
       {
         const int codim = dimension - type.dim();
-        return (type == types( codim ) ? size( codim ) : static_cast< IndexType >( 0u ));
+        return (type == types( codim )[ 0 ] ? size( codim ) : static_cast< IndexType >( 0u ));
       }
 
       IndexType size ( int codim ) const
       {
-        // TODO: extend to (dimension == 2), i.e., the 3d case
-        assert( dimension == 1 );
-
-        assert( (codim >= 0) && (codim <= dimension) )
-        return (codim+1) * size_;
+        assert( (codim >= 0) && (codim <= dimension) );
+        const IndexType size = dataSet().indices().size();
+        return (codim == 0 ? size : dataSet().offsets()[ size ]);
       }
 
       template< class Entity >
@@ -132,13 +125,12 @@ namespace Dune
       {
         assert( (codim >= 0) && (codim <= dimension) );
         const int mydim = dimension - codim;
-        return {{ GeometryType( (mydim < 2 ? GeometryType::cube, GeometryType::none), mydim ) }};
+        return {{ GeometryType( (mydim < 2 ? GeometryType::cube : GeometryType::none), mydim ) }};
       }
 
       void update ( const ColorFunction &colorFunction )
       {
         dataSet_.update( colorFunction );
-        indices_.update( dataSet_.flags() );
       }
 
       const DataSet &dataSet () const { return dataSet_; }
@@ -146,29 +138,32 @@ namespace Dune
     private:
       IndexType index ( const typename Codim< 0 >::Entity &entity, Dune::Codim< 0 > ) const
       {
-        return indices_.index( Grid::getRealImplementation( entity ).hostElement() );
+        return dataSet().indices().index( Grid::getRealImplementation( entity ).hostElement() );
       }
 
-      IndexType index ( const typename Codim< 1 >::Entity &entity, Dune::Codim< 1 > ) const
+      template< int cd >
+      IndexType index ( const typename Codim< cd >::Entity &entity, Dune::Codim< cd > ) const
       {
-        return 2*indices_.index( Grid::getRealImplementation( entity ).hostElement() ) + Grid::getRealImplementation( entity ).subEntity();
+        const IndexType elementIndex = dataSet().indices().index( Grid::getRealImplementation( entity ).hostElement() );
+        return dataSet().offsets()[ elementIndex ] + static_cast< IndexType >( Grid::getRealImplementation( entity ).subEntity() );
       }
 
       IndexType subIndex ( const typename Codim< 0 >::Entity &entity, int i, unsigned int codim, Dune::Codim< 0 > ) const
       {
-        assert( codim <= static_cast< unsigned int >( dimension ) );
-        assert( (i >= 0) && (i < static_cast< int >( codim+1 )) );
-        return (codim+1)*indices_.index( Grid::getRealImplementation( entity ).hostElement() ) + i;
+        const IndexType elementIndex = dataSet().indices().index( Grid::getRealImplementation( entity ).hostElement() );
+        return (codim == 0 ? elementIndex : dataSet().offsets()[ elementIndex ] + static_cast< IndexType >( i ));
       }
 
-      IndexType subIndex ( const typename Codim< 1 >::Entity &entity, int i, unsigned int codim, Dune::Codim< 1 > ) const
+      template< int cd >
+      IndexType subIndex ( const typename Codim< cd >::Entity &entity, int i, unsigned int codim, Dune::Codim< cd > ) const
       {
-        assert( (codim == 1u) && (i == 0) );
-        return index( entity, Dune::Codim< 1 >() );
+        const IndexType elementIndex = dataSet().indices().index( Grid::getRealImplementation( entity ).hostElement() );
+        const IndexType offset = dataSet().offsets()[ elementIndex ];
+        const IndexType size = dataSet().offsets()[ elementIndex + 1 ];
+        return offset + (static_cast< IndexType >( i + Grid::getRealImplementation( entity ).subEntity() ) % size);
       }
 
       DataSet dataSet_;
-      Indices indices_;
     };
 
   } // namespace VoF
