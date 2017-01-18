@@ -9,6 +9,7 @@ set(HEADERS
   curvatureSet.hh
   dataset.hh
   evolution.hh
+  mixedcellmapper.hh
   flags.hh
   reconstruction.hh
   reconstructionSet.hh
