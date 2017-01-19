@@ -35,7 +35,7 @@ namespace Dune
       bool isValid () const { return hostElementSeed_.isValid(); }
 
       const HostElementSeed &hostElementSeed () const { return hostElementSeed_; }
-      const int subEntity () const { return subEntity_; }
+      int subEntity () const { return subEntity_; }
 
     private:
       HostElementSeed hostElementSeed_;

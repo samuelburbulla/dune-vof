@@ -21,6 +21,14 @@ namespace Dune
   namespace VoF
   {
 
+    // External Forward Declarations
+    // -----------------------------
+
+    template< class Grid >
+    struct HostGridAccess;
+
+
+
     // InterfaceGridFamily
     // -------------------
 
@@ -61,8 +69,8 @@ namespace Dune
           template< PartitionIteratorType pitype >
           struct Partition
           {
-            typedef typename LeafGridView::template Codim< codim >::template Partition< pitype >::Iterator LeafIterator;
-            typedef typename LevelGridView::template Codim< codim >::template Partition< pitype >::Iterator LevelIterator;
+            typedef typename InterfaceGridViewTraits< Reconstruction >::template Codim< codim >::template Partition< pitype >::Iterator LeafIterator;
+            typedef typename InterfaceGridViewTraits< Reconstruction >::template Codim< codim >::template Partition< pitype >::Iterator LevelIterator;
           };
 
           typedef typename Partition< All_Partition >::LeafIterator LeafIterator;
@@ -88,14 +96,14 @@ namespace Dune
     class InterfaceGrid
       : public GridDefaultImplementation< R::GridView::dimension-1, R::GridView::dimensionworld, typename R::GridView::ctype, InterfaceGridFamily< R > >
     {
-      typedef InterfaceGrid< R > Grid;
+      typedef InterfaceGrid< R > This;
       typedef GridDefaultImplementation< R::GridView::dimension-1, R::GridView::dimensionworld, typename R::GridView::ctype, InterfaceGridFamily< R > > Base;
 
       template< int, int, class > friend class InterfaceGridEntity;
-      template< class, class > friend class InterfaceGridIntersection;
+      template< class > friend class InterfaceGridIntersection;
       template< class, class > friend class InterfaceGridIdSet;
-      template< class, class > friend class InterfaceGridIndexSet;
-      template< class > friend class HostGridAccess;
+      template< class > friend class InterfaceGridIndexSet;
+      friend struct HostGridAccess< This >;
 
     public:
       typedef InterfaceGridFamily< R > GridFamily;
@@ -108,6 +116,8 @@ namespace Dune
 
       typedef typename DataSet::ColorFunction ColorFunction;
       typedef typename DataSet::Flags Flags;
+
+      static const int dimension = Traits::dimension;
 
       typedef typename Traits::LevelGridView LevelGridView;
       typedef typename Traits::LeafGridView LeafGridView;
@@ -176,11 +186,18 @@ namespace Dune
         return LeafGridView( InterfaceGridView< Reconstruction >( *this ) );
       }
 
-      template< class EntitySeed >
+      template< class EntitySeed, std::enable_if_t< (EntitySeed::codimension == 0), int > = 0 >
       typename Traits::template Codim< EntitySeed::codimension >::Entity entity ( const EntitySeed &seed ) const
       {
-        typedef typename Traits::template Codim< EntitySeed::codimension >::EntityImpl EntityImpl;
-        return EntityImpl( extraData(), hostGrid().entity( seed.impl().hostEntitySeed() ) );
+        typedef InterfaceGridEntity< EntitySeed::codimension, dimension, const This > Impl;
+        return Impl( dataSet(), dataSet().gridView().grid().entity( getRealImplementation( seed ).hostElementSeed() ) );
+      }
+
+      template< class EntitySeed, std::enable_if_t< (EntitySeed::codimension > 0), int > = 0 >
+      typename Traits::template Codim< EntitySeed::codimension >::Entity entity ( const EntitySeed &seed ) const
+      {
+        typedef InterfaceGridEntity< EntitySeed::codimension, dimension, const This > Impl;
+        return Impl( dataSet(), dataSet().gridView().grid().entity( getRealImplementation( seed ).hostElementSeed() ), getRealImplementation( seed ).subEntity() );
       }
 
       const DataSet &dataSet () const { return leafIndexSet().dataSet(); }
