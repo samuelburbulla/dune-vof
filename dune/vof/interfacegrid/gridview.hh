@@ -152,7 +152,8 @@ namespace Dune
       template< class DataHandle, class Data >
       void communicate ( CommDataHandleIF< DataHandle, Data > &dataHandle, InterfaceType interface, CommunicationDirection direction ) const
       {
-        // TODO: Please implement me
+        InterfaceGridDataHandle< Grid, CommDataHandleIF< DataHandle, Data > > wrappedDataHandle( grid().dataSet(), dataHandle );
+        hostGridView().communicate( wrappedDataHandle, interface, direction );
       }
 
     protected:
