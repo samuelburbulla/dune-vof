@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <dune/geometry/dimension.hh>
+#include <dune/geometry/type.hh>
 
 #include <dune/grid/common/exceptions.hh>
 #include <dune/grid/common/entity.hh>
@@ -36,7 +37,7 @@ namespace Dune
     template< int cd, int dim, class Grid >
     class BasicInterfaceGridEntity
     {
-      typedef InterfaceGridEntity< cd, dim, Grid > This;
+      typedef BasicInterfaceGridEntity< cd, dim, Grid > This;
 
       typedef typename std::remove_const_t< Grid >::Traits Traits;
 
@@ -67,7 +68,7 @@ namespace Dune
 
       PartitionType partitionType () const { return hostElement().partitionType(); }
 
-      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube, GeometryType::none), mydimension ); }
+      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube : GeometryType::none), mydimension ); }
 
       const DataSet &dataSet () const { assert( dataSet_ ); return *dataSet_; }
       const HostElement &hostElement () const { return hostElement_; }
@@ -89,6 +90,9 @@ namespace Dune
       typedef InterfaceGridEntity< cd, dim, Grid > This;
       typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
 
+    protected:
+      using Base::dimensionworld;
+
     public:
       using Base::mydimension;
       using Base::codimension;
@@ -100,6 +104,7 @@ namespace Dune
       typedef typename Base::DataSet DataSet;
       typedef typename Base::HostElement HostElement;
 
+      using Base::dataSet;
       using Base::hostElement;
 
       InterfaceGridEntity () = default;
@@ -139,8 +144,8 @@ namespace Dune
     class InterfaceGridEntity< 0, dim, Grid >
       : public BasicInterfaceGridEntity< 0, dim, Grid >
     {
-      typedef InterfaceGridEntity< cd, dim, Grid > This;
-      typedef BasicInterfaceGridEntity< cd, dim, Grid > Base;
+      typedef InterfaceGridEntity< 0, dim, Grid > This;
+      typedef BasicInterfaceGridEntity< 0, dim, Grid > Base;
 
     protected:
       using Base::dimensionworld;
@@ -152,20 +157,20 @@ namespace Dune
 
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef Dune::Geometry< mydimension, dimensionworld, Grid, InterfaceGridGeometry > Geometry;
-      typedef typename Traits::template Codim< codimension >::LocalGeometry LocalGeometry;
+      typedef Dune::Geometry< mydimension, dimension, Grid, InterfaceGridGeometry > LocalGeometry; 
 
       template< int codim >
       struct Codim
       {
         typedef Dune::Entity< codim, dimension, Grid, InterfaceGridEntity > Entity;
-      }
+      };
 
       typedef Dune::EntityIterator< 0, Grid, InterfaceGridHierarchicIterator< Grid > > HierarchicIterator;
 
       typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
-      typedef Base::DataSet DataSet;
-      typedef Base::HostElement HostElement;
+      typedef typename Base::DataSet DataSet;
+      typedef typename Base::HostElement HostElement;
 
       using Base::dataSet;
       using Base::hostElement;
@@ -206,12 +211,12 @@ namespace Dune
       bool isRegular () const { return true; }
       bool mightVanish () const { return false; }
 
-      EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement_.seed() ); }
+      EntitySeed seed () const { return InterfaceGridEntitySeed< codimension, Grid >( hostElement().seed() ); }
 
       template< int codim >
       typename Codim< codim >::Entity subEntity ( int i ) const
       {
-        assert( (i >= 0) && (i < static_cast< int >( subEntities( codim ) ) );
+        assert( (i >= 0) && (i < static_cast< int >( subEntities( codim ) )) );
         return subEntity( i, Dune::Codim< codim >() );
       }
 
@@ -224,7 +229,7 @@ namespace Dune
           return 1;
       }
 
-      GlobalCoordinate normal () const { return dataSet().reconstructionSet()[ hostElement() ].innerNormal(); }
+      const GlobalCoordinate &normal () const { return dataSet().normal( hostElement() ); }
 
     private:
       typename Codim< 0 >::Entity subEntity ( int i, Dune::Codim< 0 > ) const { return *this; }

@@ -28,16 +28,22 @@ namespace Dune
     {
       typedef R Reconstruction;
 
-      typedef VoF::Flags< typename Reconstruction::GridView > Flags;
+      typedef typename Reconstruction::GridView GridView;
+
+      typedef VoF::Flags< GridView > Flags;
 
       typedef typename Reconstruction::ColorFunction ColorFunction;
       typedef typename Reconstruction::ReconstructionSet ReconstructionSet;
 
+      typedef typename GridView::template Codim< 0 >::Entity Element;
+
+      typedef typename ReconstructionSet::DataType::Coordinate GlobalCoordinate;
+
       template< class... Args >
       explicit BasicInterfaceGridDataSet ( const ColorFunction &colorFunction, Args &&... args )
         : reconstruction_( std::forward< Args >( args )... ),
-          flags_( reconstruction_.gridView(), colorFunction, 1e-6 ),
-          reconstructionSet_( reconstruction_.gridView() )
+          flags_( colorFunction.gridView() ),
+          reconstructionSet_( colorFunction.gridView() )
       {
         update( colorFunction );
       }
@@ -46,11 +52,15 @@ namespace Dune
       const Flags &flags () const { return flags_; }
       const ReconstructionSet &reconstructionSet () const { return reconstructionSet_; }
 
+      const GridView &gridView () const { return flags().gridView(); }
+
       void update ( const ColorFunction &colorFunction )
       {
         flags_.reflag( colorFunction, 1e-6 );
         reconstruction_( colorFunction, reconstructionSet_, flags_ );
       }
+
+      const GlobalCoordinate &normal ( const Element &element ) const { return reconstructionSet()[ element ].innerNormal(); }
 
     protected:
       Reconstruction reconstruction_;
@@ -73,16 +83,21 @@ namespace Dune
     public:
       using Base::flags;
       using Base::reconstructionSet;
+      using Base::normal;
 
       typedef typename Base::ColorFunction ColorFunction;
+      typedef typename Base::Element Element;
+      typedef typename Base::GridView GridView;
+      typedef typename Base::GlobalCoordinate GlobalCoordinate;
 
-      typedef MixedCellMapper< typename R::GridView > Indices;
-      typedef std::vector< typename ReconstructionSet::DataType::Coordinate > Vertices;
-      typedef typename R::GridView::template Codim< 0 >::Entity Element;
+      typedef MixedCellMapper< GridView > Indices;
+      typedef std::vector< GlobalCoordinate > Vertices;
       typedef std::vector< std::size_t > Offsets;
 
+      typedef typename GridView::ctype ctype;
+
       template< int mydim >
-      using Geometry = BasicInterfaceGridGeometry< typename R::GridView::ctype, mydim, R::dimensionworld >;
+      using Geometry = BasicInterfaceGridGeometry< ctype, mydim, GridView::dimensionworld >;
 
       template< class... Args >
       explicit InterfaceGridDataSet ( const ColorFunction &colorFunction, Args &&... args )
@@ -96,6 +111,24 @@ namespace Dune
         Base::update( colorFunction );
         indices_.update( flags() );
         getInterfaceVertices( reconstructionSet(), flags(), vertices_, offsets_ );
+      }
+
+      void covariantOuterNormal ( const Element &element, std::size_t i, FieldVector< ctype, 2 > &n ) const
+      {
+        const auto elementIndex = indices().index( element );
+        const std::size_t index = offsets()[ elementIndex ];
+        const std::size_t size = offsets()[ elementIndex + 1 ] - index;
+        assert( i < size );
+        n = vertices()[ index + i ] - vertices()[ index + (i + 1) % size ];
+      }
+
+      void covariantOuterNormal ( const Element &element, std::size_t i, FieldVector< ctype, 3 > &n ) const
+      {
+        const auto elementIndex = indices().index( element );
+        const std::size_t index = offsets()[ elementIndex ];
+        const std::size_t size = offsets()[ elementIndex + 1 ] - index;
+        assert( i < size );
+        n = generalizedCrossProduct( vertices()[ index + (i + 1) % size ] - vertices()[ index + i ], normal( element ) );
       }
 
       Geometry< 0 > geometry ( const Element &element, std::size_t i, Dune::Dim< 0 > ) const

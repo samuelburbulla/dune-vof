@@ -9,6 +9,7 @@
 
 #include <dune/grid/common/intersection.hh>
 
+#include <dune/vof/interfacegrid/dataset.hh>
 #include <dune/vof/interfacegrid/entity.hh>
 
 namespace Dune
@@ -41,6 +42,8 @@ namespace Dune
       typedef FieldVector< ctype, mydimension > LocalCoordinate;
       typedef FieldVector< ctype, dimensionworld > GlobalCoordinate;
 
+      typedef InterfaceGridDataSet< typename Traits::Reconstruction > DataSet;
+
       InterfaceGridIntersection () = default;
 
       InterfaceGridIntersection ( const Entity &inside, int indexInInside ) : inside_( inside ), indexInInside_( indexInInside ) {}
@@ -58,7 +61,7 @@ namespace Dune
 
       std::size_t boundarySegmentIndex () const
       {
-        const IndexType elementIndex = dataSet().indices().index( Grid::getRealImplementation( entity ).hostElement() );
+        const auto elementIndex = dataSet().indices().index( Grid::getRealImplementation( inside_ ).hostElement() );
         return dataSet().offsets()[ elementIndex ] + static_cast< std::size_t >( indexInInside() );
       }
 
@@ -80,27 +83,33 @@ namespace Dune
         return Geometry( dataSet().geometry( Grid::getRealImplementation( inside_ ).hostElement(), indexInInside(), Dune::Dim< mydimension >() ) );
       }
 
-      GeometryType type () const
-      {
-        GeometryType( (mydimension < 2 ? GeometryType::cube, GeometryType::none), mydimension );
-      }
+      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube : GeometryType::none), mydimension ); }
 
       int indexInInside () const { return indexInInside_; }
       int indexInOutside () const { return -1; }
 
       GlobalCoordinate integrationOuterNormal ( const LocalCoordinate &local ) const
       {
-        GlobalCoordinate normal = centerUnitOuterNormal();
-        return normal *= geometry().integrationElement( local );
+        return (mydimension > 0 ? outerNormal( local ) : unitOuterNormal( local ));
       }
 
-      GlobalCoordinate outerNormal ( const LocalCoordinate & ) const { return centerUnitOuterNormal(); }
+      GlobalCoordinate outerNormal ( const LocalCoordinate & ) const
+      {
+        GlobalCoordinate normal;
+        dataSet().covariantOuterNormal( Grid::getRealImplementation( inside_ ).hostElement(), indexInInside_, normal );
+        return normal;
+      }
+
       GlobalCoordinate unitOuterNormal ( const LocalCoordinate & ) const { return centerUnitOuterNormal(); }
 
       GlobalCoordinate centerUnitOuterNormal () const
       {
-        // TODO: Please implement me
+        GlobalCoordinate normal;
+        dataSet().covariantOuterNormal( Grid::getRealImplementation( inside_ ).hostElement(), indexInInside_, normal );
+        return normal /= normal.two_norm();
       }
+
+      const DataSet &dataSet () const { return Grid::getRealImplementation( inside_ ).dataSet(); }
 
     protected:
       Entity inside_;
