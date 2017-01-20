@@ -77,8 +77,8 @@ namespace Dune
         elementMapper_.update();
 
         size_ = 0u;
-        for( const HostElement &element : elements( flags.gridView(), Partition::all ) )
-          indices_[ elementIndex_[ element ] ] = (flags.isMixed( element ) ? size_++ : invalidIndex());
+        for( const auto &element : elements( flags.gridView(), Partitions::all ) )
+          indices_[ elementMapper_.index( element ) ] = (flags.isMixed( element ) ? size_++ : invalidIndex());
       }
 
     private:
