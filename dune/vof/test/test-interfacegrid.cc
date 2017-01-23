@@ -82,7 +82,8 @@ try
     gridcheck( interfaceGrid );
   checkIterators( interfaceGrid.leafGridView() );
   checkPartitionType( interfaceGrid.leafGridView() );
-  checkIntersectionIterator( interfaceGrid );
+  if( InterfaceGrid::dimension < 2 )
+    checkIntersectionIterator( interfaceGrid );
   checkCommunication( interfaceGrid, -1, std::cout );
 
   // perform VTK output
