@@ -38,7 +38,7 @@ namespace Dune
     template< class Reconstruction, int codim >
     struct canCommunicate< VoF::InterfaceGrid< Reconstruction >, codim >
     {
-      static const bool v = canCommunicate< Reconstruction, 0 >::v;
+      static const bool v = (codim == 0) && canCommunicate< typename Reconstruction::GridView::Grid, 0 >::v;
     };
 
 
