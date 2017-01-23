@@ -73,8 +73,7 @@ namespace Dune
           applyLocal( entity, flags, color, reconstructions[ entity ] );
         }
 
-        auto exchange = typename ReconstructionSet::Exchange ( reconstructions );
-        color.gridView().communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
+        reconstructions.communicate();
       }
 
       /**

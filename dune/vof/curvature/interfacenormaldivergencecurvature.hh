@@ -77,6 +77,7 @@ namespace Dune
           applySmoothing2nd( entity, uh, reconstructions, tmpCurvature2, curvature );
         }
 
+        curvature.communicate();
       }
 
     private:

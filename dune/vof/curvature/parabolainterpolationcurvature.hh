@@ -57,6 +57,8 @@ namespace Dune
 
           applyLocal( entity, uh, reconstructions, flags, curvature );
         }
+
+        curvature.communicate();
       }
 
     private:

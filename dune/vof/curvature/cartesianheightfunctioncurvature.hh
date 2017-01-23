@@ -73,6 +73,7 @@ namespace Dune
           averageCurvature( entity, curvature );
         }
 
+        curvature.communicate();
       }
 
     private:
