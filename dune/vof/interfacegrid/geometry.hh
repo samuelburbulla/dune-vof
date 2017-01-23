@@ -17,19 +17,16 @@ namespace Dune
   namespace VoF
   {
 
-    // PolygonGeometry
-    // ---------------
+    // BasicPolygonGeometry
+    // --------------------
 
-    template< class ct, int cdim >
-    struct PolygonGeometry;
-
-    template< class ct >
-    struct PolygonGeometry< ct, 3 >
+    template< class ct, int cdim, class SignedTrapezoidArea >
+    struct BasicPolygonGeometry
     {
       typedef ct ctype;
       
       static const int mydimension = 2;
-      static const int coorddimension = 3;
+      static const int coorddimension = cdim;
       
       typedef FieldVector< ctype, mydimension > LocalCoordinate;
       typedef FieldVector< ctype, coorddimension > GlobalCoordinate;
@@ -37,15 +34,16 @@ namespace Dune
       typedef FieldMatrix< ctype, mydimension, coorddimension > JacobianTransposed;
       typedef FieldMatrix< ctype, coorddimension, mydimension > JacobianInverseTransposed;
 
-      PolygonGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
-        : normal_( normal ), cbegin_( cbegin ), csize_( csize )
+      template< class... Args >
+      BasicPolygonGeometry ( const GlobalCoordinate *cbegin, std::size_t csize, Args &&... args )
+        : cbegin_( cbegin ), csize_( csize ), signedTrapezoidArea_( std::forward< Args >( args )... )
       {
         assert( csize >= 3u );
       }
 
       int corners () const { return csize_; }
 
-      const GlobalCoordinate &corner ( int i ) const { assert( (i >= 0) && (i < corners) ); return cbegin_[ i ]; }
+      const GlobalCoordinate &corner ( int i ) const { assert( (i >= 0) && (i < corners()) ); return cbegin_[ i ]; }
 
       GlobalCoordinate center () const
       {
@@ -55,7 +53,7 @@ namespace Dune
         {
           const GlobalCoordinate &x = cbegin_[ i ];
           const GlobalCoordinate &y = cbegin_[ (i+1) % csize_ ];
-          const ctype weight = det( x, y, normal_ );
+          const ctype weight = signedTrapezoidArea_( x, y );
           center.axpy( weight, x + y );
           volume += weight;
         }
@@ -68,7 +66,7 @@ namespace Dune
 
         ctype volume = 0;
         for( std::size_t i = 0; i < csize_; ++i )
-          volume += det( cbegin_[ i ], cbegin_[ (i+1) % csize_ ], normal_ );
+          volume += signedTrapezoidArea_( cbegin_[ i ], cbegin_[ (i+1) % csize_ ] );
         return abs( volume / ctype( 2 ) );
       }
 
@@ -105,15 +103,54 @@ namespace Dune
       }
 
     private:
-      static ctype det ( const GlobalCoordinate &x, const GlobalCoordinate &y, const GlobalCoordinate &z )
+      const GlobalCoordinate *cbegin_;
+      std::size_t csize_;
+      SignedTrapezoidArea signedTrapezoidArea_;
+    };
+
+
+
+    // SignedTrapezoidArea
+    // -------------------
+
+    template< class ctype, int dim >
+    struct SignedTrapezoidArea;
+
+    template< class ctype >
+    struct SignedTrapezoidArea< ctype, 2 >
+    {
+      ctype operator() ( const FieldVector< ctype, 2 > &x, const FieldVector< ctype, 2 > &y ) const { return det( x, y ); }
+
+    private:
+      static ctype det ( const FieldVector< ctype, 2 > &x, const FieldVector< ctype, 2 > &y )
+      {
+        return x[ 0 ]*y[ 1 ] - x[ 1 ]*y[ 0 ];
+      }
+    };
+
+    template< class ctype >
+    struct SignedTrapezoidArea< ctype, 3 >
+    {
+      explicit SignedTrapezoidArea ( const FieldVector< ctype, 3 > &normal ) : normal_( normal ) {}
+
+      ctype operator() ( const FieldVector< ctype, 3 > &x, const FieldVector< ctype, 3 > &y ) const { return det( x, y, normal_ ); }
+
+    private:
+      static ctype det ( const FieldVector< ctype, 3 > &x, const FieldVector< ctype, 3 > &y, const FieldVector< ctype, 3 > &z )
       {
         return x[ 0 ]*y[ 1 ]*z[ 2 ] + x[ 1 ]*y[ 2 ]*z[ 0 ] + x[ 2 ]*y[ 0 ]*z[ 1 ] - x[ 2 ]*y[ 1 ]*z[ 0 ] - x[ 0 ]*y[ 2 ]*z[ 1 ] - x[ 1 ]*y[ 0 ]*z[ 2 ];
       }
 
-      GlobalCoordinate normal_;
-      const GlobalCoordinate *cbegin_;
-      std::size_t csize_;
+      FieldVector< ctype, 3 > normal_;
     };
+
+
+
+    // PolygonGeometry
+    // ---------------
+
+    template< class ct, int cdim >
+    using PolygonGeometry = BasicPolygonGeometry< ct, cdim, SignedTrapezoidArea< ct, cdim > >;
 
 
 
@@ -169,8 +206,12 @@ namespace Dune
     public:
       typedef typename Base::GlobalCoordinate GlobalCoordinate;
 
+      BasicInterfaceGridGeometry ( const GlobalCoordinate *cbegin, std::size_t csize )
+        : Base( cbegin, csize )
+      {}
+
       BasicInterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )
-        : Base( normal, cbegin, csize )
+        : Base( cbegin, csize, normal )
       {}
     };
 

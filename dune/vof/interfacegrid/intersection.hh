@@ -67,15 +67,12 @@ namespace Dune
 
       LocalGeometry geometryInInside () const
       {
-        if( mydimension > 0 )
-          DUNE_THROW( InvalidStateException, "Intersection::geometryInInside does not make for arbitrary polytopes." );
-        else
-          return LocalGeometry( InterfaceGridGeometry< mydimension, dimension, Grid >( FieldVector< ctype, dimension >{ ctype( indexInInside() ) } ) );
+        return geometryInInside( Dune::Dim< mydimension >() );
       }
 
       LocalGeometry geometryInOutside () const
       {
-        DUNE_THROW( InvalidStateException, "Intersection::geometryInOutside does not make for arbitrary polytopes." );
+        DUNE_THROW( InvalidStateException, "InterfaceGrid does not have neighbors." );
       }
 
       Geometry geometry () const
@@ -112,6 +109,16 @@ namespace Dune
       const DataSet &dataSet () const { return Grid::getRealImplementation( inside_ ).dataSet(); }
 
     protected:
+      LocalGeometry geometryInInside ( Dune::Dim< 0 > ) const
+      {
+        return LocalGeometry( InterfaceGridGeometry< 0, dimension, Grid >( FieldVector< ctype, dimension >{ ctype( indexInInside() ) } ) );
+      }
+
+      LocalGeometry geometryInInside ( Dune::Dim< 1 > ) const
+      {
+        DUNE_THROW( InvalidStateException, "Intersection::geometryInInside does not make for arbitrary polytopes." );
+      }
+
       Entity inside_;
       int indexInInside_ = -1;
     };
