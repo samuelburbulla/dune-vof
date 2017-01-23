@@ -71,8 +71,8 @@ namespace Dune
     }
 
 
-    template< class Polygon, class Coordinate >
-    static inline double intersectionVolume ( const Polygon &polygon, const Coordinate &center, double radius )
+    template< class Coordinate >
+    static inline double intersectionVolume ( const Dune::VoF::Polygon< Coordinate > &polygon, const Coordinate &center, double radius )
     {
       std::vector< Coordinate > secPoints;
       std::vector< Coordinate > polyPoints;
