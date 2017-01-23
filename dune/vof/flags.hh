@@ -145,7 +145,7 @@ namespace Dune
                   flag = Flag::activefull;
               }
         }
-        auto exchange2 = makeExchange( [] ( Flag a, Flag b  ) { return std::max( a, b ); } );
+        auto exchange2 = makeExchange( [] ( Flag a, Flag b  ) { if ( a == Flag::activefull || b == Flag::activefull ) return Flag::activefull; else return std::max( a, b ); } );
         color.gridView().grid().communicate( exchange2, Dune::All_All_Interface, Dune::ForwardCommunication );
       }
 
