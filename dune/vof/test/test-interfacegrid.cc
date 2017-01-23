@@ -9,6 +9,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/parametertreeparser.hh>
 
+#include <dune/grid/io/file/vtk.hh>
 #include <dune/grid/test/checkcommunicate.hh>
 #include <dune/grid/test/checkintersectionit.hh>
 #include <dune/grid/test/checkiterators.hh>
@@ -74,6 +75,14 @@ try
   checkPartitionType( interfaceGrid.leafGridView() );
   checkIntersectionIterator( interfaceGrid );
   checkCommunication( interfaceGrid, -1, std::cout );
+
+  // perform VTK output
+  Dune::VTKWriter< GridView > vtkWriter( gridView );
+  vtkWriter.addCellData( colorFunction, "color" );
+  vtkWriter.write( "test-interfacegrid-color" );
+
+  Dune::VTKWriter< InterfaceGrid::LeafGridView > interfaceVtkWriter( interfaceGrid.leafGridView() );
+  interfaceVtkWriter.write( "test-interfacegrid-reconstruction" );
 
   return 0;
 }
