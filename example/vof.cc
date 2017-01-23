@@ -195,7 +195,7 @@ try {
     if ( restartStep == -1 )
     {
       // Use initial data of problem.
-      Dune::VoF::average( uh, problem, 0.0 );
+      Dune::VoF::average( uh, problem, start );
     }
     else
     {
