@@ -5,9 +5,11 @@
 #include <cmath>
 #include <utility>
 
-//- dune-grid includes
+//- dune-vof includes
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>
+#include <dune/vof/stencil/heightfunctionstencil.hh>
+
 
 namespace Dune
 {
@@ -21,15 +23,14 @@ namespace Dune
      * \brief set of curvatures
      *
      * \tparam  GV  grid view
-     * \tparam  ST  stencils
      * \tparam  RS  reconstruction set
      * \tparam  FL  flags
      */
-    template< class GV, class ST, class VNST, class DF, class RS, class FL >
+    template< class GV, class VNST, class DF, class RS, class FL >
     struct CartesianHeightFunctionCurvature
     {
       using GridView = GV;
-      using Stencils = ST;
+      using Stencils = Dune::VoF::HeightFunctionStencils< GridView >;
       using VertexNeighborStencils = VNST;
       using DiscreteFunction = DF;
       using ReconstructionSet = RS;
@@ -39,9 +40,9 @@ namespace Dune
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:
-      explicit CartesianHeightFunctionCurvature ( GridView gridView, const Stencils &stencils, const VertexNeighborStencils &vertexNeighborStencils )
+      explicit CartesianHeightFunctionCurvature ( GridView gridView, const VertexNeighborStencils &vertexNeighborStencils )
        : gridView_( gridView ),
-         stencils_( stencils ),
+         stencils_( gridView ),
          vertexNeighborStencils_( vertexNeighborStencils ),
          indexSet_( gridView.indexSet() ),
          satisfiesConstraint_( indexSet_.size( 0 ), 0 )
@@ -149,7 +150,7 @@ namespace Dune
       std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ index( entity ) ]; }
 
       GridView gridView_;
-      const Stencils &stencils_;
+      Stencils stencils_;
       const VertexNeighborStencils &vertexNeighborStencils_;
       IndexSet indexSet_;
       std::vector< std::size_t > satisfiesConstraint_;

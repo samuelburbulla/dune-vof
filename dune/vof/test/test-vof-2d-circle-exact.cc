@@ -23,7 +23,6 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
-#include <dune/vof/stencil/heightfunctionstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/curvature/generalheightfunctioncurvature.hh>
@@ -174,10 +173,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   auto evolution = Dune::VoF::evolution( gridView );
 
 
-  using CurvatureStencils = Dune::VoF::HeightFunctionStencils< GridView >;
-  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, CurvatureStencils, Stencils, ColorFunction, ReconstructionSet, Flags >;
-  CurvatureStencils curvatureStencils( gridView );
-  CurvatureOperator curvatureOperator ( gridView, curvatureStencils, stencils );
+  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  CurvatureOperator curvatureOperator ( gridView, stencils );
   CurvatureSet curvatureSet( gridView );
 
   std::stringstream path;
