@@ -119,9 +119,9 @@ namespace Dune
         if( ++subEntity_ < subEntities_ )
           return;
 
+        elementIterator_.increment();
         subEntity_ = 0;
         subEntities_ = (*this ? dataSet().numVertices( *hostElementIterator() ) : 0);
-        elementIterator_.increment();
       }
 
       const DataSet &dataSet () const { return elementIterator_.dataSet(); }
