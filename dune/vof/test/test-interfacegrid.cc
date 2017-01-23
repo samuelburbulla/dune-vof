@@ -54,8 +54,16 @@ try
   const GridView gridView = grid->leafGridView();
 
   // obtain initial color function
-  Dune::FieldVector< double, GridView::dimensionworld > axis( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
+#if GRIDDIM == 2
+  Dune::FieldVector< double, GridView::dimensionworld > axis( 1.0 / std::sqrt( static_cast< double > ( GridView::dimensionworld ) ) );
   Ellipse< double, GridView::dimensionworld > problem( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
+#elif GRIDDIM == 3
+  Dune::FieldVector< double, GridView::dimensionworld > axis1 ( { 0.0, 1.0, 0.0 } );
+  Dune::FieldVector< double, GridView::dimensionworld > axis2 ( { 0.0, 1.0, 0.0 } );
+  Dune::FieldVector< double, GridView::dimensionworld > axis3 ( { 0.0, 0.0, 1.0 } );
+  Ellipse< double, GridView::dimensionworld > problem( { axis1, axis2, axis3 }, { 0.4, 0.4, 0.4 } );
+#endif
+
   ColorFunction< GridView > colorFunction( gridView );
   Dune::VoF::average( colorFunction, problem );
   colorFunction.communicate();
