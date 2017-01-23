@@ -78,7 +78,8 @@ try
   InterfaceGrid interfaceGrid( colorFunction, stencils );
 
   // perform check
-  gridcheck( interfaceGrid );
+  if( InterfaceGrid::dimension < 2 )
+    gridcheck( interfaceGrid );
   checkIterators( interfaceGrid.leafGridView() );
   checkPartitionType( interfaceGrid.leafGridView() );
   checkIntersectionIterator( interfaceGrid );
