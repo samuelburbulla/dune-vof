@@ -27,7 +27,8 @@
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/curvature/generalheightfunctioncurvature.hh>
 #include <dune/vof/evolution.hh>
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagging.hh>
+#include <dune/vof/flagSet.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
@@ -206,11 +207,12 @@ try {
     const double eps = parameters.get< double >( "scheme.eps", 1e-9 );
     auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
 
-    using Flags = Dune::VoF::Flags< GridView >;
-    Flags flags = Dune::VoF::flags( gridView );
+    using FlagSet = Dune::VoF::FlagSet< GridView >;
+    FlagSet flags( gridView );
+    auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
     ColorFunction dfFlags ( gridView );
 
-    using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, Flags >;
+    using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, FlagSet >;
     CurvatureOperator curvatureOperator ( gridView, stencils );
     using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
     CurvatureSet curvatureSet( gridView );
@@ -219,7 +221,7 @@ try {
 
     DataWriter vtkwriter ( gridView );
     vtkwriter.addCellData ( uh, "celldata" );
-    vtkwriter.addCellData ( flags, "flags" );
+    //vtkwriter.addCellData ( flags, "flags" );
     vtkwriter.addCellData ( curvatureSet, "curvature" );
 
 
@@ -249,7 +251,7 @@ try {
 
       // Rebuild flags and reconstruction
       // --------------------------------
-      flags.reflag( uh, eps );
+      flagOperator( uh, flags );
       reconstruction( uh, reconstructions, flags );
       curvatureOperator( reconstructions, flags, curvatureSet );
 
@@ -264,7 +266,7 @@ try {
       // Write reconstruction to vtu file
       // --------------------------------
       using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
-      using RecOutputType = ReconstructionWriter< GridView, ReconstructionSet, Flags, RecOutputParameters, Polygon >;
+      using RecOutputType = ReconstructionWriter< GridView, ReconstructionSet, FlagSet, RecOutputParameters, Polygon >;
 
       RecOutputType recOutput ( gridView, reconstructions, flags, recOutputParameters );
       recOutput.write();

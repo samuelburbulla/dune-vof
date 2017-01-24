@@ -19,7 +19,8 @@
 
 // dune-vof includes
 #include <dune/vof/evolution.hh>
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagSet.hh>
+#include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
@@ -82,13 +83,17 @@ double algorithm ( Grid &grid, ColorFunction& uh, P& problem, const Dune::Parame
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
   ReconstructionSet reconstructions( gridView );
 
+  // Create flag set
+  using FlagSet = Dune::VoF::FlagSet< GridView >;
+  FlagSet flags( gridView );
+
   // Create operators
   auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
-  auto flags = Dune::VoF::flags( gridView );
+  auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
   auto evolution = Dune::VoF::evolution( gridView );
 
   // Calculate initial data
-  flags.reflag( uh, eps );
+  flagOperator( uh, flags );
   reconstruction( uh, reconstructions, flags );
 
   using Velocity = Velocity< P, GridView >;
@@ -118,7 +123,7 @@ double algorithm ( Grid &grid, ColorFunction& uh, P& problem, const Dune::Parame
     // Create velocity object
     Velocity velocity( problem, time );
 
-    flags.reflag( uh, eps );
+    flagOperator( uh, flags );
     reconstruction( uh, reconstructions, flags );
     double dtEst = evolution( reconstructions, flags, velocity, deltaT, update );
 

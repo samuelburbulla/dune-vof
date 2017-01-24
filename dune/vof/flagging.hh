@@ -5,6 +5,8 @@
 #include <cmath>
 #include <utility>
 
+#include <dune/vof/flagSet.hh>
+
 namespace Dune
 {
   namespace VoF
