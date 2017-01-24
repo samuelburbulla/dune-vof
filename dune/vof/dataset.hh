@@ -67,14 +67,14 @@ namespace Dune
       void communicate ( Dune::InterfaceType interface, Reduce reduce )
       {
         auto exchange = Exchange< Reduce > ( *this, std::move( reduce ) );
-        gridView_.communicate( exchange, Dune::All_All_Interface, Dune::ForwardCommunication );
+        gridView_.communicate( exchange, interface, Dune::ForwardCommunication );
       }
 
       void communicate ()
       {
         auto reduce = [] ( DataType a, DataType b ) { return a; };
         auto exchange = Exchange< decltype( reduce ) > ( *this, std::move( reduce ) );
-        gridView_.communicate( exchange, Dune::All_All_Interface, Dune::ForwardCommunication );
+        gridView_.communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
       }
 
     private:
