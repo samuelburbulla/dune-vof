@@ -19,7 +19,8 @@
 
 //- dune-vof includes
 #include <dune/vof/evolution.hh>
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagSet.hh>
+#include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
@@ -132,7 +133,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  using Flags = Dune::VoF::Flags< GridView >;
+  using FlagSet = Dune::VoF::FlagSet< GridView >;
   using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
 
 
@@ -168,12 +169,14 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ColorFunction colorFunction( gridView );
   ColorFunction update( gridView );
   ReconstructionSet reconstructionSet( gridView );
-  Flags flags ( gridView );
+  FlagSet flagSet ( gridView );
+
+  auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
   auto evolution = Dune::VoF::evolution( gridView );
 
 
-  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, FlagSet >;
   CurvatureOperator curvatureOperator ( gridView, stencils );
   CurvatureSet curvatureSet( gridView );
 
@@ -201,10 +204,10 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   colorFunction.communicate();
 
   // Initial reconstruction
-  flags.reflag( colorFunction, eps );
-  reconstruction( colorFunction, reconstructionSet, flags );
+  flagOperator( colorFunction, flagSet );
+  reconstruction( colorFunction, reconstructionSet, flagSet );
 
-  curvatureOperator( colorFunction, reconstructionSet, flags, curvatureSet );
+  curvatureOperator( colorFunction, reconstructionSet, flagSet, curvatureSet );
   for ( auto entity : elements( gridView ) )
   {
     normalX[ entity ] = reconstructionSet[ entity ].innerNormal()[ 0 ];
@@ -213,7 +216,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   if ( writeData )
   {
-    filterReconstruction( gridView, reconstructionSet, flags, recIO );
+    filterReconstruction( gridView, reconstructionSet, flagSet, recIO );
     vtkwriter.write( 0 );
     vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
@@ -223,11 +226,11 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   while ( tp.time() < endTime )
   {
-    flags.reflag( colorFunction, eps );
+    flagOperator( colorFunction, flagSet );
 
-    reconstruction( colorFunction, reconstructionSet, flags );
+    reconstruction( colorFunction, reconstructionSet, flagSet );
 
-    curvatureOperator( colorFunction, reconstructionSet, flags, curvatureSet );
+    curvatureOperator( colorFunction, reconstructionSet, flagSet, curvatureSet );
     for ( auto entity : elements( gridView ) )
     {
       normalX[ entity ] = reconstructionSet[ entity ].innerNormal()[ 0 ];
@@ -238,7 +241,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     {
       vtkwriter.write( tp.time() );
 
-      filterReconstruction( gridView, reconstructionSet, flags, recIO );
+      filterReconstruction( gridView, reconstructionSet, flagSet, recIO );
       std::stringstream name_;
       name_.fill('0');
       name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
@@ -250,7 +253,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     }
 
     Velocity velocity( circle, tp.time() );
-    double dtEst = evolution( reconstructionSet, flags, velocity, tp.deltaT(), update );
+    double dtEst = evolution( reconstructionSet, flagSet, velocity, tp.deltaT(), update );
 
     colorFunction.axpy( 1.0, update );
     colorFunction.communicate();
@@ -259,11 +262,11 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     tp.provideTimeStepEstimate( dtEst );
     tp.next();
 
-    error += dt * Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
+    error += dt * Dune::VoF::exactL1Error( colorFunction, flagSet, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
   }
 
   if ( tp.time() == startTime )
-    error += Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
+    error += Dune::VoF::exactL1Error( colorFunction, flagSet, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
 
   return error;
 }

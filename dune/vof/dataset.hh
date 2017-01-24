@@ -37,6 +37,7 @@ namespace Dune
       /**
        * \brief MPI communication handler
        */
+      template < class Reduce >
       struct Exchange;
 
       explicit DataSet ( GridView gridView )
@@ -62,10 +63,18 @@ namespace Dune
 
       const GridView &gridView () const { return gridView_; }
 
+      template< class Reduce >
+      void communicate ( Dune::InterfaceType interface, Reduce reduce )
+      {
+        auto exchange = Exchange< Reduce > ( *this, std::move( reduce ) );
+        gridView_.communicate( exchange, Dune::All_All_Interface, Dune::ForwardCommunication );
+      }
+
       void communicate ()
       {
-        auto exchange = Exchange ( *this );
-        gridView_.communicate( exchange, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication );
+        auto reduce = [] ( DataType a, DataType b ) { return a; };
+        auto exchange = Exchange< decltype( reduce ) > ( *this, std::move( reduce ) );
+        gridView_.communicate( exchange, Dune::All_All_Interface, Dune::ForwardCommunication );
       }
 
     private:
@@ -75,11 +84,14 @@ namespace Dune
     };
 
 
+
     // Exchange class for MPI
     template< class GV, class T >
-    struct DataSet< GV, T >::Exchange : public Dune::CommDataHandleIF < Exchange, T >
+    template < class Reduce >
+    struct DataSet< GV, T >::Exchange
+     : public Dune::CommDataHandleIF < Exchange< Reduce >, T >
     {
-        Exchange ( DataSet &dataSet ) : dataSet_ ( dataSet ) {}
+        Exchange ( DataSet &dataSet, Reduce reduce ) : dataSet_ ( dataSet ), reduce_( std::move( reduce ) ) {}
 
         const bool contains ( const int dim, const int codim ) const { return ( codim == 0 ); }
 
@@ -99,11 +111,12 @@ namespace Dune
         {}
 
         template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension == 0, int >::type = 0 >
-        void scatter ( MessageBuffer &buff, const Entity &e, size_t n )
+        void scatter ( MessageBuffer &buff, const Entity &e, std::size_t n )
         {
           T x ;
           buff.read( x );
-          dataSet_[ e ] = x;
+          T &y = dataSet_[ e ];
+          y = reduce_( x, y );
         }
 
         template < class MessageBuffer, class Entity, typename std::enable_if< Entity::codimension != 0, int >::type = 0 >
@@ -112,7 +125,12 @@ namespace Dune
 
       private:
         DataSet &dataSet_;
+        Reduce reduce_;
     };
+
+
+
+
 
   } // namespace VoF
 
