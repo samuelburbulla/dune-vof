@@ -21,6 +21,8 @@ namespace Dune
     template< class GV >
     struct Flags
     {
+      DUNE_DEPRECATED_MSG("Flags object is deprecated. Use flagSet and flagOperator instead.");
+
       using GridView = GV;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
 
