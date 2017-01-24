@@ -25,7 +25,7 @@
 // dune-vof includes
 #include <dune/vof/curvatureSet.hh>
 #include <dune/vof/reconstructionSet.hh>
-#include <dune/vof/curvature/generalheightfunctioncurvature.hh>
+#include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flagging.hh>
 #include <dune/vof/flagSet.hh>
@@ -209,18 +209,16 @@ try {
     using FlagSet = Dune::VoF::FlagSet< GridView >;
     FlagSet flags( gridView );
     auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
+    ColorFunction dfFlags ( gridView );
 
-    using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, FlagSet >;
+    using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, FlagSet >;
     CurvatureOperator curvatureOperator ( gridView, stencils );
     using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
     CurvatureSet curvatureSet( gridView );
 
     Dune::VTKWriter< GridView > vtkwriter ( gridView );
     vtkwriter.addCellData ( uh, "celldata" );
-    vtkwriter.addCellData ( curvatureSet, "curvature" );
-    //vtkwriter.addCellData ( flags, "flags" );
-
-
+    vtkwriter.addCellData ( dfFlags, "flags" );
 
     for ( std::size_t number = 0; ; number++ )
     {
@@ -249,10 +247,13 @@ try {
       // --------------------------------
       flagOperator( uh, flags );
       reconstruction( uh, reconstructions, flags );
-      curvatureOperator( reconstructions, flags, curvatureSet );
+      curvatureOperator( uh, reconstructions, flags, curvatureSet );
 
       // Write data
       // ----------
+      for ( const auto &entity : elements( gridView ) )
+        dfFlags[ entity ] = static_cast< double > ( flags[ entity ] );
+
       std::stringstream vtkfile;
       vtkfile.fill('0');
       vtkfile << dataOutputParameters.prefix() << std::setw(5) << number;
@@ -268,7 +269,13 @@ try {
       recfile.fill('0');
       recfile << recOutputParameters.prefix() << std::setw(5) << number;
 
+
+      Dune::VoF::DataSet< InterfaceGrid::LeafGridView, double > curvatureOnInterface ( interfaceGrid.leafGridView() );
+      for ( const auto entity : elements( interfaceGrid.leafGridView() ) )
+        curvatureOnInterface[ entity ] = curvatureSet[ entity.impl().hostElement() ];
+
       Dune::VTKWriter< InterfaceGrid::LeafGridView > interfaceVtkWriter( interfaceGrid.leafGridView() );
+      interfaceVtkWriter.addCellData( curvatureOnInterface, "curvature" );
       interfaceVtkWriter.pwrite( recfile.str(), recOutputParameters.path(), "" );
       recPVDWriter.addDataSet( grid.comm().size(), recOutputParameters.prefix(), number, timeValue );
 

@@ -41,7 +41,7 @@ namespace Dune
      ->  typename std::enable_if< GridView::dimension == 3,
                                   ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
     {
-      return ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
+      return ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
     }
 
   } // namespace VoF
