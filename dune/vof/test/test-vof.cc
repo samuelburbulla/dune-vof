@@ -19,7 +19,8 @@
 
 //- dune-vof includes
 #include <dune/vof/evolution.hh>
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagSet.hh>
+#include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionSet.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
@@ -123,7 +124,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  using Flags = Dune::VoF::Flags< GridView >;
+  using Flags = Dune::VoF::FlagSet< GridView >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -157,6 +158,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ColorFunction update( gridView );
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
+
+  auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >( eps );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
   auto evolution = Dune::VoF::evolution( gridView );
 
@@ -177,7 +180,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // Initial reconstruction
   Dune::VoF::average( colorFunction, problem );
 
-  flags.reflag( colorFunction, eps );
+  flagOperator( colorFunction, flags );
   reconstruction( colorFunction, reconstructionSet, flags );
   filterReconstruction( gridView, reconstructionSet, recIO );
 
@@ -191,7 +194,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   while ( tp.time() < endTime )
   {
-    flags.reflag( colorFunction, eps );
+    flagOperator( colorFunction, flags );
 
     reconstruction( colorFunction, reconstructionSet, flags );
 
