@@ -231,8 +231,8 @@ try {
     bool verbose = ( verboserank == grid.comm().rank() );
 
     // Run Algorithm
-    double error = algorithm( grid, uh, problem, parameters, step, start, end, cfl, eps, verbose, writeData );
-
+    double partError = algorithm( grid, uh, problem, parameters, step, start, end, cfl, eps, verbose, writeData );
+    double error = grid.comm().sum( partError );
 
     if ( grid.comm().rank() == 0 )
     {

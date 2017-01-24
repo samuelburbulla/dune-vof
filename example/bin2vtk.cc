@@ -29,13 +29,12 @@
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flagging.hh>
 #include <dune/vof/flagSet.hh>
+#include <dune/vof/interfacegrid/grid.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
 
 #include "../dune/vof/test/colorfunction.hh"
-#include "../dune/vof/test/polygon.hh"
-#include "../dune/vof/test/reconstructionwriter.hh"
 
 // DataOutputParameters
 // --------------------
@@ -111,7 +110,7 @@ private:
 
 struct PVDWriter
 {
-  PVDWriter ( const std::string& filename ) : filename_ ( filename )
+  PVDWriter ( const std::string& filename, const std::string ending = "pvtu" ) : filename_ ( filename ), ending_( ending )
   {
     content_ << "<?xml version=\"1.0\"?>" << std::endl << "<VTKFile type=\"Collection\" version=\"0.1\">" << std::endl << "  <Collection>" << std::endl;
   }
@@ -128,12 +127,12 @@ struct PVDWriter
   {
     std::stringstream pvtu;
     pvtu.fill('0');
-    pvtu << "s" << std::setw(4) << size<< "-" << prefix << std::setw(5) << number << ".pvtu";
+    pvtu << "s" << std::setw(4) << size<< "-" << prefix << std::setw(5) << number << "." << ending_;
     content_ << "    <DataSet timestep=\"" << timeValue << "\" group=\"\" part=\"0\" file=\"" << pvtu.str() << "\"/>" << std::endl;
   }
 
 private:
-  std::string filename_;
+  std::string filename_, ending_;
   std::stringstream content_;
 };
 
@@ -187,8 +186,8 @@ try {
     seriesName.fill('0');
     seriesName << "./" << path << "/" << "s" << std::setw(4) << grid.comm().size() << "-vof-" << level;
 
-    PVDWriter dataPVDWriter ( seriesName.str() + "-data.pvd" );
-    PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd" );
+    PVDWriter dataPVDWriter ( seriesName.str() + "-data.pvd", "pvtu" );
+    PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd", "pvtp" );
 
     // Create discrete function
     // ------------------------
@@ -198,31 +197,28 @@ try {
     GridView gridView( grid.leafGridView() );
     ColorFunction uh( gridView );
 
-    using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-    ReconstructionSet reconstructions( gridView );
-
     using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
     Stencils stencils( gridView );
 
-    const double eps = parameters.get< double >( "scheme.eps", 1e-9 );
+    using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
+    ReconstructionSet reconstructions( gridView );
     auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
+
+    const double eps = parameters.get< double >( "scheme.eps", 1e-9 );
 
     using FlagSet = Dune::VoF::FlagSet< GridView >;
     FlagSet flags( gridView );
     auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
-    ColorFunction dfFlags ( gridView );
 
     using CurvatureOperator = Dune::VoF::GeneralHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, FlagSet >;
     CurvatureOperator curvatureOperator ( gridView, stencils );
     using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
     CurvatureSet curvatureSet( gridView );
 
-    using DataWriter = Dune::VTKWriter< GridView >;
-
-    DataWriter vtkwriter ( gridView );
+    Dune::VTKWriter< GridView > vtkwriter ( gridView );
     vtkwriter.addCellData ( uh, "celldata" );
-    //vtkwriter.addCellData ( flags, "flags" );
     vtkwriter.addCellData ( curvatureSet, "curvature" );
+    //vtkwriter.addCellData ( flags, "flags" );
 
 
 
@@ -255,23 +251,27 @@ try {
       reconstruction( uh, reconstructions, flags );
       curvatureOperator( reconstructions, flags, curvatureSet );
 
-      // Write data to vtk file
-      // ----------------------
+      // Write data
+      // ----------
       std::stringstream vtkfile;
       vtkfile.fill('0');
       vtkfile << dataOutputParameters.prefix() << std::setw(5) << number;
       vtkwriter.pwrite( vtkfile.str(), dataOutputParameters.path(), "" );
       dataPVDWriter.addDataSet( grid.comm().size(), dataOutputParameters.prefix(), number, timeValue );
 
-      // Write reconstruction to vtu file
-      // --------------------------------
-      using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
-      using RecOutputType = ReconstructionWriter< GridView, ReconstructionSet, FlagSet, RecOutputParameters, Polygon >;
+      // Write reconstruction
+      // --------------------
+      using InterfaceGrid = Dune::VoF::InterfaceGrid< decltype( reconstruction ) >;
+      InterfaceGrid interfaceGrid( uh, stencils );
 
-      RecOutputType recOutput ( gridView, reconstructions, flags, recOutputParameters );
-      recOutput.write();
+      std::stringstream recfile;
+      recfile.fill('0');
+      recfile << recOutputParameters.prefix() << std::setw(5) << number;
 
+      Dune::VTKWriter< InterfaceGrid::LeafGridView > interfaceVtkWriter( interfaceGrid.leafGridView() );
+      interfaceVtkWriter.pwrite( recfile.str(), recOutputParameters.path(), "" );
       recPVDWriter.addDataSet( grid.comm().size(), recOutputParameters.prefix(), number, timeValue );
+
     }
 
   }

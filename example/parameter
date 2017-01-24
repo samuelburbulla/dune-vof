@@ -4,12 +4,12 @@ repeats = 0
 
 [scheme]
 start = 0
-end = 10.0
+end = 2.0
 cfl = 0.25
 eps = 1e-6
 
 [io]
-restartStep: -1
+restartStep = -1
 verboserank = -1
 writeData = 1
 savestep = 0.1

@@ -29,17 +29,17 @@ namespace Dune
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
      -> typename std::enable_if< GridView::dimension == 2,
                                  ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                  ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > > >::type
+                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > > >::type
     {
       return ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                           ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
+                                           ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                          >( stencils );
     }
 
     template< class GridView, class Stencils, class ColorFunction >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
      ->  typename std::enable_if< GridView::dimension == 3,
-                                  ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
+                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
     {
       return ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
     }
