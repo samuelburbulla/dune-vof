@@ -1,5 +1,6 @@
 add_subdirectory(curvature)
 add_subdirectory(geometry)
+add_subdirectory(interfacegrid)
 add_subdirectory(reconstruction)
 add_subdirectory(stencil)
 add_subdirectory(test)

@@ -16,3 +16,6 @@ dune_add_test( NAME test-vof-3d-linear SOURCES test-vof.cc COMPILE_DEFINITIONS "
 dune_add_test( NAME test-vof-consistence SOURCES test-vof-consistence.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=2" )
 
 dune_add_test( NAME test-curvature SOURCES test-curvature.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=2" )
+
+dune_add_test( NAME test-interfacegrid-2d SOURCES test-interfacegrid.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=2" )
+dune_add_test( NAME test-interfacegrid-3d SOURCES test-interfacegrid.cc COMPILE_DEFINITIONS "SPGRID;GRIDDIM=3" )

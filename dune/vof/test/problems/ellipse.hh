@@ -10,7 +10,6 @@
 template< class ctype, int dim >
 struct Ellipse
 {
-  static_assert( dim == 2, "Ellipse is only implemented for 2d." );
 
   using DomainType = Dune::FieldVector< ctype, dim >;
   using RangeType = Dune::FieldVector< ctype, 1 >;
