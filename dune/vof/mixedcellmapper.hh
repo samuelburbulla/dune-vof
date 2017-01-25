@@ -30,7 +30,7 @@ namespace Dune
 
       typedef std::size_t Index;
 
-      explicit MixedCellMapper ( const Flags< GridView > &flags )
+      explicit MixedCellMapper ( const FlagSet< GridView > &flags )
         : elementMapper_( flags.gridView() ), indices_( elementMapper_.size() )
       {
         update( flags );
@@ -72,7 +72,7 @@ namespace Dune
         return contains;
       }
 
-      void update ( const Flags< GridView > &flags )
+      void update ( const FlagSet< GridView > &flags )
       {
         elementMapper_.update();
 

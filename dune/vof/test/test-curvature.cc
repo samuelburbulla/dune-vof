@@ -18,11 +18,12 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
-#include <dune/vof/curvatureSet.hh>
+#include <dune/vof/curvatureset.hh>
 #include <dune/vof/evolution.hh>
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagset.hh>
+#include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
-#include <dune/vof/reconstructionSet.hh>
+#include <dune/vof/reconstructionset.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
@@ -102,7 +103,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  using Flags = Dune::VoF::Flags< GridView >;
+  using Flags = Dune::VoF::FlagSet< GridView >;
+  using FlagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -137,6 +139,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ColorFunction update( gridView );
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
+  auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >( eps );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
 
   ColorFunction normalX( gridView );
@@ -169,7 +172,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   colorFunction.communicate();
 
   // Initial reconstruction
-  flags.reflag( colorFunction, eps );
+  flagOperator( colorFunction, flags );
   reconstruction( colorFunction, reconstructionSet, flags );
   curvatureOperator( colorFunction, reconstructionSet, flags, curvatureSet );
 

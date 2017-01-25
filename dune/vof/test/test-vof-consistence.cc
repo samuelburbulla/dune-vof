@@ -18,9 +18,10 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagset.hh>
+#include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
-#include <dune/vof/reconstructionSet.hh>
+#include <dune/vof/reconstructionset.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
@@ -125,7 +126,8 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using ColorFunction = ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  using Flags = Dune::VoF::Flags< GridView >;
+  using Flags = Dune::VoF::FlagSet< GridView >;
+  using FlagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -150,6 +152,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ColorFunction uhExact( colorFunction );
   ColorFunction update( gridView );
   Flags flags ( gridView );
+  FlagOperator flagOperator ( eps );
   auto exactEvolution = Dune::VoF::exactEvolution( colorFunction );
 
   std::stringstream path;
@@ -168,7 +171,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), uhExact );
 
   // Initial flagging
-  flags.reflag( colorFunction, eps );
+  flagOperator( colorFunction, flags );
 
   if ( writeData )
     vtkwriter.write( 0 );
@@ -188,7 +191,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   ReconstructionSet reconstructionSet( gridView );
   auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
-  flags.reflag( colorFunction, eps );
+  flagOperator( colorFunction, flags );
   reconstruction( colorFunction, reconstructionSet, flags );
 
   return Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );

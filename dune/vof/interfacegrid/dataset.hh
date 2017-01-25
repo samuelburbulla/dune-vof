@@ -9,7 +9,8 @@
 
 #include <dune/geometry/dimension.hh>
 
-#include <dune/vof/flags.hh>
+#include <dune/vof/flagset.hh>
+#include <dune/vof/flagging.hh>
 #include <dune/vof/interfacegrid/geometry.hh>
 #include <dune/vof/mixedcellmapper.hh>
 #include <dune/vof/utility.hh>
@@ -30,10 +31,12 @@ namespace Dune
 
       typedef typename Reconstruction::GridView GridView;
 
-      typedef VoF::Flags< GridView > Flags;
+      typedef VoF::FlagSet< GridView > Flags;
 
       typedef typename Reconstruction::ColorFunction ColorFunction;
       typedef typename Reconstruction::ReconstructionSet ReconstructionSet;
+
+      typedef VoF::FlagOperator< ColorFunction, Flags > Flagging;
 
       typedef typename GridView::template Codim< 0 >::Entity Element;
 
@@ -42,6 +45,7 @@ namespace Dune
       template< class... Args >
       explicit BasicInterfaceGridDataSet ( const ColorFunction &colorFunction, Args &&... args )
         : reconstruction_( std::forward< Args >( args )... ),
+          flagging_ ( 1e-6 ),
           flags_( colorFunction.gridView() ),
           reconstructionSet_( colorFunction.gridView() )
       {
@@ -56,7 +60,7 @@ namespace Dune
 
       void update ( const ColorFunction &colorFunction )
       {
-        flags_.reflag( colorFunction, 1e-6 );
+        flagging_( colorFunction, flags_ );
         reconstruction_( colorFunction, reconstructionSet_, flags_ );
       }
 
@@ -64,6 +68,7 @@ namespace Dune
 
     protected:
       Reconstruction reconstruction_;
+      Flagging flagging_;
       Flags flags_;
       ReconstructionSet reconstructionSet_;
     };

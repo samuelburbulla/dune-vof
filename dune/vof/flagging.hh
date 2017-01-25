@@ -5,7 +5,7 @@
 #include <cmath>
 #include <utility>
 
-#include <dune/vof/flagSet.hh>
+#include <dune/vof/flagset.hh>
 
 namespace Dune
 {
@@ -32,7 +32,7 @@ namespace Dune
        : eps_( eps )
       {}
 
-      void operator() ( const ColorFunction& color, FlagSet &flags )
+      void operator() ( const ColorFunction& color, FlagSet &flags ) const
       {
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {

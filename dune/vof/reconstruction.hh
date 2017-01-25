@@ -4,7 +4,7 @@
 #include <dune/vof/reconstruction/modifiedswartz.hh>
 #include <dune/vof/reconstruction/modifiedyoungs.hh>
 #include <dune/vof/reconstruction/modifiedyoungssecondorder.hh>
-#include <dune/vof/reconstructionSet.hh>
+#include <dune/vof/reconstructionset.hh>
 
 namespace Dune
 {

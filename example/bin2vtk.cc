@@ -23,12 +23,12 @@
 #include <dune/fem/io/streams/binarystreams.hh>
 
 // dune-vof includes
-#include <dune/vof/curvatureSet.hh>
-#include <dune/vof/reconstructionSet.hh>
+#include <dune/vof/curvatureset.hh>
+#include <dune/vof/reconstructionset.hh>
 #include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flagging.hh>
-#include <dune/vof/flagSet.hh>
+#include <dune/vof/flagset.hh>
 #include <dune/vof/interfacegrid/grid.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>

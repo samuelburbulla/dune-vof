@@ -19,7 +19,7 @@
 #include <dune/vof/interfacegrid/grid.hh>
 #include <dune/vof/reconstruction/modifiedswartz.hh>
 #include <dune/vof/reconstruction/modifiedyoungssecondorder.hh>
-#include <dune/vof/reconstructionSet.hh>
+#include <dune/vof/reconstructionset.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 
 #include "average.hh"

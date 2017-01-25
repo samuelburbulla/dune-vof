@@ -19,10 +19,10 @@
 
 //- dune-vof includes
 #include <dune/vof/evolution.hh>
-#include <dune/vof/flagSet.hh>
+#include <dune/vof/flagset.hh>
 #include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
-#include <dune/vof/reconstructionSet.hh>
+#include <dune/vof/reconstructionset.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
@@ -32,7 +32,7 @@
 
 //- local includes
 #include "average.hh"
-#include "../curvatureSet.hh"
+#include "../curvatureset.hh"
 #include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
