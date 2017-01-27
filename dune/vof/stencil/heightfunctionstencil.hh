@@ -99,7 +99,7 @@ namespace Dune
 
         for ( const auto& entity : elements( gridView ) )
         {
-          deltaX_ = std::sqrt( entity.geometry().volume() );
+          deltaX_ = std::pow( entity.geometry().volume(), 1.0 / dim );
           break;
         }
 
@@ -108,7 +108,15 @@ namespace Dune
 
       const Stencil& operator() ( const Coordinate &normal, const Entity& entity ) const
       {
-        std::size_t dir = ( std::abs( normal[ 0 ] ) > std::abs( normal[ 1 ] ) ) ? 0 : 1;
+        std::size_t dir = 0;
+        double max = std::numeric_limits< double >::min();
+        for ( std::size_t i = 0; i < dim; ++i )
+         if ( std::abs( normal[ i ] ) > max )
+         {
+          dir = i;
+          max = std::abs( normal[ i ] );
+         }
+
         dir += dim * ( ( normal[ dir ] > 0 ) ? 0 : 1 );
 
         return stencils_[ dir ][ indexSet().index( entity ) ];

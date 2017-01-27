@@ -51,7 +51,7 @@ namespace Dune
       template< class CurvatureSet >
       void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature )
       {
-        for ( const auto& entity : elements( gridView() ) )
+        for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           curvature[ entity ] = 0.0;
           satisfiesConstraint( entity ) = 0;
@@ -62,7 +62,7 @@ namespace Dune
           applyLocal( entity, uh, reconstructions, curvature );
         }
 
-        for ( const auto& entity : elements( gridView() ) )
+        for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           if ( !flags.isMixed( entity ) )
             continue;

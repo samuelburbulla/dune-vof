@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/exceptions.hh>
@@ -17,8 +19,7 @@
 #include <dune/grid/test/gridcheck.hh>
 
 #include <dune/vof/interfacegrid/grid.hh>
-#include <dune/vof/reconstruction/modifiedswartz.hh>
-#include <dune/vof/reconstruction/modifiedyoungssecondorder.hh>
+#include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionset.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 
@@ -53,14 +54,16 @@ try
   typedef Grid::LeafGridView GridView;
   const GridView gridView = grid->leafGridView();
 
+  typedef Dune::FieldVector< double, GridView::dimensionworld > Coordinate;
+
   // obtain initial color function
 #if GRIDDIM == 2
-  Dune::FieldVector< double, GridView::dimensionworld > axis( 1.0 / std::sqrt( static_cast< double > ( GridView::dimensionworld ) ) );
+  Coordinate axis( 1.0 / std::sqrt( static_cast< double > ( GridView::dimensionworld ) ) );
   Ellipse< double, GridView::dimensionworld > problem( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
 #elif GRIDDIM == 3
-  Dune::FieldVector< double, GridView::dimensionworld > axis1 ( { 1.0, 0.0, 0.0 } );
-  Dune::FieldVector< double, GridView::dimensionworld > axis2 ( { 0.0, 1.0, 0.0 } );
-  Dune::FieldVector< double, GridView::dimensionworld > axis3 ( { 0.0, 0.0, 1.0 } );
+  Coordinate axis1 ( { 0.0, 1.0, 0.0 } );
+  Coordinate axis2 ( { 0.0, 1.0, 0.0 } );
+  Coordinate axis3 ( { 0.0, 0.0, 1.0 } );
   Ellipse< double, GridView::dimensionworld > problem( { axis1, axis2, axis3 }, { 0.2, 0.2, 0.4 } );
 #endif
 
@@ -68,13 +71,13 @@ try
   Dune::VoF::average( colorFunction, problem );
   colorFunction.communicate();
 
-  // create interface grid
-  typedef Dune::VoF::ReconstructionSet< GridView > ReconstructionSet;
   typedef Dune::VoF::VertexNeighborsStencil< GridView > Stencils;
-  typedef Dune::VoF::ModifiedSwartzReconstruction< ColorFunction< GridView >, ReconstructionSet, Stencils, Dune::VoF::ModifiedYoungsSecondOrderReconstruction< ColorFunction< GridView >, ReconstructionSet, Stencils > > Reconstruction;
+  Stencils stencils( gridView );
+
+  // create interface grid
+  using Reconstruction = decltype( Dune::VoF::reconstruction( gridView, colorFunction, stencils ) );
   typedef Dune::VoF::InterfaceGrid< Reconstruction > InterfaceGrid;
 
-  Stencils stencils( gridView );
   InterfaceGrid interfaceGrid( colorFunction, stencils );
 
   // perform check
@@ -86,12 +89,23 @@ try
     checkIntersectionIterator( interfaceGrid );
   checkCommunication( interfaceGrid, -1, std::cout );
 
+  Dune::VoF::DataSet< GridView, std::size_t > indexSet( gridView );
+  for ( const auto &entity : elements( gridView ) )
+    indexSet[ entity ] = gridView.indexSet().index( entity );
+
   // perform VTK output
   Dune::VTKWriter< GridView > vtkWriter( gridView );
   vtkWriter.addCellData( colorFunction, "color" );
+  vtkWriter.addCellData( indexSet, "index" );
   vtkWriter.write( "test-interfacegrid-color" );
 
+  std::vector< double > normals( interfaceGrid.leafGridView().indexSet().size( 0 ) * GridView::dimensionworld );
+  for ( const auto &entity : elements( interfaceGrid.leafGridView() ) )
+    for ( std::size_t i = 0; i < GridView::dimensionworld; ++i )
+      normals[ interfaceGrid.leafGridView().indexSet().index( entity ) * GridView::dimensionworld + i ] = interfaceGrid.dataSet().reconstructionSet()[ entity.impl().hostElement() ].innerNormal()[ i ];
+
   Dune::VTKWriter< InterfaceGrid::LeafGridView > interfaceVtkWriter( interfaceGrid.leafGridView() );
+  interfaceVtkWriter.addCellData( normals, "normals", 3 );
   interfaceVtkWriter.write( "test-interfacegrid-reconstruction" );
 
   return 0;
