@@ -28,7 +28,8 @@ namespace Dune
       typedef typename DF::GridView::ctype ctype;
       using RangeType = Dune::FieldVector< ctype, 1 >;
 
-      std::cout << " -- average using quadrature" << std::endl;
+      if( u.gridView().comm().rank() == 0 )
+        std::cout << " -- average using quadrature" << std::endl;
 
       for( const auto& entity : elements ( u.gridView() ) )
       {
@@ -58,7 +59,8 @@ namespace Dune
     template< class DF >
     void average ( DF &u, const Ellipse< double, 2 >& e )
     {
-      std::cout << " -- average using intersection" << std::endl;
+      if( u.gridView().comm().rank() == 0 )
+        std::cout << " -- average using intersection" << std::endl;
       circleInterpolation( e.referenceMap(), e.volumeElement(), u );
     }
 
@@ -66,7 +68,8 @@ namespace Dune
     void average ( DF &uh, const Slope< double, 2 >& s )
     {
       using Coordinate = FieldVector< double, 2 >;
-      std::cout << " -- average using intersection" << std::endl;
+      if( uh.gridView().comm().rank() == 0 )
+        std::cout << " -- average using intersection" << std::endl;
       uh.clear();
 
       HalfSpace< Coordinate > halfspace ( s.normal(), Coordinate( { 0.5, 0.5 } ) );
