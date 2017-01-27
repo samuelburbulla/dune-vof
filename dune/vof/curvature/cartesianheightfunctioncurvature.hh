@@ -45,7 +45,7 @@ namespace Dune
          stencils_( gridView ),
          vertexNeighborStencils_( vertexNeighborStencils ),
          indexSet_( gridView.indexSet() ),
-         satisfiesConstraint_( indexSet_.size( 0 ), 0 )
+         satisfiesConstraint_( gridView )
       {}
 
       template< class CurvatureSet >
@@ -61,6 +61,9 @@ namespace Dune
 
           applyLocal( entity, uh, reconstructions, curvature );
         }
+
+        curvature.communicate();
+        satisfiesConstraint_.communicate();
 
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
@@ -147,14 +150,14 @@ namespace Dune
 
       const auto &vertexNeighborStencil ( const Entity &entity ) const { return vertexNeighborStencils_[ entity ]; }
 
-      const std::size_t satisfiesConstraint ( const Entity &entity ) const { return satisfiesConstraint_[ index( entity ) ]; }
-      std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ index( entity ) ]; }
+      const std::size_t satisfiesConstraint ( const Entity &entity ) const { return satisfiesConstraint_[ entity ]; }
+      std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ entity ]; }
 
       GridView gridView_;
       Stencils stencils_;
       const VertexNeighborStencils &vertexNeighborStencils_;
       IndexSet indexSet_;
-      std::vector< std::size_t > satisfiesConstraint_;
+      Dune::VoF::DataSet< GridView, std::size_t > satisfiesConstraint_;
     };
 
   } // namespace VoF
