@@ -7,14 +7,13 @@ add_subdirectory(test)
 
 set(HEADERS
   brents.hh
-  curvatureSet.hh
+  curvatureset.hh
   dataset.hh
   evolution.hh
   interpolation.hh
   mixedcellmapper.hh
-  flags.hh
   reconstruction.hh
-  reconstructionSet.hh
+  reconstructionset.hh
 )
 
 install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vof)
