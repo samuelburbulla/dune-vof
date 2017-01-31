@@ -18,13 +18,13 @@
 #include <dune/grid/test/checkpartition.hh>
 #include <dune/grid/test/gridcheck.hh>
 
+#include <dune/vof/colorfunction.hh>
 #include <dune/vof/interfacegrid/grid.hh>
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/reconstructionset.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 
 #include "average.hh"
-#include "colorfunction.hh"
 #include "problems/ellipse.hh"
 
 
@@ -40,7 +40,7 @@ try
 
   // set parameters
   Dune::ParameterTree parameters;
-  Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
   //  create grid

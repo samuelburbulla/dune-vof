@@ -18,212 +18,16 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
-#include <dune/vof/evolution.hh>
-#include <dune/vof/flagset.hh>
-#include <dune/vof/flagging.hh>
-#include <dune/vof/reconstruction.hh>
-#include <dune/vof/reconstructionset.hh>
-#include <dune/vof/stencil/vertexneighborsstencil.hh>
-#include <dune/vof/geometry/utility.hh>
-#include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/algorithm.hh>
+#include <dune/vof/colorfunction.hh>
 
 //- local includes
 #include "average.hh"
-#include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
-#include "polygon.hh"
-#include "velocity.hh"
 #include "problems/rotatingcircle.hh"
 #include "problems/linearwall.hh"
 #include "problems/slope.hh"
-#include "vtu.hh"
-
-// filterReconstruction
-// --------------------
-
-template < class GridView, class ReconstructionSet, class Polygon >
-void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
-{
-  using Coord = typename Polygon::Position;
-
-  io.clear();
-  for ( const auto& entity : elements( gridView ) )
-  {
-    auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
-    auto intersection = static_cast< typename decltype( is )::Result > ( is );
-
-    std::vector< Coord > vertices;
-    for ( std::size_t i = 0; i < intersection.size(); ++i )
-      vertices.push_back( intersection.vertex( i ) );
-
-    if ( vertices.size() > 0 )
-      io.push_back( Polygon( vertices, reconstructionSet[ entity ].innerNormal() ) );
-  }
-}
-
-
-// TimeProvider
-// ------------
-
-class TimeProvider
-{
- public:
-  TimeProvider ( const double dt, const double start, const double cfl )
-   : cfl_ ( cfl ), dt_( dt * cfl_ ), time_( start ), dtEst_ ( std::numeric_limits< double >::max() ) {}
-
-  double time() const { return time_; }
-
-  double deltaT() const { return dt_; }
-
-  void next() {
-    time_ += dt_;
-    step_++;
-    dt_ = dtEst_;
-    dtEst_ = std::numeric_limits< double >::max();
-  }
-
-  void provideTimeStepEstimate( const double dtEst )
-  {
-    dtEst_ = std::min( dtEst * cfl_, dtEst_ );
-  }
-
- private:
-  double cfl_, dt_, time_, dtEst_;
-  int step_ = 0;
-};
-
-
-// initTimeStep
-// ---------------------
-
-template < class GridView, class Velocity >
-double initTimeStep( const GridView& gridView, Velocity &velocity )
-{
-  double dtMin = std::numeric_limits< double >::max();
-  for( const auto &entity : elements( gridView ) )
-  {
-    const auto& geoEn = entity.geometry();
-    for ( const auto& intersection : intersections( gridView, entity ) )
-    {
-      const auto& geoIs = intersection.geometry();
-      velocity.bind( intersection );
-      auto v = velocity( geoIs.local( geoIs.center() ) );
-      dtMin = std::min( dtMin, geoEn.volume() / ( intersection.geometry().volume() * std::abs( intersection.centerUnitOuterNormal() * v ) ) );
-    }
-  }
-  return dtMin;
-}
-
-// algorithm
-// ---------
-
-template < class GridView >
-double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
-{
-  using ColorFunction = ColorFunction< GridView >;
-  using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
-  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  using Flags = Dune::VoF::FlagSet< GridView >;
-
-  using DataWriter = Dune::VTKSequenceWriter< GridView >;
-
-  using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
-
-  // Testproblem
-  using ProblemType = PROBLEM < double, GridView::dimensionworld >;
-  using Velocity = Velocity< ProblemType, GridView >;
-  ProblemType problem;
-
-  // calculate dt
-  int level = parameters.get< int >( "grid.level" );
-  const double startTime = parameters.get< double >( "scheme.start", 0.0 );
-  const double endTime = parameters.get< double >( "scheme.end", 10 );
-  const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
-
-  Velocity velocity( problem, startTime );
-  double dt = initTimeStep( gridView, velocity );
-
-  const bool writeData = parameters.get< bool >( "io.writeData", dt );
-
-  int saveNumber = 1;
-  const double saveInterval = std::max( parameters.get< double >( "io.saveInterval", 1 ), dt );
-  double nextSaveTime = saveInterval;
-
-  // build domain references for each cell
-  Stencils stencils( gridView );
-
-  // allocate and initialize objects for data representation
-  ColorFunction colorFunction( gridView );
-  ColorFunction update( gridView );
-  ReconstructionSet reconstructionSet( gridView );
-  Flags flags ( gridView );
-
-  auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >( eps );
-  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
-  auto evolution = Dune::VoF::evolution( gridView );
-
-  // VTK Writer
-  std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
-  createDirectory( path.str() );
-
-  DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
-  vtkwriter.addCellData ( colorFunction, "celldata" );
-
-  std::vector< Polygon > recIO;
-  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
-  std::stringstream name;
-  name.fill('0');
-  name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
-
-  // Initial reconstruction
-  Dune::VoF::average( colorFunction, problem );
-
-  flagOperator( colorFunction, flags );
-  reconstruction( colorFunction, reconstructionSet, flags );
-  filterReconstruction( gridView, reconstructionSet, recIO );
-
-  if( writeData )
-  {
-    vtkwriter.write( 0 );
-    vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
-  }
-
-  TimeProvider tp ( dt, startTime, parameters.get< double >( "scheme.cflFactor" ) );
-
-  while ( tp.time() < endTime )
-  {
-    flagOperator( colorFunction, flags );
-
-    reconstruction( colorFunction, reconstructionSet, flags );
-
-    Velocity velocity( problem, tp.time() );
-    double dtEst = evolution( reconstructionSet, flags, velocity, tp.deltaT(), update );
-    colorFunction.axpy( 1.0, update );
-
-    tp.provideTimeStepEstimate( dtEst );
-    tp.next();
-
-    if ( writeData && tp.time() > nextSaveTime - 0.5 * tp.deltaT() )
-    {
-      vtkwriter.write( saveNumber );
-
-      filterReconstruction( gridView, reconstructionSet, recIO );
-      std::stringstream name_;
-      name_.fill('0');
-      name_ << "vof-rec-" << std::setw(5) << saveNumber << ".vtu" ;
-      vtuwriter.write( Dune::concatPaths( path.str(), name_.str() ) );
-
-
-      nextSaveTime += saveInterval;
-      ++saveNumber;
-    }
-
-  }
-
-  return Dune::VoF::l1error( gridView, reconstructionSet, flags, problem, tp.time() );
-}
 
 int main(int argc, char** argv)
 try {
@@ -233,15 +37,15 @@ try {
 
   // set parameters
   Dune::ParameterTree parameters;
-  Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  double lastL1Error;
-
-  // open errors file
-  std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" );
-  createDirectory( path.str() );
+  double cfl = 0.25;
+  double eps = 1e-6;
+  double start = 0.0;
+  double end = 1.0;
+  int numRuns = 2;
+  int level = 0;
 
   //  create grid
   std::stringstream gridFile;
@@ -250,22 +54,44 @@ try {
   Dune::GridPtr< GridType > gridPtr( gridFile.str() );
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
+  using GridView = typename GridType::LeafGridView;
+  GridView gridView = grid.leafGridView();
 
-  int level = parameters.get< int >( "grid.level" );
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int numRuns = parameters.get<int>( "grid.runs", 1 );
+  // Testproblem
+  using ProblemType = PROBLEM < double, GridView::dimensionworld >;
+  ProblemType problem;
+
+  double lastL1Error;
   std::ofstream errorsFile;
   errorsFile.open( "errors" );
   errorsFile << "#dx \terror " << std::endl;
 
   for ( int i = 0; i < numRuns; ++i )
   {
+    ColorFunction< GridView > uh( gridView );
+    Dune::VoF::average( uh, problem );
+    uh.communicate();
+
+    using DataWriter = Dune::VTKSequenceWriter< GridView >;
+    std::stringstream path;
+    path << "./" << parameters.get< std::string >( "io.path" ) << "/vof-" << std::to_string( level );
+    createDirectory( path.str() );
+
+    DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
+    vtkwriter.addCellData ( uh, "celldata" );
+
     // start time integration
-    auto partL1Error = algorithm( grid.leafGridView(), parameters );
+    Dune::VoF::Algorithm< GridType::LeafGridView, ProblemType, DataWriter > algorithm( gridView, problem, vtkwriter, cfl, eps );
+    vtkwriter.addCellData( algorithm.flags(), "flags" );
+    algorithm( uh, start, end );
+
+    auto partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, end );
     double L1Error = grid.comm().sum( partL1Error );
+
     errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
 
     // print errors and eoc

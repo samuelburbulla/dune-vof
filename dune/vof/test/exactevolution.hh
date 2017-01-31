@@ -11,7 +11,8 @@
 //- local includes
 #include <dune/vof/geometry/upwindpolygon.hh>
 #include <dune/vof/geometry/utility.hh>
-#include <dune/vof/interpolation.hh>
+
+#include "interpolation.hh"
 
 
 namespace Dune

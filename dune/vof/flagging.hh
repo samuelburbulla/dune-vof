@@ -36,8 +36,7 @@ namespace Dune
       {
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
-          const auto idx = color.gridView().indexSet().index( entity );
-          Flag &flag = flags[ idx ];
+          Flag &flag = flags[ entity ];
           const auto colorEn = color[ entity ];
 
           if ( colorEn < eps_ )
@@ -65,9 +64,7 @@ namespace Dune
 
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
-          const auto idx = color.gridView().indexSet().index( entity );
-
-          if ( flags[ idx ] == Flag::mixed || flags[ idx ] == Flag::mixedfull )
+          if ( flags[ entity ] == Flag::mixed || flags[ entity ] == Flag::mixedfull )
             for ( const auto &intersection : intersections( color.gridView(), entity ) )
               if ( intersection.neighbor() )
               {

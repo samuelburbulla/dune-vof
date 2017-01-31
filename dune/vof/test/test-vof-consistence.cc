@@ -18,6 +18,7 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
+#include <dune/vof/colorfunction.hh>
 #include <dune/vof/flagset.hh>
 #include <dune/vof/flagging.hh>
 #include <dune/vof/reconstruction.hh>
@@ -25,43 +26,13 @@
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
-#include <dune/vof/interpolation.hh>
 
 //- local includes
 #include "average.hh"
-#include "colorfunction.hh"
 #include "errors.hh"
 #include "exactevolution.hh"
-#include "polygon.hh"
 #include "io.hh"
 #include "problems/rotatingcircle.hh"
-#include "vtu.hh"
-
-// filterReconstruction
-// --------------------
-
-template < class GridView, class ReconstructionSet, class Polygon >
-void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, std::vector< Polygon > &io )
-{
-  using Coord = typename Polygon::Position;
-
-  io.clear();
-  for ( const auto& entity : elements( gridView ) )
-  {
-    auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
-    auto intersection = static_cast< typename decltype( is )::Result > ( is );
-
-    if ( intersection == typename decltype( is )::Result() )
-      continue;
-
-    std::vector< Coord > vertices;
-    for ( std::size_t i = 0; i < intersection.size(); ++i )
-      vertices.push_back( intersection.vertex( i ) );
-
-    if ( vertices.size() > 0 )
-      io.push_back( Polygon( vertices ), reconstructionSet[ entity ].innerNormal() );
-  }
-}
 
 
 // TimeProvider
@@ -131,8 +102,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
-  using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
-
   // Testproblem
   using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
   ProblemType circle;
@@ -140,7 +109,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // calculate dt
   int level = parameters.get< int >( "grid.level" );
   double dt = initTimeStep( gridView, [ &circle ] ( const auto &x ) { DomainVector rot; circle.velocityField( x, 0.0, rot ); return rot; } );
-  const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
+  const double eps = parameters.get< double >( "scheme.eps", 1e-6 );
   const bool writeData = parameters.get< bool >( "io.writeData", 0 );
 
   // build domain references for each cell
@@ -156,15 +125,12 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   auto exactEvolution = Dune::VoF::exactEvolution( colorFunction );
 
   std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
+  path << "./" << parameters.get< std::string >( "io.path" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "uh" );
   vtkwriter.addCellData ( uhExact, "u" );
-
-  std::vector< Polygon > recIO;
-  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
 
   // Initial data
   Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), colorFunction );
@@ -194,7 +160,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   flagOperator( colorFunction, flags );
   reconstruction( colorFunction, reconstructionSet, flags );
 
-  return Dune::VoF::exactL1Error( colorFunction, flags, reconstructionSet, circle.center( tp.time() ), circle.radius( tp.time() ) );
+  return Dune::VoF::l1error( gridView, reconstructionSet, flags, circle, tp.time() );
 }
 
 int main(int argc, char** argv)
@@ -205,7 +171,7 @@ try {
 
   // set parameters
   Dune::ParameterTree parameters;
-  Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
   for ( double cfl = 0.25; cfl >= 0.25; cfl *= 0.5 )

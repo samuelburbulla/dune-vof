@@ -16,13 +16,13 @@
 
 // BinaryDataWriter
 // ================
-template< class GridView >
+template< class GridView, class DF >
 class BinaryWriter
 {
 public:
   using BinaryStream = Dune::Fem::BinaryFileOutStream;
 
-  BinaryWriter ( const GridView& gridView, const Dune::ParameterTree parameters, int level ) : gridView_( gridView ), level_( level )
+  BinaryWriter ( const GridView& gridView, const DF& uh, const Dune::ParameterTree parameters, int level ) : gridView_( gridView ), uh_( uh ), level_( level )
   {
     saveTime_ = std::numeric_limits< double >::min();
     saveStep_ = parameters.get< double >( "io.savestep", 0.1 );
@@ -37,8 +37,7 @@ public:
     return writeData_ && time - saveTime_ >= -0.5 * saveStep_;
   }
 
-  template < class DF >
-  const void write ( const DF &uh, double time, const bool forced = false )
+  const void write ( double time, const bool forced = false )
   {
 
     if ( willWrite( time ) || forced )
@@ -52,7 +51,7 @@ public:
       dfname << name.str() << ".bin";
       BinaryStream binaryStream ( Dune::concatPaths( path_, dfname.str() ) );
       binaryStream << time;
-      uh.write( binaryStream );
+      uh_.write( binaryStream );
 
       saveTime_ += saveStep_;
       writeStep_++;
@@ -61,6 +60,7 @@ public:
 
 private:
   const GridView& gridView_;
+  const DF uh_;
   std::string path_, prefix_;
   const std::size_t level_;
   double saveStep_, saveTime_ ;

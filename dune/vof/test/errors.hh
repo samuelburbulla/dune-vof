@@ -10,7 +10,7 @@
 //- Dune includes
 #include <dune/geometry/quadraturerules.hh>
 
-#include <dune/vof/interpolation.hh>
+#include "interpolation.hh"
 
 
 namespace Dune
@@ -21,6 +21,9 @@ namespace Dune
     template< class GridView, class RS, class Flags, class F >
     double l1error ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0 )
     {
+      if( gridView.comm().rank() == 0 )
+        std::cout << " -- error using quadrature" << std::endl;
+
       using RangeType = Dune::FieldVector< double, 1 >;
 
       double error = 0.0;
@@ -50,30 +53,36 @@ namespace Dune
     }
 
 
-    template< class DF, class F, class R, class Coord >
-    static inline double exactL1Error ( const DF &uhComp, const F &flags, const R &reconstructions, const Coord &center, const double radius )
+    template< class GridView, class RS, class Flags >
+    double l1error ( const GridView &gridView, const RS &reconstructionSet, const Flags &flags, RotatingCircle< double, 2 > circle, const double time = 0.0 )
     {
+      if( gridView.comm().rank() == 0 )
+        std::cout << " -- error using intersection" << std::endl;
+
       double l1Error = 0.0;
 
-      DF uhExact( uhComp );
-      circleInterpolation( center, radius, uhExact );
+      ColorFunction< GridView > uhExact( gridView );
+      circleInterpolation( circle.center( time ), circle.radius( time ), uhExact );
 
-      for ( auto entity : elements( uhComp.gridView(), Partitions::interior ) )
+      for ( auto entity : elements( gridView, Partitions::interior ) )
       {
         double volume = entity.geometry().volume();
 
         double T1 = uhExact[ entity ] * volume;
         double T0 = volume - T1;
 
-        if ( !reconstructions[ entity ] )
-          l1Error += T0 * std::abs( uhComp[ entity ] ) + T1 * std::abs( 1.0 - uhComp[ entity ] );
+        if ( !reconstructionSet[ entity ] )
+        {
+          double c = ( flags.isFull( entity ) ) ? 1.0 : 0.0;
+          l1Error += T0 * std::abs( c ) + T1 * std::abs( 1.0 - c );
+        }
         else
         {
           auto entityAsPolytope = makePolytope( entity.geometry() );
-          Dune::VoF::Polygon< Coord > calculatedOnePart = intersect( entityAsPolytope, reconstructions[ entity ] );
-          double sharedOneVolume = intersectionVolume( calculatedOnePart, center, radius );
+          auto calculatedOnePart = intersect( entityAsPolytope, reconstructionSet[ entity ], eager );
+          double sharedOneVolume = intersectionVolume( calculatedOnePart, circle.center( time ), circle.radius( time ) );
 
-          l1Error += ( T1 - sharedOneVolume ) + ( uhComp[ entity ] * volume - sharedOneVolume );
+          l1Error += ( T1 - sharedOneVolume ) + ( calculatedOnePart.volume() - sharedOneVolume );
         }
       }
 

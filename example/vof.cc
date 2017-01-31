@@ -18,18 +18,16 @@
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-vof includes
-#include "../dune/vof/algorithm.hh"
-#include "../dune/vof/test/colorfunction.hh"
+#include <dune/vof/algorithm.hh>
+#include <dune/vof/colorfunction.hh>
 #include "../dune/vof/test/average.hh"
 #include "../dune/vof/test/errors.hh"
-#include "../dune/vof/test/binarywriter.hh"
-#include "../dune/vof/test/polygon.hh"
-#include "../dune/vof/test/reconstructionwriter.hh"
 #include "../dune/vof/test/problems/linearwall.hh"
 #include "../dune/vof/test/problems/rotatingcircle.hh"
 #include "../dune/vof/test/problems/sflow.hh"
 #include "../dune/vof/test/problems/slottedcylinder.hh"
 
+#include "binarywriter.hh"
 
 int main(int argc, char** argv)
 try {
@@ -119,8 +117,8 @@ try {
 
     bool verbose = ( verboserank == grid.comm().rank() );
 
-    using DataOutputType = BinaryWriter< GridView >;
-    DataOutputType dataOutput( gridView, parameters, level );
+    using DataOutputType = BinaryWriter< GridView, ColorFunction >;
+    DataOutputType dataOutput( gridView, uh, parameters, level );
 
     // Run Algorithm
     Dune::VoF::Algorithm< GridView, ProblemType, DataOutputType > algorithm( gridView, problem, dataOutput, cfl, eps, verbose );

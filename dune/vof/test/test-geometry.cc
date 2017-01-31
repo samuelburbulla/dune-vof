@@ -25,7 +25,7 @@ try {
 
   // set parameters
   Dune::ParameterTree parameters;
-  Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
   //  create grid

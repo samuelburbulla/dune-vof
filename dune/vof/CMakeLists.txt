@@ -8,12 +8,12 @@ add_subdirectory(test)
 set(HEADERS
   algorithm.hh
   brents.hh
+  colorfunction.hh
   curvatureset.hh
   dataset.hh
   evolution.hh
   flagging.hh
   flagset.hh
-  interpolation.hh
   mixedcellmapper.hh
   reconstruction.hh
   reconstructionset.hh

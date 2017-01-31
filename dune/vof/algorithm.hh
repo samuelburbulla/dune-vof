@@ -75,7 +75,7 @@ namespace Dune
           update.communicate();
           uh.axpy( 1.0, update );
 
-          dataWriter_.write( uh, time );
+          dataWriter_.write( time );
         }
 
         end = time;

@@ -4,7 +4,7 @@
 //- dune-grid includes
 #include <dune/grid/common/mcmgmapper.hh>
 
-#include "../dataset.hh"
+#include <dune/vof/dataset.hh>
 
 
 // ColorFunction

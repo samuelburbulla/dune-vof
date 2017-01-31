@@ -18,6 +18,7 @@
 #include <dune/grid/io/file/vtk/vtksequencewriter.hh>
 
 //- dune-vof includes
+#include <dune/vof/colorfunction.hh>
 #include <dune/vof/curvatureset.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flagset.hh>
@@ -28,47 +29,14 @@
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
-#include <dune/vof/interpolation.hh>
 
 //- local includes
 #include "average.hh"
-#include "colorfunction.hh"
 #include "errors.hh"
 #include "io.hh"
-#include "polygon.hh"
 #include "problems/ellipse.hh"
 #include "problems/rotatingcircle.hh"
 #include "problems/slope.hh"
-#include "vtu.hh"
-
-// filterReconstruction
-// --------------------
-
-template < class GridView, class ReconstructionSet, class Flags, class Polygon >
-void filterReconstruction( const GridView &gridView, const ReconstructionSet &reconstructionSet, const Flags &flags, std::vector< Polygon > &io )
-{
-  using Coord = typename Polygon::Position;
-
-  io.clear();
-  for ( const auto& entity : elements( gridView ) )
-  {
-    if ( !flags.isMixed( entity ) )
-      continue;
-
-    auto is = intersect( Dune::VoF::makePolytope( entity.geometry() ), reconstructionSet[ entity ].boundary() );
-    auto intersection = static_cast< typename decltype( is )::Result > ( is );
-
-    //if ( intersection == typename decltype( is )::Result() )
-      //continue;
-
-    std::vector< Coord > vertices;
-    for ( std::size_t i = 0; i < intersection.size(); ++i )
-      vertices.push_back( intersection.vertex( i ) );
-
-    if ( vertices.size() > 0 )
-      io.push_back( Polygon( vertices, reconstructionSet[ entity ].innerNormal() ) );
-  }
-}
 
 
 // initTimeStep
@@ -107,8 +75,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   using FlagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
-
-  using Polygon = OutputPolygon< typename ReconstructionSet::DataType::Coordinate >;
 
   // Testproblem
   using ProblemType = Ellipse< double, GridView::dimensionworld >;
@@ -159,13 +125,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   vtkwriter.addCellData ( normalY, "nY" );
   //vtkwriter.addCellData ( normalZ, "nZ" );
 
-  std::vector< Polygon > recIO;
-  VTUWriter< std::vector< Polygon > > vtuwriter( recIO );
-  std::stringstream name;
-  name.fill('0');
-  name << "vof-rec-" << std::setw(5) << 0 << ".vtu";
-
-
 
   // Initial data
   Dune::VoF::average( colorFunction, problem );
@@ -186,9 +145,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
       normalY[ entity ] = reconstructionSet[ entity ].innerNormal()[ 1 ];
       //normalZ[ entity ] = reconstructionSet[ entity ].innerNormal()[ 2 ];
     }
-    filterReconstruction( gridView, reconstructionSet, flags, recIO );
     vtkwriter.write( 0 );
-    vtuwriter.write( Dune::concatPaths( path.str(), name.str() ) );
   }
 
   return error;
@@ -202,7 +159,7 @@ try {
 
   // set parameters
   Dune::ParameterTree parameters;
-  Dune::ParameterTreeParser::readINITree( "parameter.ini", parameters );
+  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
   double lastL1Error = 0.0;

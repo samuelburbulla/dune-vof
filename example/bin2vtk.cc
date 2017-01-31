@@ -23,6 +23,7 @@
 #include <dune/fem/io/streams/binarystreams.hh>
 
 // dune-vof includes
+#include <dune/vof/colorfunction.hh>
 #include <dune/vof/curvatureset.hh>
 #include <dune/vof/reconstructionset.hh>
 #include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
@@ -33,8 +34,6 @@
 #include <dune/vof/reconstruction.hh>
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/stencil/edgeneighborsstencil.hh>
-
-#include "../dune/vof/test/colorfunction.hh"
 
 // DataOutputParameters
 // --------------------

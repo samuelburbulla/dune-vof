@@ -7,9 +7,9 @@
 
 #include <dune/geometry/quadraturerules.hh>
 
-#include <dune/vof/interpolation.hh>
-
+#include "interpolation.hh"
 #include "problems/ellipse.hh"
+#include "problems/rotatingcircle.hh"
 #include "problems/slope.hh"
 #include "../geometry/intersect.hh"
 #include "../geometry/halfspace.hh"
@@ -57,7 +57,7 @@ namespace Dune
     }
 
     template< class DF >
-    void average ( DF &u, const Ellipse< double, 2 >& e )
+    void average ( DF &u, const Ellipse< double, 2 >& e, const double time = 0.0 )
     {
       if( u.gridView().comm().rank() == 0 )
         std::cout << " -- average using intersection" << std::endl;
@@ -65,7 +65,15 @@ namespace Dune
     }
 
     template< class DF >
-    void average ( DF &uh, const Slope< double, 2 >& s )
+    void average ( DF &u, const RotatingCircle< double, 2 >& c, const double time = 0.0 )
+    {
+      if( u.gridView().comm().rank() == 0 )
+        std::cout << " -- average using intersection" << std::endl;
+      circleInterpolation( c.center( time ), c.radius( time ), u );
+    }
+
+    template< class DF >
+    void average ( DF &uh, const Slope< double, 2 >& s, const double time = 0.0 )
     {
       using Coordinate = FieldVector< double, 2 >;
       if( uh.gridView().comm().rank() == 0 )
