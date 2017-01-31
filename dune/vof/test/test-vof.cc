@@ -168,7 +168,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
-  DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
+  DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
   vtkwriter.addCellData ( colorFunction, "celldata" );
 
   std::vector< Polygon > recIO;
@@ -257,19 +257,21 @@ try {
   grid.globalRefine( refineStepsForHalf * level );
 
   int numRuns = parameters.get<int>( "grid.runs", 1 );
+  std::ofstream errorsFile;
+  errorsFile.open( "errors" );
+  errorsFile << "#dx \terror " << std::endl;
 
   for ( int i = 0; i < numRuns; ++i )
   {
     // start time integration
-    auto L1Error = algorithm( grid.leafGridView(), parameters );
+    auto partL1Error = algorithm( grid.leafGridView(), parameters );
+    double L1Error = grid.comm().sum( partL1Error );
+    errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
 
-      // print errors and eoc
-    if ( i > 0 )
+    // print errors and eoc
+    if ( i > 0 && grid.comm().rank() == 0 )
     {
       const double eoc = log( lastL1Error / L1Error ) / M_LN2;
-
-      if( eoc < 1.5 )
-        DUNE_THROW( Dune::InvalidStateException, "EOC is smaller than 1.5!");
 
       std::cout << "EOC " << i << ": " << eoc << std::endl;
     }

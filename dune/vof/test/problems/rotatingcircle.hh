@@ -13,6 +13,11 @@ struct RotatingCircle < ctype, 2 >
   using DomainType = Dune::FieldVector< ctype, 2 >;
   using RangeType = Dune::FieldVector< ctype, 1 >;
 
+  void evaluate ( const DomainType &x, double t, RangeType &u ) const
+  {
+    u = ( x - center( t ) ).two_norm() < radius( t ) ? RangeType( 1.0 ) : RangeType( 0.0 );
+  }
+
   DomainType center( const double t ) const
   {
     DomainType center = rotationCenter();

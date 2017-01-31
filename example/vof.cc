@@ -18,18 +18,10 @@
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-vof includes
-#include <dune/vof/evolution.hh>
-#include <dune/vof/flagset.hh>
-#include <dune/vof/flagging.hh>
-#include <dune/vof/reconstruction.hh>
-#include <dune/vof/reconstructionset.hh>
-#include <dune/vof/stencil/vertexneighborsstencil.hh>
-#include <dune/vof/stencil/edgeneighborsstencil.hh>
-
+#include "../dune/vof/algorithm.hh"
 #include "../dune/vof/test/colorfunction.hh"
 #include "../dune/vof/test/average.hh"
 #include "../dune/vof/test/errors.hh"
-#include "../dune/vof/test/velocity.hh"
 #include "../dune/vof/test/binarywriter.hh"
 #include "../dune/vof/test/polygon.hh"
 #include "../dune/vof/test/reconstructionwriter.hh"
@@ -37,108 +29,6 @@
 #include "../dune/vof/test/problems/rotatingcircle.hh"
 #include "../dune/vof/test/problems/sflow.hh"
 #include "../dune/vof/test/problems/slottedcylinder.hh"
-
-
-template < class GridPart, class Velocity, class Flags >
-double initTimeStep( const GridPart& gridPart, Velocity &velocity, const Flags &flags )
-{
-  double dtMin = std::numeric_limits< double >::max();
-  for( const auto &entity : elements( gridPart ) )
-  {
-    if( !flags.isActive( entity ) )
-    continue;
-
-    const auto geoEn = entity.geometry();
-
-    for ( const auto &intersection : intersections( gridPart, entity ) )
-    {
-      if ( !intersection.neighbor() )
-        continue;
-
-      const auto geoIs = intersection.geometry();
-      velocity.bind( intersection );
-      auto v = velocity( geoIs.local( geoIs.center() ) );
-      dtMin = std::min( dtMin, geoEn.volume() / std::abs( intersection.integrationOuterNormal( typename decltype( geoIs )::LocalCoordinate( 0 ) ) * v ) );
-    }
-  }
-  return dtMin;
-}
-
-
-
-// Algorithm
-// ---------
-
-template< class Grid, class ColorFunction, class P >
-double algorithm ( Grid &grid, ColorFunction& uh, P& problem, const Dune::ParameterTree &parameters, int level, double start, double end, double cfl, double eps, const bool verbose = false, const bool writeData = true )
-{
-  using GridView = typename Grid::LeafGridView;
-  GridView gridView( grid.leafGridView() );
-
-  // Create stencils
-  using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
-  Stencils stencils( gridView );
-
-  // Create reconstruction set
-  using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
-  ReconstructionSet reconstructions( gridView );
-
-  // Create flag set
-  using FlagSet = Dune::VoF::FlagSet< GridView >;
-  FlagSet flags( gridView );
-
-  // Create operators
-  auto reconstruction = Dune::VoF::reconstruction( gridView, uh, stencils );
-  auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
-  auto evolution = Dune::VoF::evolution( gridView );
-
-  // Calculate initial data
-  flagOperator( uh, flags );
-  reconstruction( uh, reconstructions, flags );
-
-  using Velocity = Velocity< P, GridView >;
-  Velocity velocity( problem, start );
-
-  // Create and initialize time provider
-  double time = start;
-  double deltaT = initTimeStep( gridView, velocity, flags );
-
-  // Create data output
-  using DataOutputType = BinaryWriter;
-  DataOutputType dataOutput( parameters, level, time );
-
-  // Calculate and write initial data
-  if ( writeData )
-    dataOutput.write( grid, uh, time );
-
-  ColorFunction update( gridView );
-
-  // Time Iteration
-  for( ; time <= end; )
-  {
-    if ( verbose )
-      std::cerr << "time = " << time<< ", "
-                << "dt = " << deltaT << std::endl;
-
-    // Create velocity object
-    Velocity velocity( problem, time );
-
-    flagOperator( uh, flags );
-    reconstruction( uh, reconstructions, flags );
-    double dtEst = evolution( reconstructions, flags, velocity, deltaT, update );
-
-    update.communicate();
-    uh.axpy( 1.0, update );
-
-    time += deltaT;
-    deltaT = dtEst * cfl;
-
-    if ( writeData )
-      dataOutput.write( grid, uh, time );
-  }
-
-  return Dune::VoF::l1error( gridView, reconstructions, flags, problem, time );
-}
 
 
 int main(int argc, char** argv)
@@ -152,7 +42,7 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  int level = parameters.get< int >( "grid.level", 0 );
+  int level0 = parameters.get< int >( "grid.level", 0 );
   int repeats = parameters.get< int >( "grid.repeats", 0 );
   double start = parameters.get< double >( "scheme.start", 0.0 );
   double end = parameters.get< double >( "scheme.end", 2.5 );
@@ -161,7 +51,6 @@ try {
   std::string path = parameters.get< std::string >( "io.path", "data" );
   int restartStep = parameters.get< int >( "io.restartStep", -1 );
   int verboserank = parameters.get< int >( "io.verboserank", -1 );
-  bool writeData = parameters.get< bool >( "io.writeData", true );
 
   using Grid = Dune::GridSelector::GridType;
   using GridView = typename Grid::LeafGridView;
@@ -176,21 +65,21 @@ try {
   gridPtr->loadBalance();
   Grid& grid = *gridPtr;
   const int refineStepsForHalf = Dune::DGFGridInfo< Grid >::refineStepsForHalf();
-  grid.globalRefine( level * refineStepsForHalf );
+  grid.globalRefine( level0 * refineStepsForHalf );
 
   GridView gridView( grid.leafGridView() );
 
   using ColorFunction = ColorFunction< GridView >;
 
   // Testproblem
-  using ProblemType = SFlow< double, GridView::dimensionworld >;
+  using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
   ProblemType problem;
 
 
   // EOC Calculation
   // ===============
   double oldError = 0;
-  for( int step = level; step <= level+repeats; ++step )
+  for( int level = level0; level <= level0+repeats; ++level )
   {
     // Initialize Data
     // ===============
@@ -208,11 +97,11 @@ try {
       std::stringstream namedata;
       namedata.fill('0');
       namedata << "s" << std::setw(4) << grid.comm().size() << "-p" << std::setw(4) << grid.comm().rank()
-        << "-vof-" << std::to_string( step ) << "-" << std::setw(5) << restartStep << ".bin";
+        << "-vof-" << std::to_string( level ) << "-" << std::setw(5) << restartStep << ".bin";
       const auto filename = Dune::concatPaths( path, namedata.str() );
       if ( !Dune::Fem::fileExists( filename ) )
       {
-        std::cout << "Restart error: A step is given to load binary file but this file does not exist." << std::endl;
+        std::cout << "Restart error: A time step is given to load binary file but this file does not exist." << std::endl;
         return 1;
       }
       else
@@ -230,8 +119,14 @@ try {
 
     bool verbose = ( verboserank == grid.comm().rank() );
 
+    using DataOutputType = BinaryWriter< GridView >;
+    DataOutputType dataOutput( gridView, parameters, level );
+
     // Run Algorithm
-    double partError = algorithm( grid, uh, problem, parameters, step, start, end, cfl, eps, verbose, writeData );
+    Dune::VoF::Algorithm< GridView, ProblemType, DataOutputType > algorithm( gridView, problem, dataOutput, cfl, eps, verbose );
+    algorithm( uh, start, end );
+
+    double partError = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, end );
     double error = grid.comm().sum( partError );
 
     if ( grid.comm().rank() == 0 )
@@ -239,8 +134,8 @@ try {
       const double l1eoc = log( oldError / error ) / M_LN2;
       std::cout << "L1-Error =" << std::setw( 16 ) << error << std::endl;
 
-      if ( step > level )
-        std::cout << "L1 EOC( " << std::setw( 2 ) << step << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
+      if ( level > level0 )
+        std::cout << "L1 EOC( " << std::setw( 2 ) << level << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
     }
 
     grid.globalRefine( refineStepsForHalf );
