@@ -68,7 +68,7 @@ namespace Dune
             for ( const auto &intersection : intersections( color.gridView(), entity ) )
               if ( intersection.neighbor() )
               {
-                Flag &flag = flags[ color.gridView().indexSet().index( intersection.outside() ) ];
+                Flag &flag = flags[ intersection.outside() ];
 
                 if ( flag == Flag::empty )
                   flag = Flag::activeempty;

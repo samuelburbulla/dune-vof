@@ -63,6 +63,10 @@ namespace Dune
       : Base( gridView )
       {}
 
+      using Base::operator[];
+
+      double operator[] ( const typename Base::Index &index ) const { return static_cast< double >( this->Base::operator[]( index ) ); }
+
       using Empty = Range< static_cast< std::size_t >( Flag::empty ),
                            static_cast< std::size_t >( Flag::activeempty ) >;
 
