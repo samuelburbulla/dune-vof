@@ -18,6 +18,11 @@ struct RotatingCircle < ctype, 2 >
     u = ( x - center( t ) ).two_norm() < radius( t ) ? RangeType( 1.0 ) : RangeType( 0.0 );
   }
 
+  void evaluate ( const DomainType &x, RangeType &u ) const
+  {
+    return evaluate( x, 0.0, u );
+  }
+
   DomainType center( const double t ) const
   {
     DomainType center = rotationCenter();

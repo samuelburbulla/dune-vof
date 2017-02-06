@@ -8,6 +8,7 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "interpolation.hh"
+#include "recursiveinterpolation.hh"
 #include "problems/ellipse.hh"
 #include "problems/rotatingcircle.hh"
 #include "problems/slope.hh"
@@ -23,7 +24,19 @@ namespace Dune
     // -------
 
     template< class DF, class F >
-    void average ( DF &u, const F &f, const double time = 0.0 )
+    void averageRecursive ( DF &u, const F &f, const double time = 0.0 )
+    {
+      if( u.gridView().comm().rank() == 0 )
+        std::cout << " -- average using recursive algorithm" << std::endl;
+
+      RecursiveInterpolation< typename std::remove_reference< decltype( u.gridView() ) >::type > interpolation ( u.gridView(), 5 );
+      auto function = [ &f, time ]( const auto &x ) { FieldVector< double, 1 > u; f.evaluate( x, u ); return u; };
+      interpolation( function, u );
+    }
+
+
+    template< class DF, class F >
+    void average ( DF &u, const F &f, const double time = 0.0, const double x = 0.0 )
     {
       typedef typename DF::GridView::ctype ctype;
       using RangeType = Dune::FieldVector< ctype, 1 >;
