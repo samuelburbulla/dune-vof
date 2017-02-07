@@ -89,8 +89,8 @@ try {
     double realEnd = end;
     algorithm( uh, start, realEnd );
 
-    //double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd, i-level );
-    double partL1Error = Dune::VoF::cellwiseL1error( uh, problem, realEnd, i-level );
+    double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd, i-level );
+    //double partL1Error = Dune::VoF::cellwiseL1error( uh, problem, realEnd, i-level );
     double L1Error = grid.comm().sum( partL1Error );
 
     // print errors and eoc

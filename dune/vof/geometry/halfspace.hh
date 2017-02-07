@@ -5,6 +5,8 @@
 
 #include <dune/common/deprecated.hh>
 
+#include <dune/vof/geometry/utility.hh>
+
 namespace Dune
 {
   namespace VoF
@@ -51,6 +53,20 @@ namespace Dune
       HalfSpace ( const Coordinate& normal, const Coordinate& point )
        : innerNormal_( normal ), distanceToOrigin_( -1.0*( normal * point ) )
       {}
+
+      HalfSpace ( const std::vector< Coordinate > &points )
+      {
+        assert( points.size() == dimension );
+
+        std::array< Coordinate, dimension-1 > vectors;
+        for ( std::size_t i = 1; i < dimension; ++i )
+          vectors[ i-1 ] = points[ i ] - points[ 0 ];
+
+        innerNormal_ = generalizedCrossProduct( vectors );
+        innerNormal_ /= innerNormal_.two_norm();
+
+        distanceToOrigin_ = -1.0*( innerNormal_ * points[ 0 ] );
+      }
 
       /**
        * \brief inner normal (used in the representation)
