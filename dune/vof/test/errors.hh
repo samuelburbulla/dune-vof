@@ -90,6 +90,22 @@ namespace Dune
     }
 
 
+    template< class DF >
+    double cellwiseL1error ( const DF& uh, RotatingCircle< double, 2 > circle, const double time = 0.0 )
+    {
+      if( uh.gridView().comm().rank() == 0 )
+        std::cout << " -- error using cell values" << std::endl;
+
+      DF uhExact( uh.gridView() );
+      circleInterpolation( circle.center( time ), circle.radius( time ), uhExact );
+
+      double error = 0.0;
+      for ( const auto& entity : elements( uh.gridView(), Dune::Partitions::interior ) )
+        error += std::abs( uh[ entity ] - uhExact[ entity ] ) * entity.geometry().volume();
+
+      return error;
+    }
+
     template< class CU, class F, class R, class P, class DF >
     static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem, DF &curvatureError )
     {

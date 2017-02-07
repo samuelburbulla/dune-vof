@@ -127,7 +127,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 
   // Initial data
-  Dune::VoF::average( colorFunction, problem );
+  Dune::VoF::averageRecursive( colorFunction, problem );
   colorFunction.communicate();
 
   // Initial reconstruction

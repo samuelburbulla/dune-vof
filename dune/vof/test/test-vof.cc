@@ -43,15 +43,12 @@ try {
   double cfl = 0.25;
   double eps = 1e-6;
   double start = 0.0;
-  double end = 1.0;
-  int numRuns = 2;
+  double end = 0.0;
+  int numRuns = 8;
   int level = 0;
 
   //  create grid
-  std::stringstream gridFile;
-  gridFile << GridType::dimension << "dgrid.dgf";
-
-  Dune::GridPtr< GridType > gridPtr( gridFile.str() );
+  Dune::GridPtr< GridType > gridPtr( std::to_string( GridType::dimension ) + "dgrid.dgf" );
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
   using GridView = typename GridType::LeafGridView;
@@ -65,47 +62,48 @@ try {
   using ProblemType = PROBLEM < double, GridView::dimensionworld >;
   ProblemType problem;
 
-  double lastL1Error;
+  double lastL1Error = 0.0;
   std::ofstream errorsFile;
   errorsFile.open( "errors" );
   errorsFile << "#dx \terror " << std::endl;
 
-  for ( int i = 0; i < numRuns; ++i )
+  for ( int i = level; i < level + numRuns; ++i )
   {
     ColorFunction< GridView > uh( gridView );
-    Dune::VoF::average( uh, problem );
+    Dune::VoF::averageRecursive( uh, problem );
     uh.communicate();
 
     using DataWriter = Dune::VTKSequenceWriter< GridView >;
-    std::stringstream path;
-    path << "./" << parameters.get< std::string >( "io.path" ) << "/vof-" << std::to_string( level );
-    createDirectory( path.str() );
+    const std::string path = "./" + parameters.get< std::string >( "io.path" ) + "/vof-" + std::to_string( i );
+    createDirectory( path );
 
-    DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
+    DataWriter vtkwriter ( gridView, "vof", path, "" );
     vtkwriter.addCellData ( uh, "celldata" );
 
     // start time integration
     Dune::VoF::Algorithm< GridType::LeafGridView, ProblemType, DataWriter > algorithm( gridView, problem, vtkwriter, cfl, eps );
     vtkwriter.addCellData( algorithm.flags(), "flags" );
-    algorithm( uh, start, end );
+    double realEnd = end;
+    algorithm( uh, start, realEnd );
 
-    auto partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, end );
+    double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd );
     double L1Error = grid.comm().sum( partL1Error );
 
-    errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
-
     // print errors and eoc
-    if ( i > 0 && grid.comm().rank() == 0 )
+    if ( grid.comm().rank() == 0 )
     {
-      const double eoc = log( lastL1Error / L1Error ) / M_LN2;
+      errorsFile << 1.0 / 8.0 * std::pow( 2, -i ) << " \t" << L1Error << std::endl;
+      std::cout << "L1-Error( " << i << " ) =\t" << L1Error << std::endl;
 
-      std::cout << "EOC " << i << ": " << eoc << std::endl;
+      if ( i > level )
+      {
+        const double eoc = log( lastL1Error / L1Error ) / M_LN2;
+        std::cout << "EOC " << i << ": " << eoc << std::endl;
+      }
     }
 
     lastL1Error = L1Error;
 
-    // refine
-    parameters[ "grid.level" ] = std::to_string( ++level );
     grid.globalRefine( refineStepsForHalf );
   }
 

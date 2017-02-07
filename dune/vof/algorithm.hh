@@ -59,7 +59,7 @@ namespace Dune
         ColorFunction update( gridView_ );
 
         // Time Iteration
-        for( ; time <= end; time += dt, dt = dtEst * cfl_)
+        do
         {
           if ( verbose_ )
             std::cerr << "time = " << time << ", " << "dt = " << dt << std::endl;
@@ -75,8 +75,13 @@ namespace Dune
           update.communicate();
           uh.axpy( 1.0, update );
 
+          time += dt;
+
           dataWriter_.write( time );
+
+          dt = dtEst * cfl_;
         }
+        while( time < end );
 
         end = time;
       }
