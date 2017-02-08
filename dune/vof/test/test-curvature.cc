@@ -114,7 +114,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // File io
   std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
+  path << "./" << parameters.get< std::string >( "io.path" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
@@ -127,7 +127,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 
   // Initial data
-  Dune::VoF::averageRecursive( colorFunction, problem );
+  Dune::VoF::average( colorFunction, problem, level );
   colorFunction.communicate();
 
   // Initial reconstruction
@@ -179,6 +179,12 @@ try {
 
   int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level;
 
+  std::ofstream errorsFile;
+  errorsFile.open( "errors" );
+  errorsFile << "#dx \terror " << std::endl;
+  std::ofstream eocFile;
+  eocFile.open( "eoc" );
+
   for ( ; level < maxLevel; ++level )
   {
     // start time integration
@@ -188,12 +194,12 @@ try {
 
     if ( grid.comm().rank() == 0 )
     {
-      // print errors and eoc
+      const double eoc = ( log( lastL1Error ) - log( L1Error ) ) / M_LN2;
+      eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, level ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
+      errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
+
       if ( level > 0 )
-      {
-        const double eoc = ( log( lastL1Error ) - log( L1Error ) ) / M_LN2;
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
-      }
 
       std::cout << "Err " << level << ": " << L1Error << std::endl;
     }

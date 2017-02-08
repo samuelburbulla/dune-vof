@@ -44,7 +44,7 @@ try {
   double eps = 1e-6;
   double start = 0.0;
   double end = 0.0;
-  int numRuns = 8;
+  int numRuns = 10;
   int level = 0;
 
   //  create grid
@@ -67,10 +67,13 @@ try {
   errorsFile.open( "errors" );
   errorsFile << "#dx \terror " << std::endl;
 
+  std::ofstream eocFile;
+  eocFile.open( "eoc" );
+
   for ( int i = level; i < level + numRuns; ++i )
   {
     ColorFunction< GridView > uh( gridView );
-    Dune::VoF::averageRecursive( uh, problem );
+    Dune::VoF::averageRecursive( uh, problem, start, i-level );
     uh.communicate();
 
     using DataWriter = Dune::VTKSequenceWriter< GridView >;
@@ -86,20 +89,21 @@ try {
     double realEnd = end;
     algorithm( uh, start, realEnd );
 
-    double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd );
+    //double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd, i-level );
+    double partL1Error = Dune::VoF::cellwiseL1error( uh, problem, realEnd, i-level );
     double L1Error = grid.comm().sum( partL1Error );
 
     // print errors and eoc
     if ( grid.comm().rank() == 0 )
     {
+      const double eoc = log( lastL1Error / L1Error ) / M_LN2;
+
       errorsFile << 1.0 / 8.0 * std::pow( 2, -i ) << " \t" << L1Error << std::endl;
+      eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, i ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
       std::cout << "L1-Error( " << i << " ) =\t" << L1Error << std::endl;
 
       if ( i > level )
-      {
-        const double eoc = log( lastL1Error / L1Error ) / M_LN2;
         std::cout << "EOC " << i << ": " << eoc << std::endl;
-      }
     }
 
     lastL1Error = L1Error;

@@ -24,9 +24,9 @@ namespace Dune
     // -------
 
     template< class DF, class F >
-    void averageRecursive ( DF &u, const F &f, const double time = 0.0 )
+    void averageRecursive ( DF &u, const F &f, const double time = 0.0, const int level = 0 )
     {
-      if( u.gridView().comm().rank() == 0 )
+      if( u.gridView().comm().rank() == 0 && level == 0 )
         std::cout << " -- average using recursive algorithm" << std::endl;
 
       RecursiveInterpolation< typename std::remove_reference< decltype( u.gridView() ) >::type > interpolation ( u.gridView(), 10 );
@@ -36,12 +36,12 @@ namespace Dune
 
 
     template< class DF, class F >
-    void average ( DF &u, const F &f, const double time = 0.0, const double x = 0.0 )
+    void average ( DF &u, const F &f, const double time = 0.0, const double x = 0.0, const int level = 0 )
     {
       typedef typename DF::GridView::ctype ctype;
       using RangeType = Dune::FieldVector< ctype, 1 >;
 
-      if( u.gridView().comm().rank() == 0 )
+      if( u.gridView().comm().rank() == 0 && level == 0 )
         std::cout << " -- average using quadrature" << std::endl;
 
       for( const auto& entity : elements ( u.gridView() ) )
@@ -70,26 +70,26 @@ namespace Dune
     }
 
     template< class DF >
-    void average ( DF &u, const Ellipse< double, 2 >& e, const double time = 0.0 )
+    void average ( DF &u, const Ellipse< double, 2 >& e, const double time = 0.0, const int level = 0 )
     {
-      if( u.gridView().comm().rank() == 0 )
+      if( u.gridView().comm().rank() == 0 && level == 0 )
         std::cout << " -- average using intersection" << std::endl;
       circleInterpolation( e.referenceMap(), e.volumeElement(), u );
     }
 
     template< class DF >
-    void average ( DF &u, const RotatingCircle< double, 2 >& c, const double time = 0.0 )
+    void average ( DF &u, const RotatingCircle< double, 2 >& c, const double time = 0.0, const int level = 0 )
     {
-      if( u.gridView().comm().rank() == 0 )
+      if( u.gridView().comm().rank() == 0 && level == 0 )
         std::cout << " -- average using intersection" << std::endl;
       circleInterpolation( c.center( time ), c.radius( time ), u );
     }
 
     template< class DF >
-    void average ( DF &uh, const Slope< double, 2 >& s, const double time = 0.0 )
+    void average ( DF &uh, const Slope< double, 2 >& s, const double time = 0.0, const int level = 0 )
     {
       using Coordinate = FieldVector< double, 2 >;
-      if( uh.gridView().comm().rank() == 0 )
+      if( uh.gridView().comm().rank() == 0 && level == 0 )
         std::cout << " -- average using intersection" << std::endl;
       uh.clear();
 
