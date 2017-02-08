@@ -43,11 +43,12 @@ struct RotatingCircle < ctype, 2 >
   void velocityField ( const DomainType &x, const double t, DomainType &r ) const
   {
     DomainType center = rotationCenter();
+    r = center - x;
+    r /= r.two_norm();
+    //r[ 0 ] = x[ 1 ] - center[ 1 ];
+    //r[ 1 ] = center[ 0 ] - x[ 0 ];
 
-    r[ 0 ] = x[ 1 ] - center[ 1 ];
-    r[ 1 ] = center[ 0 ] - x[ 0 ];
-
-    r *= 2 * M_PI / 10;
+    //r *= 2 * M_PI / 10;
   }
 
   ctype curvature( const DomainType &x ) const

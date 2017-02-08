@@ -57,7 +57,6 @@ namespace Dune
 
         double time = start, dt = 0.0, dtEst = 0.0;
         ColorFunction update( gridView_ );
-
         // Time Iteration
         do
         {

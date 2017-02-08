@@ -58,7 +58,7 @@ namespace Dune
 
         for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
-          if( !flags.isActive( entity ) )
+          if( !flags.isMixed( entity ) )
             continue;
 
           using std::min;
@@ -97,8 +97,9 @@ namespace Dune
 
           const Coordinate &outerNormal = intersection.centerUnitOuterNormal();
 
-          velocity.bind( intersection );
-          const auto& refElement = ReferenceElements< ctype, std::decay_t< decltype( intersection ) >::mydimension >::general( intersection.type() );
+          const auto geometry = entity.geometry();
+          velocity.bind( geometry );
+          const auto& refElement = ReferenceElements< ctype, 2 >::general( entity.geometry().type() );
           Coordinate v = velocity( refElement.position( 0, 0 ) );
 
           using std::abs;
@@ -113,6 +114,14 @@ namespace Dune
           if ( v * outerNormal > 0 )
           {
             geometricFlux( intersection.inside(), intersection.geometry(), reconstructions, flags, v, flux );
+
+            const auto &neighbor = intersection.outside();
+
+            if( flags.isFull( neighbor ) )
+              update[ neighbor ] -= ( ( v * intersection.integrationOuterNormal(0) ) - flux ) / neighbor.geometry().volume();
+            if ( flags.isEmpty( neighbor ) )
+              update[ neighbor ] += flux / neighbor.geometry().volume();
+
             flux *= -1.0;
           }
           // inflow
