@@ -121,7 +121,7 @@ namespace Dune {
       static_assert( dimension <= dimensionworld, "dimension larger than dimensionworld." );
 
       Line ()
-        : vertices_{ Coordinate( 0 ), Coordinate( 0 ) }
+        : vertices_{{ Coordinate( 0 ), Coordinate( 0 ) }}
       {}
 
       Line ( Container vertices )
@@ -129,7 +129,7 @@ namespace Dune {
       {}
 
       Line ( const Coordinate& v0, const Coordinate& v1 )
-      : vertices_{ v0, v1 }
+      : vertices_{{ v0, v1 }}
       {}
 
       bool operator== ( const This &other) const
