@@ -1,10 +1,11 @@
 #ifndef DUNE_VOF_RECONSTRUCTION_HH
 #define DUNE_VOF_RECONSTRUCTION_HH
 
-#include <dune/vof/reconstruction/modifiedswartz.hh>
+#include <dune/vof/reconstruction/heightfunction.hh>
 #include <dune/vof/reconstruction/modifiedyoungs.hh>
-#include <dune/vof/reconstruction/modifiedyoungssecondorder.hh>
 #include <dune/vof/reconstructionset.hh>
+
+//#include <dune/vof/reconstruction/modifiedswartz.hh>
 
 namespace Dune
 {
@@ -24,7 +25,7 @@ namespace Dune
      * \param   stencils  set of stencils
      * \return [description]
      */
-
+    /*
     template< class GridView, class Stencils, class ColorFunction >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
      -> typename std::enable_if< GridView::dimension == 2,
@@ -35,13 +36,15 @@ namespace Dune
                                            ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
                                          >( stencils );
     }
+    */
 
-    template< class GridView, class Stencils, class ColorFunction >
+    template< class GridView, class ColorFunction, class Stencils >
     static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
-     ->  typename std::enable_if< GridView::dimension == 3,
-                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >::type
+     ->  HeightFunctionReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
+          ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >
     {
-      return ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >( stencils );
+      return HeightFunctionReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
+              ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >( stencils );
     }
 
   } // namespace VoF

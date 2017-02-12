@@ -42,7 +42,6 @@ namespace Dune
       using Flags = FlagSet< GridView >;
       using VelocityField = Velocity< Problem, GridView >;
 
-
       Algorithm ( const GridView &gridView, const Problem& problem, DataWriter& dataWriter, double cfl, double eps, const bool verbose = false )
        : gridView_( gridView ), problem_( problem ), dataWriter_( dataWriter ), cfl_( cfl ), eps_( eps ), verbose_( verbose ),
          stencils_( gridView ), reconstructions_( gridView ), flags_( gridView )

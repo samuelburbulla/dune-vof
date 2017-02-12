@@ -88,9 +88,12 @@ namespace Dune
 
         Dune::FieldVector< double, decltype( stencil )::noc > heights ( 0.0 );
 
-        for( int i = stencil.cMin(); i < stencil.cMax(); ++i )
-          for( int t = -stencil.tdown(); t <= stencil.tup(); ++t )
+        for( std::size_t i = 0; i < stencil.columns(); ++i )
+          for( int t = stencil.tdown(); t <= stencil.tup(); ++t )
           {
+            if ( !stencil.valid( i, t ) )
+              continue;
+
             double u = uh[ stencil( i, t ) ];
 
             // local monotonic variation
@@ -105,10 +108,10 @@ namespace Dune
                 u = 0.0;
             }
 
-            heights[ i - stencil.cMin() ] += u;
+            heights[ i ] += u;
           }
 
-        if ( stencil.tdown() < heights[ 1 ] && heights[ 1 ] < stencil.tdown() + 1 )
+        if ( stencil.effectiveTdown() < heights[ 1 ] && heights[ 1 ] < stencil.effectiveTdown() + 1 )
         {
           satisfiesConstraint( entity ) = 1;
 

@@ -13,57 +13,70 @@ namespace Dune
      * \ingroup Method
      * \brief  a single stencil for the height function method
      *
-     * \tparam  Entity  entity
+     * \tparam  GV  grid view
      */
-    template< class E, class M >
+    template< class GV >
     struct HeightFunctionStencil
     {
-      using Entity = E;
-      using MultiIndex = M;
-      static constexpr int noc = 3;
+      using GridView = GV;
+      static constexpr int dim = GridView::dimension;
+
+      using Entity = typename GridView::template Codim< 0 >::Entity;
+      using EntityImpl = SPEntity< 0, dim, const typename GridView::Grid >;
+      using EntityInfo = typename EntityImpl::EntityInfo;
+      using MultiIndex = typename EntityInfo::MultiIndex;
+
+      static constexpr int noc = std::pow( 3, dim-1 );
 
     public:
-      explicit HeightFunctionStencil ()
-       : tdown_( 3 ), tup_( 3 ), offset_( tdown_ ), maxTdown_( 0 ), maxTup_( 0 ), nocL_( -1 ), nocR_( 1 ), nocOffset_( -nocL_ ), minC_( 0 ), maxC_( 0 ), columns_( columns() )
+      explicit HeightFunctionStencil ( const GridView &gridView )
+       : gridView_( gridView ), tup_( 3 ), columns_( noc )
       {
-        for ( int i = cMin(); i < cMax(); ++i )
-          columns_[ nocOffset_ + i ].resize( tdown() + tup() + 1 );
+        for ( int i = 0; i < noc; ++i )
+          columns_[ i ].resize( 2 * tup_ + 1 );
+      }
+
+      std::size_t columns() const { return noc; }
+
+      int tdown() const { return -tup_; }
+
+      int tup() const { return tup_; }
+
+      int effectiveTdown() const
+      {
+        for ( int i = -1; i >= tdown(); --i )
+          if ( !valid( ( noc - 1 ) / 2, i ) )
+            return  - 1 - i;
+        return tup_;
+      }
+
+      Entity operator() ( std::size_t i, int t ) const
+      {
+        assert( valid( i, t ) );
+        const EntityInfo entityInfo = columns_[ i ][ t + tup_ ];
+        return EntityImpl( entityInfo );
       }
 
       void add ( const MultiIndex &m, const Entity &entity )
       {
-        columns_[ m[ 1 ] + 1 ][ m[ 0 ] + offset_ ] = entity;
+        int columnId = m[ 1 ] + 1;
 
-        if ( m[ 0 ] < -maxTdown_ )
-          maxTdown_ = -m[ 0 ];
-        else if ( m[ 0 ] > maxTup_ )
-          maxTup_ = m[ 0 ];
+        if ( dim == 3 )
+          columnId += 3 * ( m[ 2 ] + 1 );
 
-        if ( m[ 1 ] < minC_ )
-          minC_ = m[ 1 ];
-        if ( m[ 1 ] > maxC_ )
-          maxC_ = m[ 1 ];
+        columns_[ columnId ][ m[ 0 ] + tup_ ] = GridView::Grid::getRealImplementation( entity ).entityInfo();
       }
 
-      void fixBounds ()
+      bool valid ( std::size_t i, int t ) const
       {
-        tdown_ = maxTdown_;
-        tup_ = maxTup_;
-        nocL_ = minC_;
-        nocR_ = maxC_;
+        auto multiIndex = columns_[ i ][ t + tup_ ].id();
+        return multiIndex != MultiIndex::zero();
       }
-
-      int cMin() const { return nocL_; }
-      int cMax() const { return columns() + nocL_; }
-      std::size_t columns() const { return 1 - nocL_ + nocR_; }
-      int tdown() const { return tdown_; }
-      int tup() const { return tup_; }
-      const Entity &operator() ( std::size_t i, int t ) const { return columns_[ nocOffset_ + i ][ t + offset_ ]; }
 
     private:
-      std::size_t tdown_, tup_, offset_;
-      int maxTdown_, maxTup_, nocL_, nocR_, nocOffset_, minC_, maxC_;
-      std::vector< std::vector< Entity > > columns_;
+      const GridView &gridView_;
+      std::size_t tup_;
+      std::vector< std::vector< EntityInfo > > columns_;
     };
 
     // HeightFunctionStencils
@@ -81,7 +94,7 @@ namespace Dune
       using GridView = GV;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using MultiIndex = typename SPEntity< 0, GV::dimension, typename GV::Grid >::MultiIndex;
-      using Stencil = HeightFunctionStencil< Entity, MultiIndex >;
+      using Stencil = HeightFunctionStencil< GridView >;
       static constexpr int dim = GridView::dimension;
 
     private:
@@ -93,9 +106,9 @@ namespace Dune
       explicit HeightFunctionStencils ( const GridView& gridView )
        : gridView_( gridView )
       {
-        std::size_t size = indexSet().size( 0 );
         for ( std::size_t i = 0; i < 2 * dim; ++i )
-          stencils_[ i ].resize( size );
+          for ( std::size_t id = 0; id < indexSet().size( 0 ); ++id )
+            stencils_[ i ].emplace_back( gridView_ );
 
         for ( const auto& entity : elements( gridView ) )
         {
@@ -149,9 +162,23 @@ namespace Dune
 
                 MultiIndex m = multiIndexOther - multiIndex;
                 m /= 2;
-                m[ i ] *= j;
+                m *= j;
 
-                if ( m[ i ] < -stencil.tdown() || m[ i ] > stencil.tup() )
+                if ( dim == 2 )
+                {
+                  if ( i == 0 ) m[1] *= -1;
+                }
+
+                if ( dim == 3 )
+                {
+                  if ( i == 0 && j == -1 ) m[2] *= -1;
+                  if ( i == 0 && j == 1 ) m[1] *= -1;
+                  if ( i == 1 && j == -1 ) m[2] *= -1;
+                  if ( i == 2 && j == -1 ) m[1] *= -1;
+                  if ( i == 2 && j == 1 ) m[1] *= -1;
+                }
+
+                if ( m[ i ] < stencil.tdown() || m[ i ] > stencil.tup() )
                   continue;
 
                 bool valid = true;
@@ -165,11 +192,17 @@ namespace Dune
                 if ( !valid )
                   continue;
 
-                std::swap( m[0], m[i] );
+                if ( i == 1 )
+                  std::swap( m[0], m[1] );
+
+                if ( i == 2 )
+                {
+                  std::swap( m[1], m[2] );
+                  std::swap( m[0], m[1] );
+                }
+
                 stencil.add( m, other );
               }
-
-              stencil.fixBounds();
             }
 
         }

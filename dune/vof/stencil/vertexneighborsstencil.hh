@@ -39,8 +39,8 @@ namespace Dune
         return stencils_[ indexSet().index( entity ) ];
       }
 
-    private:
       const GridView& gridView() const { return gridView_; }
+    private:
       const IndexSet& indexSet() const { return gridView().indexSet(); }
 
       void initialize()

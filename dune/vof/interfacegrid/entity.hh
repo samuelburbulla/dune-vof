@@ -162,7 +162,7 @@ namespace Dune
       template< int codim >
       struct Codim
       {
-        typedef Dune::Entity< codim, dimension, Grid, InterfaceGridEntity > Entity;
+        typedef Dune::Entity< codim, dimension, Grid, ::Dune::VoF::InterfaceGridEntity > Entity;
       };
 
       typedef Dune::EntityIterator< 0, Grid, InterfaceGridHierarchicIterator< Grid > > HierarchicIterator;

@@ -40,8 +40,8 @@ namespace Dune
       Index index ( const Entity &entity ) const
       {
         const ElementIndex elementIndex = elementMapper_.index( entity );
-        assert( indices_[ elementMapper_.index( entity ) ] != invalidIndex() );
-        return indices_[ elementMapper_.index( entity ) ];
+        assert( indices_[ elementIndex ] != invalidIndex() );
+        return indices_[ elementIndex ];
       }
 
       template< class Entity >
