@@ -277,7 +277,6 @@ try {
       interfaceVtkWriter.addCellData( curvatureOnInterface, "curvature" );
       interfaceVtkWriter.pwrite( recfile.str(), recOutputParameters.path(), "" );
       recPVDWriter.addDataSet( grid.comm().size(), recOutputParameters.prefix(), number, timeValue );
-
     }
 
   }

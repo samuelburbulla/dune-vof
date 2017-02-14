@@ -39,6 +39,8 @@ namespace Dune
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
+      using Heights = Dune::FieldVector< double, Stencils::Stencil::noc >;
+
     public:
       explicit CartesianHeightFunctionCurvature ( GridView gridView, const VertexNeighborStencils &vertexNeighborStencils )
        : gridView_( gridView ),
@@ -86,7 +88,7 @@ namespace Dune
         const Coordinate &normal = reconstructions[ entity ].innerNormal();
         auto stencil = heightFunctionStencil( normal, entity );
 
-        Dune::FieldVector< double, decltype( stencil )::noc > heights ( 0.0 );
+        Heights heights ( 0.0 );
 
         for( std::size_t i = 0; i < stencil.columns(); ++i )
           for( int t = stencil.tdown(); t <= stencil.tup(); ++t )
@@ -111,19 +113,60 @@ namespace Dune
             heights[ i ] += u;
           }
 
-        if ( stencil.effectiveTdown() < heights[ 1 ] && heights[ 1 ] < stencil.effectiveTdown() + 1 )
+        // Constraint
+        double uMid = heights[ ( heights.size() - 1 ) / 2 ];
+        int effTdown = stencil.effectiveTdown();
+        if ( effTdown < uMid || uMid > effTdown + 1 )
+          return;
+
+
+        for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
+          if ( heights[ i ] == 0.0 )
+            return;
+
+        satisfiesConstraint( entity ) = 1;
+
+        curvature[ entity ] = kappa( heights, getOrientation( normal ), stencils_.deltaX() );
+      }
+
+
+      template< class Coordinate >
+      auto kappa ( const Heights &heights, const Coordinate &orientation, const double dx ) const
+      -> typename std::enable_if< Coordinate::dimension == 2, double >::type
+      {
+        double Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;
+        double Hxx = ( heights[ 2 ] - 2 * heights[ 1 ] + heights[ 0 ] ) / dx;
+
+        return - Hxx / std::pow( 1.0 + Hx * Hx, 3.0 / 2.0 );
+      }
+
+      template< class Coordinate >
+      auto kappa ( const Heights &heights, const Coordinate &orientation, const double dx ) const
+      -> typename std::enable_if< Coordinate::dimension == 3, double >::type
+      {
+        double Hx = ( heights[ 5 ] - heights[ 3 ] ) / 2.0;
+        double Hy = ( heights[ 7 ] - heights[ 1 ] ) / 2.0;
+        double Hxx = ( heights[ 5 ] - 2.0 * heights[ 4 ] + heights[ 3 ] ) / dx;
+        double Hyy = ( heights[ 7 ] - 2.0 * heights[ 4 ] + heights[ 1 ] ) / dx;
+        double Hxy = ( heights[ 8 ] - heights[ 2 ] - heights[ 6 ] + heights[ 0 ] ) / ( 4.0 * dx );
+
+        return - ( Hxx + Hyy + Hxx * Hy * Hy + Hyy * Hx * Hx - 2.0 * Hxy * Hx * Hy ) / ( 2.0 * std::pow( 1.0 + Hx * Hx + Hy * Hy, 3.0 / 2.0 ) );
+      }
+
+      static inline Coordinate getOrientation( const Coordinate &normal )
+      {
+        std::size_t dir = 0;
+        double max = std::numeric_limits< double >::min();
+        for ( std::size_t i = 0; i < Coordinate::dimension; ++i )
+        if ( std::abs( normal[ i ] ) > max )
         {
-          satisfiesConstraint( entity ) = 1;
-
-          for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
-            if ( heights[ i ] == 0.0 )
-              return;
-
-          double Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;
-          double Hxx = ( heights[ 2 ] - 2 * heights[ 1 ] + heights[ 0 ] ) / stencils_.deltaX();
-
-          curvature[ entity ] = - Hxx / std::pow( 1.0 + Hx * Hx, 3.0 / 2.0 );
+          dir = i;
+          max = std::abs( normal[ i ] );
         }
+        Coordinate orientation;
+        orientation[ dir ] = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
+
+        return orientation;
       }
 
       template< class CurvatureSet >
