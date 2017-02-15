@@ -79,9 +79,9 @@ struct RotatingCircle < ctype, 3 >
   void evaluate ( const DomainType &x, double t, RangeType &u ) const
   {
     DomainType center{ 0.5, 0.5, 0.5 };
-    center.axpy( std::cos( (2 * M_PI / 10)*t ), DomainType{ 0.25, 0.0, 0.0 } );
-    center.axpy( std::sin( (2 * M_PI / 10)*t ), DomainType{ 0.0,  0.25, 0.0 } );
-    center.axpy( - std::sin( (2 * M_PI / 10)*t ), DomainType{ 0.0, 0.0, 0.25 } );
+    center.axpy( std::cos( (2 * M_PI / 10)*t ), DomainType{ 0.0, 0.25, 0.0 } );
+    center.axpy( std::sin( (2 * M_PI / 10)*t ), DomainType{ 0.25, 0.0, 0.0 } );
+    center.axpy( - std::sin( (2 * M_PI / 10)*t ), DomainType{ 0.0, 0.0, 0.0 } );
 
     double dist = ( x - center ).two_norm();
 
@@ -93,10 +93,10 @@ struct RotatingCircle < ctype, 3 >
     DomainType c = x;
     c -= DomainType{ 0.5, 0.5, 0.5 };
 
-    rot[ 0 ] = - c[ 1 ] + c[ 2 ];
-    rot[ 1 ] = c[ 0 ];
-    rot[ 2 ] = - c[ 0 ];
-    rot *= 2 * M_PI / 10 / std::sqrt(2);
+    rot[ 0 ] = c[ 1 ];
+    rot[ 1 ] = - c[ 0 ];
+    rot[ 2 ] = 0;
+    rot *= 2 * M_PI / 10;
   }
 
 };
