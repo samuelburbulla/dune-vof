@@ -38,6 +38,7 @@ namespace Dune
       using Entity = typename GridView::template Codim< 0 >::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
       using ctype = typename Entity::Geometry::ctype;
+      static constexpr std::size_t dim = GridView::dimension;
 
     public:
       explicit Evolution ( GridView gridView ) : gridView_( gridView ) {}
@@ -97,9 +98,8 @@ namespace Dune
 
           const Coordinate &outerNormal = intersection.centerUnitOuterNormal();
 
-          const auto geometry = entity.geometry();
-          velocity.bind( geometry );
-          const auto& refElement = ReferenceElements< ctype, 2 >::general( entity.geometry().type() );
+          velocity.bind( intersection );
+          const auto& refElement = ReferenceElements< ctype, dim-1 >::general( intersection.type() );
           Coordinate v = velocity( refElement.position( 0, 0 ) );
 
           using std::abs;
@@ -118,7 +118,7 @@ namespace Dune
             const auto &neighbor = intersection.outside();
 
             if( flags.isFull( neighbor ) )
-              update[ neighbor ] -= ( ( v * intersection.integrationOuterNormal(0) ) - flux ) / neighbor.geometry().volume();
+              update[ neighbor ] -= ( ( v * intersection.integrationOuterNormal( refElement.position( 0, 0 ) ) ) - flux ) / neighbor.geometry().volume();
             if ( flags.isEmpty( neighbor ) )
               update[ neighbor ] += flux / neighbor.geometry().volume();
 

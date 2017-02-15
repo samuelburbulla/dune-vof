@@ -18,14 +18,13 @@
 #include <dune/grid/io/file/dgfparser/dgfparser.hh>
 
 // dune-vof includes
-#include <dune/vof/algorithm.hh>
 #include <dune/vof/colorfunction.hh>
 #include "../dune/vof/test/average.hh"
-#include "../dune/vof/test/errors.hh"
 #include "../dune/vof/test/problems/linearwall.hh"
 #include "../dune/vof/test/problems/rotatingcircle.hh"
 #include "../dune/vof/test/problems/sflow.hh"
 #include "../dune/vof/test/problems/slottedcylinder.hh"
+#include <dune/vof/algorithm.hh>
 
 #include "binarywriter.hh"
 
@@ -123,9 +122,9 @@ try {
     // Run Algorithm
     Dune::VoF::Algorithm< GridView, ProblemType, DataOutputType > algorithm( gridView, problem, dataOutput, cfl, eps, verbose );
     double realEnd = end;
-    algorithm( uh, start, realEnd );
 
-    double partError = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd );
+
+    double partError = algorithm( uh, start, realEnd );
     double error = grid.comm().sum( partError );
 
     if ( grid.comm().rank() == 0 )

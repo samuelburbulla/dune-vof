@@ -1,7 +1,7 @@
 
 set( GRIDTYPE SPGRID )
 
-set( GRIDDIM 2 )
+set( GRIDDIM 3 )
 
 set( GRIDFILES
   parameter

@@ -5,6 +5,7 @@
 #include <utility>
 
 // dune-vof includes
+#include "test/errors.hh"
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flagset.hh>
 #include <dune/vof/flagging.hh>
@@ -48,7 +49,7 @@ namespace Dune
       {}
 
       template< class ColorFunction >
-      void operator() ( ColorFunction& uh, double start, double &end )
+      double operator() ( ColorFunction& uh, double start, double &end )
       {
         // Create operators
         auto reconstructionOperator = reconstruction( gridView_, uh, stencils_ );
@@ -56,6 +57,7 @@ namespace Dune
         auto evolutionOperator = evolution( gridView_ );
 
         double time = start, dt = 0.0, dtEst = 0.0;
+        double error = 0.0;
         ColorFunction update( gridView_ );
         // Time Iteration
         do
@@ -74,6 +76,8 @@ namespace Dune
           update.communicate();
           uh.axpy( 1.0, update );
 
+          error += dt * Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time );
+
           time += dt;
 
           dataWriter_.write( time );
@@ -82,7 +86,11 @@ namespace Dune
         }
         while( time < end );
 
+        if ( time == start )
+          error += Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time );
+
         end = time;
+        return error;
       }
 
       const Reconstructions& reconstructions() const { return reconstructions_; }

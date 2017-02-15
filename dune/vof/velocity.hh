@@ -6,7 +6,7 @@ class Velocity
 {
   using DomainType = typename Problem::DomainType;
   using RangeType = typename Problem::RangeType;
-  using Intersection = typename GridView::template Codim< 0 >::Entity::Geometry;
+  using Intersection = typename GridView::Intersection;
   using LocalCoordinate = typename Intersection::LocalCoordinate;
 
 public:
@@ -15,7 +15,7 @@ public:
   DomainType operator() ( const LocalCoordinate &local ) const
   {
     DomainType v ( 0.0 );
-    problem().velocityField( intersection().global( local ), time_, v );
+    problem().velocityField( intersection().geometry().global( local ), time_, v );
     return v;
   }
 

@@ -26,8 +26,8 @@ struct RotatingCircle < ctype, 2 >
   DomainType center( const double t ) const
   {
     DomainType center = rotationCenter();
-    DomainType offset { 0, 0 };
-    DomainType normal { 0, 0 };
+    DomainType offset { 0, 0.25 };
+    DomainType normal { 0.25, 0 };
 
     center.axpy( std::cos( ( 2 * M_PI / 10 ) * t ), offset );
     center.axpy( std::sin( ( 2 * M_PI / 10 ) * t ), normal );
@@ -37,18 +37,16 @@ struct RotatingCircle < ctype, 2 >
 
   ctype radius( const double t ) const
   {
-    return 0.4;
+    return 0.15;
   }
 
   void velocityField ( const DomainType &x, const double t, DomainType &r ) const
   {
     DomainType center = rotationCenter();
-    r = center - x;
-    r /= r.two_norm();
-    //r[ 0 ] = x[ 1 ] - center[ 1 ];
-    //r[ 1 ] = center[ 0 ] - x[ 0 ];
+    r[ 0 ] = x[ 1 ] - center[ 1 ];
+    r[ 1 ] = center[ 0 ] - x[ 0 ];
 
-    //r *= 2 * M_PI / 10;
+    r *= 2 * M_PI / 10;
   }
 
   ctype curvature( const DomainType &x ) const

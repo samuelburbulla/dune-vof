@@ -21,7 +21,7 @@ namespace Dune
     template< class GridView, class RS, class Flags, class F >
     double l1error ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0, const int level = 0 )
     {
-      if( gridView.comm().rank() == 0 && level == 0 )
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using quadrature" << std::endl;
 
       using RangeType = Dune::FieldVector< double, 1 >;
@@ -56,7 +56,7 @@ namespace Dune
     template< class GridView, class RS, class Flags >
     double l1error ( const GridView &gridView, const RS &reconstructionSet, const Flags &flags, RotatingCircle< double, 2 > circle, const double time = 0.0, const int level = 0 )
     {
-      if( gridView.comm().rank() == 0 && level == 0 )
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using intersection" << std::endl;
 
       double l1Error = 0.0;
@@ -92,7 +92,7 @@ namespace Dune
     template< class GridView, class RS, class Flags, class F >
     double l1errorRecursive ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0, const int level = 0 )
     {
-      if( gridView.comm().rank() == 0 && level == 0 )
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using recursive algorithm" << std::endl;
 
       using RangeType = Dune::FieldVector< double, 1 >;
@@ -129,7 +129,7 @@ namespace Dune
     template< class DF >
     double cellwiseL1error ( const DF& uh, RotatingCircle< double, 2 > circle, const double time = 0.0, const int level = 0 )
     {
-      if( uh.gridView().comm().rank() == 0 && level == 0 )
+      if( uh.gridView().comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using cell values" << std::endl;
 
       DF uhExact( uh.gridView() );
