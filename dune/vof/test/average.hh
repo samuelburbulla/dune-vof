@@ -30,7 +30,7 @@ namespace Dune
         std::cout << " -- average using recursive algorithm" << std::endl;
 
       RecursiveInterpolation< typename std::remove_reference< decltype( u.gridView() ) >::type > interpolation ( u.gridView(), 5 );
-      auto function = [ &f, time ]( const auto &x ) { FieldVector< double, 1 > u; f.evaluate( x, u ); return u; };
+      auto function = [ &f, time ]( const auto &x ) { FieldVector< double, 1 > u; f.evaluate( x, time, u ); return u; };
       interpolation( function, u );
     }
 

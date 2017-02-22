@@ -49,7 +49,7 @@ namespace Dune
       {}
 
       template< class ColorFunction >
-      double operator() ( ColorFunction& uh, double start, double &end )
+      double operator() ( ColorFunction& uh, double start, double &end, int level = 0 )
       {
         // Create operators
         auto reconstructionOperator = reconstruction( gridView_, uh, stencils_ );
@@ -59,6 +59,7 @@ namespace Dune
         double time = start, dt = 0.0, dtEst = 0.0;
         double error = 0.0;
         ColorFunction update( gridView_ );
+
         // Time Iteration
         do
         {
@@ -76,7 +77,8 @@ namespace Dune
           update.communicate();
           uh.axpy( 1.0, update );
 
-          error += dt * Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time );
+          if ( dt > 0.0 )
+            error += dt * Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time, level );
 
           time += dt;
 

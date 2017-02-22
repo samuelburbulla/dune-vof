@@ -88,7 +88,7 @@ namespace Dune
                           double deltaT,
                           DiscreteFunction &update ) const
       {
-        double dtEst = std::numeric_limits< double >::max();
+        double sumFluxes = 0.0;
         double volume = entity.geometry().volume();
 
         for ( const auto &intersection : intersections( gridView(), entity ) )
@@ -104,7 +104,7 @@ namespace Dune
 
           using std::abs;
           using std::min;
-          dtEst = min( dtEst, volume / ( intersection.geometry().volume() * abs( outerNormal * v ) ) );
+          sumFluxes += intersection.geometry().volume() * abs( outerNormal * v );
 
           v *= deltaT;
 
@@ -132,7 +132,7 @@ namespace Dune
 
         }
 
-        return dtEst;
+        return volume / sumFluxes;
       }
 
       /**

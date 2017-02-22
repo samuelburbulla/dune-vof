@@ -86,7 +86,7 @@ try {
     if ( restartStep == -1 )
     {
       // Use initial data of problem.
-      Dune::VoF::average( uh, problem, start );
+      Dune::VoF::average( uh, problem, start, level );
     }
     else
     {
@@ -124,7 +124,7 @@ try {
     double realEnd = end;
 
 
-    double partError = algorithm( uh, start, realEnd );
+    double partError = algorithm( uh, start, realEnd, level );
     double error = grid.comm().sum( partError );
 
     if ( grid.comm().rank() == 0 )

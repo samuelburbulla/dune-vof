@@ -40,12 +40,12 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  double cfl = 0.25;
+  double cfl = 0.5;
   double eps = 1e-6;
   double start = 0.0;
-  double end = 0.0;
-  int numRuns = 10;
+  double end = 1.0;
   int level = 0;
+  int numRuns = 2;
 
   //  create grid
   Dune::GridPtr< GridType > gridPtr( std::to_string( GridType::dimension ) + "dgrid.dgf" );

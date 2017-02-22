@@ -5,7 +5,7 @@ repeats = 4
 [scheme]
 start = 0
 end = 10.0
-cfl = 0.25
+cfl = 0.5
 eps = 1e-6
 
 [io]

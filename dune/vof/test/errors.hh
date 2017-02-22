@@ -10,7 +10,10 @@
 //- Dune includes
 #include <dune/geometry/quadraturerules.hh>
 
+#include <dune/vof/colorfunction.hh>
 #include "interpolation.hh"
+#include "recursiveinterpolation.hh"
+#include "problems/rotatingcircle.hh"
 
 
 namespace Dune
