@@ -80,7 +80,6 @@ namespace Dune
       }
 
     private:
-
       template< class CurvatureSet >
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, CurvatureSet &curvature )
       {
@@ -97,12 +96,12 @@ namespace Dune
             // local monotonic variation
             if ( t < 0 )
             {
-              if ( u < uh[ stencil( i, t+1 ) ] )
+              if ( u < uh[ stencil( i, t+1 ) ] - 1e-8 )
                 u = 1.0;
             }
             else if ( t > 0 )
             {
-              if ( u > uh[ stencil( i, t-1 ) ] )
+              if ( u > uh[ stencil( i, t-1 ) ] + 1e-8 )
                 u = 0.0;
             }
 
