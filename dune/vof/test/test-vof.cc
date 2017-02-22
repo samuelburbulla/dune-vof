@@ -40,10 +40,10 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  double cfl = 0.5;
+  double cfl = 0.25;
   double eps = 1e-6;
   double start = 0.0;
-  double end = 1.0;
+  double end = 0.1;
   int level = 0;
   int numRuns = 2;
 
@@ -73,7 +73,7 @@ try {
   for ( int i = level; i < level + numRuns; ++i )
   {
     ColorFunction< GridView > uh( gridView );
-    Dune::VoF::averageRecursive( uh, problem, start, i-level );
+    Dune::VoF::average( uh, problem, start, i-level );
     uh.communicate();
 
     using DataWriter = Dune::VTKSequenceWriter< GridView >;
@@ -86,10 +86,8 @@ try {
     // start time integration
     Dune::VoF::Algorithm< GridType::LeafGridView, ProblemType, DataWriter > algorithm( gridView, problem, vtkwriter, cfl, eps );
     vtkwriter.addCellData( algorithm.flags(), "flags" );
-    double realEnd = end;
-    algorithm( uh, start, realEnd );
+    double partL1Error = algorithm( uh, start, end, i-level );
 
-    double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd, i-level );
     double L1Error = grid.comm().sum( partL1Error );
 
     // print errors and eoc
@@ -102,7 +100,11 @@ try {
       std::cout << "L1-Error( " << i << " ) =\t" << L1Error << std::endl;
 
       if ( i > level )
+      {
         std::cout << "EOC " << i << ": " << eoc << std::endl;
+        assert( eoc > 1.0 || std::isnan( eoc ) );
+      }
+
     }
 
     lastL1Error = L1Error;

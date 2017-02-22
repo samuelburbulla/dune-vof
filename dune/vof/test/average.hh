@@ -36,7 +36,7 @@ namespace Dune
 
 
     template< class DF, class F >
-    void average ( DF &u, const F &f, const double time = 0.0, const double x = 0.0, const int level = 0 )
+    void average ( DF &u, const F &f, const double time = 0.0, const int level = 0 )
     {
       typedef typename DF::GridView::ctype ctype;
       using RangeType = Dune::FieldVector< ctype, 1 >;

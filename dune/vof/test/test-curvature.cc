@@ -87,7 +87,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   //ProblemType problem ( 0.125 * M_PI );
 
   // calculate dt
-  int level = parameters.get< int >( "grid.level" );
+  int level = 1;
 
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
   const bool writeData = parameters.get< bool >( "io.writeData", 0 );
@@ -172,12 +172,12 @@ try {
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
 
-  int level = parameters.get< int >( "grid.level" );
+  int level = 1;
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level;
+  int maxLevel = 3;
 
   std::ofstream errorsFile;
   errorsFile.open( "errors" );
@@ -198,8 +198,11 @@ try {
       eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, level ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
       errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
 
-      if ( level > 0 )
+      if ( level > 1 )
+      {
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
+        assert( eoc > 1.0 );
+      }
 
       std::cout << "Err " << level << ": " << L1Error << std::endl;
     }

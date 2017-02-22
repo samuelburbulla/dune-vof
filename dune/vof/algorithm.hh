@@ -49,7 +49,7 @@ namespace Dune
       {}
 
       template< class ColorFunction >
-      double operator() ( ColorFunction& uh, double start, double &end, int level = 0 )
+      double operator() ( ColorFunction& uh, double start, double end, int level = 0 )
       {
         // Create operators
         auto reconstructionOperator = reconstruction( gridView_, uh, stencils_ );
@@ -91,7 +91,6 @@ namespace Dune
         if ( time == start )
           error += Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time );
 
-        end = time;
         return error;
       }
 
