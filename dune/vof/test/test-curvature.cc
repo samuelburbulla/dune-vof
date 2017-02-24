@@ -87,7 +87,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   //ProblemType problem ( 0.125 * M_PI );
 
   // calculate dt
-  int level = parameters.get< int >( "grid.level" );
+  int level = 1;
 
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
   const bool writeData = parameters.get< bool >( "io.writeData", 0 );
@@ -114,7 +114,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // File io
   std::stringstream path;
-  path << "./" << parameters.get< std::string >( "io.folderPath" ) << "/vof-" << std::to_string( level );
+  path << "./" << parameters.get< std::string >( "io.path" ) << "/vof-" << std::to_string( level );
   createDirectory( path.str() );
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "" );
@@ -127,7 +127,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 
   // Initial data
-  Dune::VoF::averageRecursive( colorFunction, problem );
+  Dune::VoF::average( colorFunction, problem, level );
   colorFunction.communicate();
 
   // Initial reconstruction
@@ -172,12 +172,18 @@ try {
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
 
-  int level = parameters.get< int >( "grid.level" );
+  int level = 1;
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level;
+  int maxLevel = 3;
+
+  std::ofstream errorsFile;
+  errorsFile.open( "errors" );
+  errorsFile << "#dx \terror " << std::endl;
+  std::ofstream eocFile;
+  eocFile.open( "eoc" );
 
   for ( ; level < maxLevel; ++level )
   {
@@ -188,11 +194,14 @@ try {
 
     if ( grid.comm().rank() == 0 )
     {
-      // print errors and eoc
-      if ( level > 0 )
+      const double eoc = ( log( lastL1Error ) - log( L1Error ) ) / M_LN2;
+      eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, level ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
+      errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
+
+      if ( level > 1 )
       {
-        const double eoc = ( log( lastL1Error ) - log( L1Error ) ) / M_LN2;
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
+        assert( eoc > 1.0 );
       }
 
       std::cout << "Err " << level << ": " << L1Error << std::endl;

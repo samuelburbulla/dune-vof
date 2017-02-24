@@ -60,7 +60,7 @@ public:
 
 private:
   const GridView& gridView_;
-  const DF uh_;
+  const DF &uh_;
   std::string path_, prefix_;
   const std::size_t level_;
   double saveStep_, saveTime_ ;

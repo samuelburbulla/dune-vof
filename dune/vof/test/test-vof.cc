@@ -43,9 +43,9 @@ try {
   double cfl = 0.25;
   double eps = 1e-6;
   double start = 0.0;
-  double end = 0.0;
-  int numRuns = 8;
+  double end = 0.1;
   int level = 0;
+  int numRuns = 2;
 
   //  create grid
   Dune::GridPtr< GridType > gridPtr( std::to_string( GridType::dimension ) + "dgrid.dgf" );
@@ -67,10 +67,13 @@ try {
   errorsFile.open( "errors" );
   errorsFile << "#dx \terror " << std::endl;
 
+  std::ofstream eocFile;
+  eocFile.open( "eoc" );
+
   for ( int i = level; i < level + numRuns; ++i )
   {
     ColorFunction< GridView > uh( gridView );
-    Dune::VoF::averageRecursive( uh, problem );
+    Dune::VoF::average( uh, problem, start, i-level );
     uh.communicate();
 
     using DataWriter = Dune::VTKSequenceWriter< GridView >;
@@ -83,23 +86,25 @@ try {
     // start time integration
     Dune::VoF::Algorithm< GridType::LeafGridView, ProblemType, DataWriter > algorithm( gridView, problem, vtkwriter, cfl, eps );
     vtkwriter.addCellData( algorithm.flags(), "flags" );
-    double realEnd = end;
-    algorithm( uh, start, realEnd );
+    double partL1Error = algorithm( uh, start, end, i-level );
 
-    double partL1Error = Dune::VoF::l1error( gridView, algorithm.reconstructions(), algorithm.flags(), problem, realEnd );
     double L1Error = grid.comm().sum( partL1Error );
 
     // print errors and eoc
     if ( grid.comm().rank() == 0 )
     {
+      const double eoc = log( lastL1Error / L1Error ) / M_LN2;
+
       errorsFile << 1.0 / 8.0 * std::pow( 2, -i ) << " \t" << L1Error << std::endl;
+      eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, i ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
       std::cout << "L1-Error( " << i << " ) =\t" << L1Error << std::endl;
 
       if ( i > level )
       {
-        const double eoc = log( lastL1Error / L1Error ) / M_LN2;
         std::cout << "EOC " << i << ": " << eoc << std::endl;
+        assert( eoc > 1.0 || std::isnan( eoc ) );
       }
+
     }
 
     lastL1Error = L1Error;

@@ -221,7 +221,6 @@ namespace Dune {
         Vd_k = Vd_k1;
       }
 
-      assert( false );
       return HalfSpace< Coord > ( innerNormal, inverseMode ? -dUnique[ dUnique.size() - 1 ] : dUnique[ dUnique.size() - 1 ] );
     }
 

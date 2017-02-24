@@ -38,6 +38,7 @@ namespace Dune
       using Entity = typename GridView::template Codim< 0 >::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
       using ctype = typename Entity::Geometry::ctype;
+      static constexpr std::size_t dim = GridView::dimension;
 
     public:
       explicit Evolution ( GridView gridView ) : gridView_( gridView ) {}
@@ -58,7 +59,7 @@ namespace Dune
 
         for( const auto &entity : elements( gridView(), Partitions::interiorBorder ) )
         {
-          if( !flags.isActive( entity ) )
+          if( !flags.isMixed( entity ) )
             continue;
 
           using std::min;
@@ -87,7 +88,7 @@ namespace Dune
                           double deltaT,
                           DiscreteFunction &update ) const
       {
-        double dtEst = std::numeric_limits< double >::max();
+        double sumFluxes = 0.0;
         double volume = entity.geometry().volume();
 
         for ( const auto &intersection : intersections( gridView(), entity ) )
@@ -98,12 +99,12 @@ namespace Dune
           const Coordinate &outerNormal = intersection.centerUnitOuterNormal();
 
           velocity.bind( intersection );
-          const auto& refElement = ReferenceElements< ctype, std::decay_t< decltype( intersection ) >::mydimension >::general( intersection.type() );
+          const auto& refElement = ReferenceElements< ctype, dim-1 >::general( intersection.type() );
           Coordinate v = velocity( refElement.position( 0, 0 ) );
 
           using std::abs;
           using std::min;
-          dtEst = min( dtEst, volume / ( intersection.geometry().volume() * abs( outerNormal * v ) ) );
+          sumFluxes += intersection.geometry().volume() * abs( outerNormal * v );
 
           v *= deltaT;
 
@@ -113,6 +114,14 @@ namespace Dune
           if ( v * outerNormal > 0 )
           {
             geometricFlux( intersection.inside(), intersection.geometry(), reconstructions, flags, v, flux );
+
+            const auto &neighbor = intersection.outside();
+
+            if( flags.isFull( neighbor ) )
+              update[ neighbor ] -= ( ( v * intersection.integrationOuterNormal( refElement.position( 0, 0 ) ) ) - flux ) / neighbor.geometry().volume();
+            if ( flags.isEmpty( neighbor ) )
+              update[ neighbor ] += flux / neighbor.geometry().volume();
+
             flux *= -1.0;
           }
           // inflow
@@ -123,7 +132,7 @@ namespace Dune
 
         }
 
-        return dtEst;
+        return volume / sumFluxes;
       }
 
       /**

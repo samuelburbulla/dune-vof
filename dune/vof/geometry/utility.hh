@@ -122,6 +122,20 @@ namespace Dune
       return __impl::GCPImpl< typename __impl::isHomogeneous< Coords ... >::type, sizeof...(Coords) >::apply( coords ... );
     }
 
+    template< class Coord, int dim >
+    auto generalizedCrossProduct ( std::array< Coord, dim > coords );
+
+    template< class Coord >
+    auto generalizedCrossProduct ( std::array< Coord, 1 > coords )
+    {
+      return generalizedCrossProduct( coords[ 0 ] );
+    }
+
+    template< class Coord >
+    auto generalizedCrossProduct ( std::array< Coord, 2 > coords )
+    {
+      return generalizedCrossProduct( coords[ 0 ], coords[ 1 ] );
+    }
 
     // normalize
     // ---------

@@ -10,7 +10,10 @@
 //- Dune includes
 #include <dune/geometry/quadraturerules.hh>
 
+#include <dune/vof/colorfunction.hh>
 #include "interpolation.hh"
+#include "recursiveinterpolation.hh"
+#include "problems/rotatingcircle.hh"
 
 
 namespace Dune
@@ -19,9 +22,9 @@ namespace Dune
   {
 
     template< class GridView, class RS, class Flags, class F >
-    double l1error ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0 )
+    double l1error ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0, const int level = 0 )
     {
-      if( gridView.comm().rank() == 0 )
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using quadrature" << std::endl;
 
       using RangeType = Dune::FieldVector< double, 1 >;
@@ -54,9 +57,9 @@ namespace Dune
 
 
     template< class GridView, class RS, class Flags >
-    double l1error ( const GridView &gridView, const RS &reconstructionSet, const Flags &flags, RotatingCircle< double, 2 > circle, const double time = 0.0 )
+    double l1error ( const GridView &gridView, const RS &reconstructionSet, const Flags &flags, RotatingCircle< double, 2 > circle, const double time = 0.0, const int level = 0 )
     {
-      if( gridView.comm().rank() == 0 )
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using intersection" << std::endl;
 
       double l1Error = 0.0;
@@ -89,11 +92,47 @@ namespace Dune
       return l1Error;
     }
 
+    template< class GridView, class RS, class Flags, class F >
+    double l1errorRecursive ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0, const int level = 0 )
+    {
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
+        std::cout << " -- error using recursive algorithm" << std::endl;
+
+      using RangeType = Dune::FieldVector< double, 1 >;
+
+      RecursiveInterpolation< GridView > interpolation ( gridView, 0 );
+
+      double error = 0;
+      for ( const auto &entity : elements( gridView ) )
+      {
+        auto localErrorFunction = [ &reconstructionSet, &flags, entity, f, time ] ( const auto &x )
+        {
+          const auto global = entity.geometry().global( x );
+          RangeType v, w;
+          f.evaluate( global, time, v );
+
+          if ( flags.isFull( entity ) )
+            w = 1.0;
+          else if ( flags.isMixed( entity ) )
+            w = ( reconstructionSet[ entity ].levelSet( global ) > 0.0 );
+          else
+            w = 0.0;
+
+          return static_cast< int >( std::abs( v - w ) + 0.3 );
+        };
+
+        const auto geometry = entity.geometry();
+        const auto refElementGeometry = ReferenceElements< double, GridView::dimension >::general( geometry.type() ).template geometry< 0 >( 0 );
+        error += interpolation.recursiveEvaluation( refElementGeometry, localErrorFunction, 10, true ) * geometry.volume();
+      }
+      return error;
+    }
+
 
     template< class DF >
-    double cellwiseL1error ( const DF& uh, RotatingCircle< double, 2 > circle, const double time = 0.0 )
+    double cellwiseL1error ( const DF& uh, RotatingCircle< double, 2 > circle, const double time = 0.0, const int level = 0 )
     {
-      if( uh.gridView().comm().rank() == 0 )
+      if( uh.gridView().comm().rank() == 0 && level == 0 && time == 0.0 )
         std::cout << " -- error using cell values" << std::endl;
 
       DF uhExact( uh.gridView() );
@@ -107,8 +146,11 @@ namespace Dune
     }
 
     template< class CU, class F, class R, class P, class DF >
-    static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem, DF &curvatureError )
+    static inline double curvatureError ( const CU &curvature, const F &flags, const R &reconstructions, const P &problem, DF &curvatureError, const int level = 0 )
     {
+      if( curvature.gridView().comm().rank() == 0 && level == 0 )
+        std::cout << " -- error of curvature" << std::endl;
+
       double error = 0.0;
       for ( auto entity : elements( curvatureError.gridView(), Partitions::interior ) )
       {

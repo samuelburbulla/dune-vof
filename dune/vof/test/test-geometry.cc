@@ -23,11 +23,6 @@ try {
   using Coordinate = Dune::FieldVector< double, GridType::dimension >;
   using Polytope = typename std::conditional< Coordinate::dimension == 2, Dune::VoF::Polygon< Coordinate >, Dune::VoF::Polyhedron< Coordinate > >::type;
 
-  // set parameters
-  Dune::ParameterTree parameters;
-  Dune::ParameterTreeParser::readINITree( "parameter", parameters );
-  Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
-
   //  create grid
   std::stringstream gridFile;
   gridFile << GridType::dimension << "dgrid.dgf";
@@ -36,12 +31,12 @@ try {
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
 
-  int level = parameters.get< int >( "grid.level" );
+  int level = 2;
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int numRuns = parameters.get<int>( "grid.runs", 1 );
+  int numRuns = 1;
 
   for ( int i = 0; i < numRuns; ++i )
   {
@@ -52,28 +47,28 @@ try {
     Coordinate normal ( 0.0 );
     normal[ 0 ] = -1.0;
 
+    std::cout << "Checking intersection with empty part..." << std::endl;
     Dune::VoF::HalfSpace< Coordinate > hs1 ( normal, geoEn.corner(0) );
     Polytope interface1 = Dune::VoF::intersect( polytope, hs1 );
-    if ( interface1.volume() > std::numeric_limits< double >::epsilon() )
-      DUNE_THROW( Dune::InvalidStateException, "Intersection to empty part failed.");
+    assert( interface1.volume() < std::numeric_limits< double >::epsilon() );
 
+    std::cout << "Checking intersection with half part..." << std::endl;
     Dune::VoF::HalfSpace< Coordinate > hs2 ( normal, geoEn.center() );
     Polytope interface2 = Dune::VoF::intersect( polytope, hs2 );
-    if ( std::abs( interface2.volume() - 0.5 * geoEn.volume() ) > std::numeric_limits< double >::epsilon() )
-      DUNE_THROW( Dune::InvalidStateException, "Intersection to half of cell failed.");
+    assert( std::abs( interface2.volume() - 0.5 * geoEn.volume() ) < std::numeric_limits< double >::epsilon() );
 
+    std::cout << "Checking intersection with full part..." << std::endl;
     Dune::VoF::HalfSpace< Coordinate > hs3 ( normal, geoEn.corner(1) );
     Polytope interface3 = Dune::VoF::intersect( polytope, hs3 );
-    if ( std::abs( interface2.volume() - 1.0 * geoEn.volume() ) > std::numeric_limits< double >::epsilon() )
-      DUNE_THROW( Dune::InvalidStateException, "Intersection to full cell failed.");
+    assert( std::abs( interface3.volume() - 1.0 * geoEn.volume() ) < std::numeric_limits< double >::epsilon() );
 
     Coordinate normal2 ( 1.0 );
     normal2 /= normal2.two_norm();
 
-    Dune::VoF::HalfSpace< Coordinate > hs4 ( normal2, geoEn.corner(0) );
+    std::cout << "Checking intersection with diagonal half part..." << std::endl;
+    Dune::VoF::HalfSpace< Coordinate > hs4 ( normal2, geoEn.center() );
     Polytope interface4 = Dune::VoF::intersect( polytope, hs4 );
-    if ( std::abs( interface2.volume() - 0.5 * geoEn.volume() ) > std::numeric_limits< double >::epsilon() )
-      DUNE_THROW( Dune::InvalidStateException, "Intersection to diagonal half of cell failed.");
+    assert( std::abs( interface4.volume() - 0.5 * geoEn.volume() ) < std::numeric_limits< double >::epsilon() );
 
     grid.globalRefine( refineStepsForHalf );
   }

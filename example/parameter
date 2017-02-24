@@ -1,11 +1,11 @@
 [grid]
-level = 3
-repeats = 0
+level = 0
+repeats = 4
 
 [scheme]
 start = 0
-end = 2.0
-cfl = 0.25
+end = 10.0
+cfl = 0.5
 eps = 1e-6
 
 [io]
