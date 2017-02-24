@@ -137,6 +137,8 @@ namespace Dune {
         return vertices_ == other.vertices_;
       }
 
+      operator bool () const { return !(*this == Line{}); }
+
       const Coordinate& vertex ( std::size_t i ) const
       {
         assert( i < size( 1 ) );
