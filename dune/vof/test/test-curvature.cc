@@ -39,27 +39,6 @@
 #include "problems/slope.hh"
 
 
-// initTimeStep
-// ---------------------
-
-template < class GridView, class Velocity >
-double initTimeStep( const GridView& gridView, const Velocity &velocity )
-{
-  double dtMin = std::numeric_limits< double >::max();
-
-  for( const auto &entity : elements( gridView, Dune::Partitions::interiorBorder ) )
-  {
-    const auto geoEn = entity.geometry();
-    for ( const auto &intersection : intersections( gridView, entity ) )
-    {
-      const auto geoIs = intersection.geometry();
-      auto v = velocity( geoIs.center() );
-      dtMin = std::min( dtMin, ( geoEn.volume() / geoIs.volume() ) / v.two_norm() );
-    }
-  }
-  return dtMin;
-}
-
 // algorithm
 // ---------
 
@@ -78,16 +57,20 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   // Testproblem
   using ProblemType = Ellipse< double, GridView::dimensionworld >;
-  DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
-  ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
-  //DomainVector axis2 ( { 0.0, 1.0, 0.0 } );
-  //DomainVector axis3 ( { 0.0, 0.0, 1.0 } );
-  //ProblemType problem ( { axis, axis2, axis3 }, { 0.4, 0.4, 0.4 } );
+
+  #if GRIDDIM == 2
+    DomainVector axis ( { 1.0 / std::sqrt( 2 ), 1.0 / std::sqrt( 2 ) } );
+    ProblemType problem ( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
+  #else
+    DomainVector axis1 ( { 1.0, 0.0, 0.0 } );
+    DomainVector axis2 ( { 0.0, 1.0, 0.0 } );
+    DomainVector axis3 ( { 0.0, 0.0, 1.0 } );
+    ProblemType problem ( { axis1, axis2, axis3 }, { 0.4, 0.4, 0.4 } );
+  #endif
   //using ProblemType = Slope< double, GridView::dimensionworld >;
   //ProblemType problem ( 0.125 * M_PI );
 
-  // calculate dt
-  int level = 1;
+  int level = 0;
 
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
   const bool writeData = parameters.get< bool >( "io.writeData", 0 );
@@ -127,7 +110,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
 
   // Initial data
-  Dune::VoF::average( colorFunction, problem, level );
+  Dune::VoF::averageRecursive( colorFunction, problem, level );
   colorFunction.communicate();
 
   // Initial reconstruction
@@ -172,12 +155,12 @@ try {
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
 
-  int level = 1;
+  int level = 0;
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int maxLevel = 3;
+  int maxLevel = 5;
 
   std::ofstream errorsFile;
   errorsFile.open( "errors" );
@@ -198,7 +181,7 @@ try {
       eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, level ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
       errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
 
-      if ( level > 1 )
+      if ( level > 0 )
       {
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
         assert( eoc > 1.0 );

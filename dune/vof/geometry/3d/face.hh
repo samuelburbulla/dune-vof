@@ -29,6 +29,27 @@ namespace Dune {
         return center;
       }
 
+      double volume () const
+      {
+        double sum = 0;
+        Coord normal = generalizedCrossProduct( vertex( 2 ) - vertex( 1 ), vertex( 0 ) - vertex( 1 ) );
+        normal /= normal.two_norm();
+
+        int n = size();
+        for( int i = 0; i < n; i++ )
+        {
+          Coord edge = vertex( (i+1)%n ) - vertex( i );
+          Coord center = vertex( (i+1)%n ) + vertex( i );
+          center *= 0.5;
+
+          Coord outerNormal = generalizedCrossProduct( edge, normal );
+          outerNormal /= outerNormal.two_norm();
+
+          sum += edge.two_norm() * ( center * outerNormal );
+        }
+        return std::abs( sum ) / 2.0;
+      }
+
     private:
       const std::vector< Coord > nodes_;
     };

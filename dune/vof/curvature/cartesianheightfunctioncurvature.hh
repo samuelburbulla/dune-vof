@@ -116,9 +116,8 @@ namespace Dune
         // Constraint
         double uMid = heights[ ( heights.size() - 1 ) / 2 ];
         int effTdown = stencil.effectiveTdown();
-        if ( effTdown < uMid || uMid > effTdown + 1 )
+        if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
-
 
         for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
           if ( heights[ i ] == 0.0 )
@@ -150,7 +149,7 @@ namespace Dune
         double Hyy = ( heights[ 7 ] - 2.0 * heights[ 4 ] + heights[ 1 ] ) / dx;
         double Hxy = ( heights[ 8 ] - heights[ 2 ] - heights[ 6 ] + heights[ 0 ] ) / ( 4.0 * dx );
 
-        return - ( Hxx + Hyy + Hxx * Hy * Hy + Hyy * Hx * Hx - 2.0 * Hxy * Hx * Hy ) / ( 2.0 * std::pow( 1.0 + Hx * Hx + Hy * Hy, 3.0 / 2.0 ) );
+        return - ( Hxx + Hyy + Hxx * Hy * Hy + Hyy * Hx * Hx - 2.0 * Hxy * Hx * Hy ) / ( std::pow( 1.0 + Hx * Hx + Hy * Hy, 3.0 / 2.0 ) );
       }
 
       static inline Coordinate getOrientation( const Coordinate &normal )

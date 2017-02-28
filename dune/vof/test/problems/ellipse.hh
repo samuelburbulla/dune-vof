@@ -67,7 +67,7 @@ struct Ellipse
     radius += std::pow( axis_[ 1 ] * ( x - DomainType( 0.5 ) ), 2 ) * std::pow( radii_[ 0 ], 4 );
     radius = std::pow( radius, 3 );
 
-    return std::pow( radii_[ 0 ] * radii_[ 1 ], 4 ) / std::sqrt( radius );
+    return 5.0;// std::pow( radii_[ 0 ] * radii_[ 1 ], 4 ) / std::sqrt( radius );
   }
 
   std::array< DomainType, dim > axis_;
