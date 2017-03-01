@@ -33,27 +33,28 @@ namespace Dune
     {
       using ColorFunction = DF;
       using ReconstructionSet = RS;
-      using StencilSet = StS;
+      using VertexStencilSet = StS;
       using InitialReconstruction = IR;
 
       using GridView = typename ColorFunction::GridView;
 
     private:
       using Reconstruction = typename ReconstructionSet::DataType;
-      using Stencil = typename StencilSet::Stencil;
+      using VertexStencil = typename VertexStencilSet::Stencil;
 
       using Entity = typename ColorFunction::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
-      using HeightFunctionStencils = Dune::VoF::HeightFunctionStencils< GridView >;
+      using Stencil = HeightFunctionStencil< GridView >;
 
       static constexpr int dim = Coordinate::dimension;
 
-      using Heights = Dune::FieldVector< double, HeightFunctionStencils::Stencil::noc >;
+      using Heights = Dune::FieldVector< double, Stencil::noc >;
+      using Orientation = std::tuple< int, int >;
 
     public:
-      explicit HeightFunctionReconstruction ( const StencilSet &stencils )
-       : stencils_( stencils ), heightFunctionStencils_( stencils.gridView() ), initializer_( stencils )
+      explicit HeightFunctionReconstruction ( const VertexStencilSet &vertexStencilSet )
+       : vertexStencilSet_( vertexStencilSet ), initializer_( vertexStencilSet )
       {}
 
       /**
@@ -94,7 +95,10 @@ namespace Dune
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
       {
         const Coordinate &normal = reconstruction.innerNormal();
-        auto stencil = heightFunctionStencils_( normal, entity );
+        const Orientation orientation = getOrientation( normal );
+
+        const auto entityInfo = GridView::Grid::getRealImplementation( entity ).entityInfo();
+        const auto stencil = Stencil( color.gridView(), entityInfo, orientation );
 
         Heights heights ( 0.0 );
 
@@ -127,15 +131,14 @@ namespace Dune
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
 
-        Coordinate newNormal = computeNormal( heights, getOrientation( normal ) );
+        Coordinate newNormal = computeNormal( heights, orientation );
 
         reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), newNormal, color[ entity ] );
       }
 
     private:
-      template< class Coordinate >
-      auto computeNormal ( const Heights &heights, const Coordinate &orientation ) const
-      -> typename std::enable_if< Coordinate::dimension == 2, Coordinate >::type
+    #if GRIDDIM == 2
+      Coordinate computeNormal ( const Heights &heights, const Orientation &orientation ) const
       {
         double Hx;
         if ( heights[ 0 ] == 0.0 )
@@ -148,17 +151,19 @@ namespace Dune
         Coordinate newNormal ( { Hx, -1.0 } );
         normalize( newNormal );
 
-        if ( orientation == Coordinate( { 0.0, -1.0 } ) || orientation == Coordinate( { 1.0, 0.0 } ) )
+        int i = std::get< 0 >( orientation );
+        int j = std::get< 1 >( orientation );
+
+        if ( ( i == 0 && j == 1 ) || ( i == 1 && j == -1 ) )
           newNormal *= -1.0;
-        if ( orientation == Coordinate( { 1.0, 0.0 } ) || orientation == Coordinate( { -1.0, 0.0 } ) )
+        if ( ( i == 0 && j == 1 ) || ( i == 0 && j == -1 ) )
           newNormal = generalizedCrossProduct( newNormal );
 
         return newNormal;
       }
 
-      template< class Coordinate >
-      auto computeNormal ( const Heights &heights, const Coordinate &orientation ) const
-      -> typename std::enable_if< Coordinate::dimension == 3, Coordinate >::type
+    #elif GRIDDIM == 3
+      Coordinate computeNormal ( const Heights &heights, const Orientation &orientation ) const
       {
         double Hx;
         if ( heights[ 5 ] == 0.0 )
@@ -178,29 +183,33 @@ namespace Dune
 
         Coordinate newNormal;
 
-        if ( orientation == Coordinate( { -1.0, 0.0, 0.0 } ) )
+        int i = std::get< 0 >( orientation );
+        int j = std::get< 1 >( orientation );
+
+        if ( i == 0 && j == -1 )
           newNormal = Coordinate( { 1.0, -Hx, Hy } );
 
-        if ( orientation == Coordinate( { 0.0, -1.0, 0.0 } ) )
+        if ( i == 1 && j == -1 )
           newNormal = Coordinate( { -Hx, 1.0, Hy } );
 
-        if ( orientation == Coordinate( { 0.0, 0.0, -1.0 } ) )
+        if ( i == 2 && j == -1)
           newNormal = Coordinate( { -Hx, Hy, 1.0 } );
 
-        if ( orientation == Coordinate( { 1.0, 0.0, 0.0 } ) )
+        if ( i == 0 && j == 1 )
           newNormal = Coordinate( { -1.0, -Hx, Hy } );
 
-        if ( orientation == Coordinate( { 0.0, 1.0, 0.0 } ) )
+        if ( i == 1 && j == 1 )
           newNormal = Coordinate( { Hx, -1.0, Hy } );
 
-        if ( orientation == Coordinate( { 0.0, 0.0, 1.0 } ) )
+        if ( i == 2 && j == 1 )
           newNormal = Coordinate( { Hx, -Hy, -1.0 } );
 
         normalize( newNormal );
         return newNormal;
       }
+    #endif
 
-      static inline Coordinate getOrientation( const Coordinate &normal )
+      static inline Orientation getOrientation( const Coordinate &normal )
       {
         std::size_t dir = 0;
         double max = std::numeric_limits< double >::min();
@@ -210,16 +219,14 @@ namespace Dune
           dir = i;
           max = std::abs( normal[ i ] );
         }
-        Coordinate orientation;
-        orientation[ dir ] = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
+        int sign = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
 
-        return orientation;
+        return std::make_tuple( dir, sign );
       }
 
-      const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
+      const VertexStencil &vertexStencil ( const Entity &entity ) const { return vertexStencilSet_[ entity ]; }
 
-      const StencilSet &stencils_;
-      const HeightFunctionStencils heightFunctionStencils_;
+      const VertexStencilSet &vertexStencilSet_;
       InitialReconstruction initializer_;
     };
 

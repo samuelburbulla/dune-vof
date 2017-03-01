@@ -24,9 +24,9 @@
 
 // dune-vof includes
 #include <dune/vof/colorfunction.hh>
-#include <dune/vof/curvatureset.hh>
+//#include <dune/vof/curvatureset.hh>
 #include <dune/vof/reconstructionset.hh>
-#include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
+//#include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
 #include <dune/vof/evolution.hh>
 #include <dune/vof/flagging.hh>
 #include <dune/vof/flagset.hh>
@@ -210,10 +210,12 @@ try {
     auto flagOperator = Dune::VoF::FlagOperator< ColorFunction, FlagSet >( eps );
     ColorFunction dfFlags ( gridView );
 
+    /*
     using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils, decltype( uh ), ReconstructionSet, FlagSet >;
     CurvatureOperator curvatureOperator ( gridView, stencils );
     using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
     CurvatureSet curvatureSet( gridView );
+    */
 
     Dune::VTKWriter< GridView > vtkwriter ( gridView );
     vtkwriter.addCellData ( uh, "celldata" );
@@ -246,7 +248,7 @@ try {
       // --------------------------------
       flagOperator( uh, flags );
       reconstruction( uh, reconstructions, flags );
-      curvatureOperator( uh, reconstructions, flags, curvatureSet );
+      //curvatureOperator( uh, reconstructions, flags, curvatureSet );
 
       // Write data
       // ----------
@@ -268,13 +270,14 @@ try {
       recfile.fill('0');
       recfile << recOutputParameters.prefix() << std::setw(5) << number;
 
-
+      /*
       Dune::VoF::DataSet< InterfaceGrid::LeafGridView, double > curvatureOnInterface ( interfaceGrid.leafGridView() );
       for ( const auto entity : elements( interfaceGrid.leafGridView() ) )
         curvatureOnInterface[ entity ] = curvatureSet[ entity.impl().hostElement() ];
+      */
 
       Dune::VTKWriter< InterfaceGrid::LeafGridView > interfaceVtkWriter( interfaceGrid.leafGridView() );
-      interfaceVtkWriter.addCellData( curvatureOnInterface, "curvature" );
+      //interfaceVtkWriter.addCellData( curvatureOnInterface, "curvature" );
       interfaceVtkWriter.pwrite( recfile.str(), recOutputParameters.path(), "" );
       recPVDWriter.addDataSet( grid.comm().size(), recOutputParameters.prefix(), number, timeValue );
     }
