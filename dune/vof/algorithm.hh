@@ -4,6 +4,9 @@
 // C++ includes
 #include <utility>
 
+// dune-common includes
+#include <dune/common/timer.hh>
+
 // dune-vof includes
 #include "test/errors.hh"
 #include <dune/vof/evolution.hh>
@@ -59,6 +62,8 @@ namespace Dune
         double error = 0.0;
         ColorFunction update( gridView_ );
 
+        Dune::Timer timer( false );
+
         // Time Iteration
         do
         {
@@ -68,7 +73,10 @@ namespace Dune
           VelocityField velocity( problem_, time );
 
           flagOperator( uh, flags_ );
+
+          timer.start();
           reconstructionOperator( uh, reconstructions_, flags_ );
+          timer.stop();
 
           dtEst = evolutionOperator( reconstructions_, flags_, velocity, dt, update );
 
@@ -88,6 +96,9 @@ namespace Dune
 
         if ( time == start )
           error += Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time );
+
+        if ( gridView_.comm().rank() == 0 )
+          std::cout << "Elapsed time for reconstruction: " << timer.elapsed() << "s" << std::endl;
 
         return error;
       }
