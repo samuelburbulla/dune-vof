@@ -74,7 +74,6 @@ namespace Dune
           double dtEstimate = evolutionOperator( reconstructions_, flags_, velocity, dt, update );
           dtEst = gridView_.comm().min( dtEstimate );
 
-          update.communicate();
           uh.axpy( 1.0, update );
 
           if ( dt > 0.0 )

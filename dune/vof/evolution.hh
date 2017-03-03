@@ -66,6 +66,8 @@ namespace Dune
           dtEst = min( dtEst, applyLocal( entity, reconstructions, flags, velocity, deltaT, update ) );
         }
 
+        update.communicate( Dune::All_All_Interface, []( ctype a, ctype b ){ return a + b; } );
+
         return dtEst;
       }
 
