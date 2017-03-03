@@ -61,22 +61,6 @@ namespace Dune
           }
         }
         flags.communicate();
-
-        for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
-        {
-          if ( flags[ entity ] == Flag::mixed || flags[ entity ] == Flag::mixedfull )
-            for ( const auto &intersection : intersections( color.gridView(), entity ) )
-              if ( intersection.neighbor() )
-              {
-                Flag &flag = flags[ intersection.outside() ];
-
-                if ( flag == Flag::empty )
-                  flag = Flag::activeempty;
-                else if ( flag == Flag::full )
-                  flag = Flag::activefull;
-              }
-        }
-        flags.communicate( Dune::All_All_Interface, [] ( Flag a, Flag b  ) { if ( a == Flag::activefull || b == Flag::activefull ) return Flag::activefull; else return std::max( a, b ); } );
       }
 
     private:

@@ -17,11 +17,9 @@ namespace Dune
 
     enum class Flag : std::size_t {
       empty       = 0,
-      mixed       = 2,
-      full        = 5,
-      mixedfull   = 3,
-      activeempty = 1,
-      activefull  = 4,
+      mixed       = 1,
+      mixedfull   = 2,
+      full        = 3,
       nan         = 99
     };
 
@@ -67,22 +65,12 @@ namespace Dune
 
       double operator[] ( const typename Base::Index &index ) const { return static_cast< double >( this->Base::operator[]( index ) ); }
 
-      using Empty = Range< static_cast< std::size_t >( Flag::empty ),
-                           static_cast< std::size_t >( Flag::activeempty ) >;
-
       using Mixed = Range< static_cast< std::size_t >( Flag::mixed ),
                            static_cast< std::size_t >( Flag::mixedfull ) >;
 
-      using Full = Range< static_cast< std::size_t >( Flag::activefull ),
-                          static_cast< std::size_t >( Flag::full ) >;
-
-      using Active = Range< static_cast< std::size_t >( Flag::activeempty ),
-                            static_cast< std::size_t >( Flag::activefull ) >;
-
-      bool isEmpty  ( const Entity& entity ) const { return inRange( entity, Empty{} ); }
+      bool isEmpty  ( const Entity& entity ) const { return this->Base::operator[]( entity ) == Flag::empty; }
       bool isMixed  ( const Entity& entity ) const { return inRange( entity, Mixed{} ); }
-      bool isFull   ( const Entity& entity ) const { return inRange( entity, Full{} ); }
-      bool isActive ( const Entity& entity ) const { return inRange( entity, Active{} );; }
+      bool isFull   ( const Entity& entity ) const { return this->Base::operator[]( entity ) == Flag::full; }
 
     private:
       template< class _Range >
