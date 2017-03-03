@@ -51,7 +51,7 @@ namespace Dune
       {}
 
       template< class CurvatureSet >
-      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature )
+      void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature, bool communicate = false )
       {
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
@@ -78,7 +78,8 @@ namespace Dune
           averageCurvature( entity, curvature );
         }
 
-        curvature.communicate();
+        if ( communicate )
+          curvature.communicate();
       }
 
     private:

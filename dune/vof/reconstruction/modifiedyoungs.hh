@@ -46,8 +46,6 @@ namespace Dune
       using Matrix = FieldMatrix< ctype, dim, dim >;
       using Vector = FieldVector< ctype, dim >;
 
-      //friend class ModifiedYoungsSecondOrderReconstruction< ColorFunction, ReconstructionSet, StencilSet >;
-
     public:
       explicit ModifiedYoungsReconstruction ( const StencilSet &stencils )
        : stencils_( stencils )
@@ -62,7 +60,7 @@ namespace Dune
        * \param   flags           set of flags
        */
       template< class Flags >
-      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
+      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = false ) const
       {
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
@@ -73,7 +71,8 @@ namespace Dune
           applyLocal( entity, flags, color, reconstructions[ entity ] );
         }
 
-        reconstructions.communicate();
+        if ( communicate )
+          reconstructions.communicate();
       }
 
       /**

@@ -69,7 +69,7 @@ namespace Dune
 
         update.communicate( Dune::All_All_Interface, CommOperation::Add() );
 
-        return dtEst;
+        return gridView().comm().min( dtEst );
       }
 
     private:

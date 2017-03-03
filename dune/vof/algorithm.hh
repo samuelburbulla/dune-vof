@@ -70,8 +70,7 @@ namespace Dune
           flagOperator( uh, flags_ );
           reconstructionOperator( uh, reconstructions_, flags_ );
 
-          double dtEstimate = evolutionOperator( reconstructions_, flags_, velocity, dt, update );
-          dtEst = gridView_.comm().min( dtEstimate );
+          dtEst = evolutionOperator( reconstructions_, flags_, velocity, dt, update );
 
           uh.axpy( 1.0, update );
 

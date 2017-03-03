@@ -32,9 +32,13 @@ namespace Dune
        : eps_( eps )
       {}
 
-      void operator() ( const ColorFunction& color, FlagSet &flags ) const
+      void operator() ( const ColorFunction& color, FlagSet &flags, bool communicate = false ) const
       {
-        for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
+        // TODO
+        //if ( communicate )
+        //  partition = Partitions::interiorBorder;
+
+        for ( const auto &entity : elements( color.gridView(), Partitions::all ) )
         {
           Flag &flag = flags[ entity ];
           const auto colorEn = color[ entity ];
@@ -60,7 +64,9 @@ namespace Dune
             }
           }
         }
-        flags.communicate();
+
+        if ( communicate )
+          flags.communicate();
       }
 
     private:

@@ -1,6 +1,6 @@
 [grid]
-level = 0
-repeats = 4
+level = 1
+repeats = 0
 
 [scheme]
 start = 0
