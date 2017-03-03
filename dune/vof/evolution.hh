@@ -110,26 +110,29 @@ namespace Dune
 
           ctype flux = 0.0;
 
+          const auto &neighbor = intersection.outside();
+
           // outflow
           if ( v * outerNormal > 0 )
           {
             geometricFlux( intersection.inside(), intersection.geometry(), reconstructions, flags, v, flux );
 
-            const auto &neighbor = intersection.outside();
+            update[ entity ] -= flux / volume;
 
             if( flags.isFull( neighbor ) )
               update[ neighbor ] -= ( ( v * intersection.integrationOuterNormal( refElement.position( 0, 0 ) ) ) - flux ) / neighbor.geometry().volume();
+
             if ( flags.isEmpty( neighbor ) )
               update[ neighbor ] += flux / neighbor.geometry().volume();
 
-            flux *= -1.0;
+            if ( flags.isMixed( neighbor ) )
+              update[ neighbor ] += flux / neighbor.geometry().volume();
           }
-          // inflow
-          else if ( v * outerNormal < 0 )
-            geometricFlux( intersection.outside(), intersection.geometry(), reconstructions, flags, v, flux );
 
-          update[ entity ] += flux / volume;
-
+          // inflow from full neighbors
+          if ( flags.isFull( neighbor ) )
+            if ( v * outerNormal < 0 )
+              update[ entity ] -= ( v * intersection.integrationOuterNormal( refElement.position( 0, 0 ) ) ) / volume;
         }
 
         return volume / sumFluxes;

@@ -70,17 +70,18 @@ namespace Dune
 
           flagOperator( uh, flags_ );
           reconstructionOperator( uh, reconstructions_, flags_ );
-          dtEst = evolutionOperator( reconstructions_, flags_, velocity, dt, update );
 
-          gridView_.comm().min( dtEst );
+          double dtEstimate = evolutionOperator( reconstructions_, flags_, velocity, dt, update );
+          dtEst = gridView_.comm().min( dtEstimate );
 
           update.communicate();
           uh.axpy( 1.0, update );
 
           if ( dt > 0.0 )
+          {
             error += dt * Dune::VoF::l1error( gridView_, reconstructions(), flags(), problem_, time, level );
-
-          time += dt;
+            time += dt;
+          }
 
           dataWriter_.write( time );
 

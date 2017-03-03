@@ -121,10 +121,8 @@ try {
 
     // Run Algorithm
     Dune::VoF::Algorithm< GridView, ProblemType, DataOutputType > algorithm( gridView, problem, dataOutput, cfl, eps, verbose );
-    double realEnd = end;
 
-
-    double partError = algorithm( uh, start, realEnd, level );
+    double partError = algorithm( uh, start, end, level );
     double error = grid.comm().sum( partError );
 
     if ( grid.comm().rank() == 0 )
