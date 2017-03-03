@@ -30,7 +30,7 @@ namespace Dune
     struct CartesianHeightFunctionCurvature
     {
       using GridView = GV;
-      using Stencils = Dune::VoF::HeightFunctionStencils< GridView >;
+      using Stencil = Dune::VoF::HeightFunctionStencil< GridView >;
       using VertexNeighborStencils = VNST;
       using DiscreteFunction = DF;
       using ReconstructionSet = RS;
@@ -38,13 +38,14 @@ namespace Dune
       using IndexSet = decltype( std::declval< GridView >().indexSet() );
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
+      static constexpr int dim = GridView::dimension;
 
-      using Heights = Dune::FieldVector< double, Stencils::Stencil::noc >;
+      using Heights = Dune::FieldVector< double, Stencil::noc >;
+      using Orientation = std::tuple< int, int >;
 
     public:
       explicit CartesianHeightFunctionCurvature ( GridView gridView, const VertexNeighborStencils &vertexNeighborStencils )
        : gridView_( gridView ),
-         stencils_( gridView ),
          vertexNeighborStencils_( vertexNeighborStencils ),
          indexSet_( gridView.indexSet() ),
          satisfiesConstraint_( gridView )
@@ -87,7 +88,10 @@ namespace Dune
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, CurvatureSet &curvature )
       {
         const Coordinate &normal = reconstructions[ entity ].innerNormal();
-        auto stencil = heightFunctionStencil( normal, entity );
+        const Orientation orientation = getOrientation( normal );
+
+        const auto entityInfo = GridView::Grid::getRealImplementation( entity ).entityInfo();
+        const Stencil stencil ( gridView(), entityInfo, orientation );
 
         Heights heights ( 0.0 );
 
@@ -120,29 +124,27 @@ namespace Dune
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
 
+        double deltaX = std::pow( entity.geometry().volume(), 1.0 / dim );
+
         for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
           if ( heights[ i ] == 0.0 )
             return;
 
         satisfiesConstraint( entity ) = 1;
 
-        curvature[ entity ] = kappa( heights, getOrientation( normal ), stencils_.deltaX() );
+        curvature[ entity ] = kappa( heights, deltaX );
       }
 
-
-      template< class Coordinate >
-      auto kappa ( const Heights &heights, const Coordinate &orientation, const double dx ) const
-      -> typename std::enable_if< Coordinate::dimension == 2, double >::type
+    # if GRIDDIM == 2
+      double kappa ( const Heights &heights, const double dx ) const
       {
         double Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;
         double Hxx = ( heights[ 2 ] - 2 * heights[ 1 ] + heights[ 0 ] ) / dx;
 
         return - Hxx / std::pow( 1.0 + Hx * Hx, 3.0 / 2.0 );
       }
-
-      template< class Coordinate >
-      auto kappa ( const Heights &heights, const Coordinate &orientation, const double dx ) const
-      -> typename std::enable_if< Coordinate::dimension == 3, double >::type
+    #elif GRIDDIM == 3
+      double kappa ( const Heights &heights, const double dx ) const
       {
         double Hx = ( heights[ 5 ] - heights[ 3 ] ) / 2.0;
         double Hy = ( heights[ 7 ] - heights[ 1 ] ) / 2.0;
@@ -152,8 +154,9 @@ namespace Dune
 
         return - ( Hxx + Hyy + Hxx * Hy * Hy + Hyy * Hx * Hx - 2.0 * Hxy * Hx * Hy ) / ( std::pow( 1.0 + Hx * Hx + Hy * Hy, 3.0 / 2.0 ) );
       }
+    #endif
 
-      static inline Coordinate getOrientation( const Coordinate &normal )
+      static inline Orientation getOrientation( const Coordinate &normal )
       {
         std::size_t dir = 0;
         double max = std::numeric_limits< double >::min();
@@ -163,10 +166,9 @@ namespace Dune
           dir = i;
           max = std::abs( normal[ i ] );
         }
-        Coordinate orientation;
-        orientation[ dir ] = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
+        int sign = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
 
-        return orientation;
+        return std::make_tuple( dir, sign );
       }
 
       template< class CurvatureSet >
@@ -191,15 +193,12 @@ namespace Dune
 
       const auto index ( const Entity &entity ) const { return indexSet_.index( entity ); }
 
-      const auto &heightFunctionStencil ( const Coordinate &normal, const Entity &entity ) const { return stencils_( normal, entity ); }
-
       const auto &vertexNeighborStencil ( const Entity &entity ) const { return vertexNeighborStencils_[ entity ]; }
 
       const std::size_t satisfiesConstraint ( const Entity &entity ) const { return satisfiesConstraint_[ entity ]; }
       std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ entity ]; }
 
       GridView gridView_;
-      Stencils stencils_;
       const VertexNeighborStencils &vertexNeighborStencils_;
       IndexSet indexSet_;
       Dune::VoF::DataSet< GridView, std::size_t > satisfiesConstraint_;
