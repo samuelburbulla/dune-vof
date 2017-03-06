@@ -186,7 +186,7 @@ try {
     seriesName << "./" << path << "/" << "s" << std::setw(4) << grid.comm().size() << "-vof-" << level;
 
     PVDWriter dataPVDWriter ( seriesName.str() + "-data.pvd", "pvtu" );
-    PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd", "pvtp" );
+    PVDWriter recPVDWriter ( seriesName.str() + "-reconstruction.pvd", GridType::dimension == 2 ? "pvtp" : "pvtu" );
 
     // Create discrete function
     // ------------------------

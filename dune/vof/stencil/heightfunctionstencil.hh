@@ -66,39 +66,20 @@ namespace Dune
       {
         MultiIndex m;
 
-      #if GRIDDIM == 2
-        m[ 0 ] += c - 1;
-        m[ 1 ] += t;
-
-      #elif GRIDDIM == 3
-        m[ 0 ] += ( c % 3 ) - 1;
-        m[ 1 ] += ( t / 3 ) - 1;
-        m[ 2 ] += t;
-
-      #endif
-
         int i = std::get< 0 >( orientation_ );
         int j = std::get< 1 >( orientation_ );
 
-        m *= 2;
-        m *= j;
-
       #if GRIDDIM == 2
-        if ( i == 0 )
-        {
-          std::swap( m[0], m[1] );
-          m[1] *= -1;
-        }
-
+        m[ 1 - i ] += ( c - 1 ) * ( i == 0 ? -1 : 1 );
+        m[ i ] += t;
+        m *= j;
       #elif GRIDDIM == 3
-        if ( i == 0 && j == -1 ) m[2] *= -1;
-        if ( i == 0 && j == 1 ) m[1] *= -1;
-        if ( i == 1 && j == -1 ) m[2] *= -1;
-        if ( i == 2 && j == -1 ) m[1] *= -1;
-        if ( i == 2 && j == 1 ) m[1] *= -1;
-
+        m[ i ] += j * t;
+        m[ (i+1)%3 ] += ( ( c % 3 ) - 1 ) * -j;
+        m[ (i+2)%3 ] += ( ( c / 3 ) - 1 );
       #endif
 
+        m *= 2;
         return m + entityInfo_.id();
       }
 

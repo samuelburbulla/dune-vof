@@ -126,10 +126,10 @@ namespace Dune
           }
 
         // Check constraint
-        double uMid = heights[ ( heights.size() - 1 ) / 2 ];
-        int effTdown = stencil.effectiveTdown();
-        if ( uMid < effTdown || uMid > effTdown + 1 )
-          return;
+        //double uMid = heights[ ( heights.size() - 1 ) / 2 ];
+        //int effTdown = stencil.effectiveTdown();
+        //if ( uMid < effTdown || uMid > effTdown + 1 )
+          //return;
 
         Coordinate newNormal = computeNormal( heights, orientation );
 
@@ -181,28 +181,14 @@ namespace Dune
         else
           Hy = ( heights[ 7 ] - heights[ 1 ] ) / 2.0;
 
-        Coordinate newNormal;
 
         int i = std::get< 0 >( orientation );
         int j = std::get< 1 >( orientation );
 
-        if ( i == 0 && j == -1 )
-          newNormal = Coordinate( { 1.0, -Hx, Hy } );
-
-        if ( i == 1 && j == -1 )
-          newNormal = Coordinate( { -Hx, 1.0, Hy } );
-
-        if ( i == 2 && j == -1)
-          newNormal = Coordinate( { -Hx, Hy, 1.0 } );
-
-        if ( i == 0 && j == 1 )
-          newNormal = Coordinate( { -1.0, -Hx, Hy } );
-
-        if ( i == 1 && j == 1 )
-          newNormal = Coordinate( { Hx, -1.0, Hy } );
-
-        if ( i == 2 && j == 1 )
-          newNormal = Coordinate( { Hx, -Hy, -1.0 } );
+        Coordinate newNormal;
+        newNormal[ i ] = -j;
+        newNormal[ (i+1)%3 ] = Hx * -j;
+        newNormal[ (i+2)%3 ] = Hy;
 
         normalize( newNormal );
         return newNormal;
