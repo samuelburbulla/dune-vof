@@ -65,8 +65,14 @@ namespace Dune
 
       double operator[] ( const typename Base::Index &index ) const { return static_cast< double >( this->Base::operator[]( index ) ); }
 
+      using Empty = Range< static_cast< std::size_t >( Flag::empty ),
+                           static_cast< std::size_t >( Flag::empty ) >;
+
       using Mixed = Range< static_cast< std::size_t >( Flag::mixed ),
                            static_cast< std::size_t >( Flag::mixedfull ) >;
+
+      using Full = Range< static_cast< std::size_t >( Flag::full ),
+                          static_cast< std::size_t >( Flag::full ) >;
 
       bool isEmpty  ( const Entity& entity ) const { return this->Base::operator[]( entity ) == Flag::empty; }
       bool isMixed  ( const Entity& entity ) const { return inRange( entity, Mixed{} ); }
