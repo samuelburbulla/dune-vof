@@ -101,35 +101,56 @@ namespace Dune
         const auto stencil = Stencil( color.gridView(), entityInfo, orientation );
 
         Heights heights ( 0.0 );
+        double tol = 1e-8;
 
         for( std::size_t i = 0; i < stencil.columns(); ++i )
-          for( int t = stencil.tdown(); t <= stencil.tup(); ++t )
+        {
+          if ( !stencil.valid( i, 0 ) )
+            continue;
+
+          double u0 = color[ stencil( i, 0 ) ];
+          heights[ i ] += u0;
+
+          // upwards
+          double lastU = u0;
+
+          for( int t = 1; t <= stencil.tup(); ++t )
           {
             if ( !stencil.valid( i, t ) )
-              continue;
+              break;
 
             double u = color[ stencil( i, t ) ];
 
-            // local monotonic variation
-            if ( t < 0 )
-            {
-              if ( u < color[ stencil( i, t+1 ) ] - 1e-8  )
-                u = 1.0;
-            }
-            else if ( t > 0 )
-            {
-              if ( u > color[ stencil( i, t-1 ) ] + 1e-8 )
-                u = 0.0;
-            }
+            if ( u > lastU + tol )
+              break;
 
             heights[ i ] += u;
+            lastU = u;
           }
 
+          lastU = u0;
+
+          // downwards
+          for( int t = -1; t >= stencil.tdown(); --t )
+          {
+            if ( !stencil.valid( i, t ) )
+              break;
+
+            double u = color[ stencil( i, t ) ];
+
+            if ( u < lastU - tol )
+              u = 1.0;
+
+            heights[ i ] += u;
+            lastU = u;
+          }
+        }
+
         // Check constraint
-        //double uMid = heights[ ( heights.size() - 1 ) / 2 ];
-        //int effTdown = stencil.effectiveTdown();
-        //if ( uMid < effTdown || uMid > effTdown + 1 )
-          //return;
+        double uMid = heights[ ( heights.size() - 1 ) / 2 ];
+        int effTdown = stencil.effectiveTdown();
+        if ( uMid < effTdown || uMid > effTdown + 1 )
+          return;
 
         Coordinate newNormal = computeNormal( heights, orientation );
 
