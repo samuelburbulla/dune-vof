@@ -9,6 +9,7 @@
 #include <dune/geometry/referenceelements.hh>
 
 //- local includes
+#include <dune/vof/common/commoperation.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/upwindpolygon.hh>
 #include <dune/vof/geometry/utility.hh>
@@ -66,7 +67,7 @@ namespace Dune
           dtEst = min( dtEst, applyLocal( entity, reconstructions, flags, velocity, deltaT, update ) );
         }
 
-        update.communicate( Dune::All_All_Interface, []( ctype a, ctype b ){ return a + b; } );
+        update.communicate( Dune::All_All_Interface, CommOperation::Add() );
 
         return dtEst;
       }

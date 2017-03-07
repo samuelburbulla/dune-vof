@@ -129,9 +129,6 @@ namespace Dune
     };
 
 
-
-
-
   } // namespace VoF
 
 } // namespace Dune
