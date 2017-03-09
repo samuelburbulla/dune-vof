@@ -22,19 +22,15 @@ namespace Dune
      * \ingroup Method
      * \brief set of curvatures
      *
-     * \tparam  GV  grid view
-     * \tparam  RS  reconstruction set
-     * \tparam  FL  flags
+     * \tparam  GV    grid view
+     * \tparam  VNST  vertex neighbor stencils
      */
-    template< class GV, class VNST, class DF, class RS, class FL >
+    template< class GV, class VNST >
     struct CartesianHeightFunctionCurvature
     {
       using GridView = GV;
-      using Stencil = Dune::VoF::HeightFunctionStencil< GridView >;
       using VertexNeighborStencils = VNST;
-      using DiscreteFunction = DF;
-      using ReconstructionSet = RS;
-      using Flags = FL;
+      using Stencil = Dune::VoF::HeightFunctionStencil< GridView >;
       using IndexSet = decltype( std::declval< GridView >().indexSet() );
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
@@ -51,7 +47,7 @@ namespace Dune
          satisfiesConstraint_( gridView )
       {}
 
-      template< class CurvatureSet >
+      template< class DiscreteFunction, class ReconstructionSet, class Flags, class CurvatureSet >
       void operator() ( const DiscreteFunction &uh, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature, bool communicate = false )
       {
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
@@ -84,7 +80,7 @@ namespace Dune
       }
 
     private:
-      template< class CurvatureSet >
+      template< class DiscreteFunction, class ReconstructionSet, class CurvatureSet >
       void applyLocal ( const Entity &entity, const DiscreteFunction &uh, const ReconstructionSet &reconstructions, CurvatureSet &curvature )
       {
         const Coordinate &normal = reconstructions[ entity ].innerNormal();

@@ -46,12 +46,12 @@ template < class GridView >
 double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
 {
   using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
-  using ColorFunction = ColorFunction< GridView >;
+  using ColorFunction = Dune::VoF::ColorFunction< GridView >;
   using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
   using Flags = Dune::VoF::FlagSet< GridView >;
-  using FlagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >;
+  using FlagOperator = Dune::VoF::FlagOperator< GridView >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -78,7 +78,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // build domain references for each cell
   Stencils stencils( gridView );
 
-  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils, ColorFunction, ReconstructionSet, Flags >;
+  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils >;
   CurvatureOperator curvatureOperator ( gridView, stencils );
   CurvatureSet curvatureSet( gridView );
   ColorFunction curvatureError( gridView );
@@ -89,7 +89,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
   auto flagOperator = FlagOperator( eps );
-  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, stencils );
 
   ColorFunction normalX( gridView );
   ColorFunction normalY( gridView );
@@ -155,7 +155,8 @@ try {
   gridPtr->loadBalance();
   GridType& grid = *gridPtr;
 
-  int level = 0;
+  int level0 = 0;
+  int level = level0;
   const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
   grid.globalRefine( refineStepsForHalf * level );
@@ -181,7 +182,7 @@ try {
       eocFile << std::setprecision(0) << "    $" << 8 * std::pow( 2, level ) << "^2$ \t& " << std::scientific << std::setprecision(2) << L1Error << " & " << std::fixed << eoc << " \\\\" << std::endl;
       errorsFile << 1.0 / 8.0 * std::pow( 2, -level ) << " \t" << L1Error << std::endl;
 
-      if ( level > 0 )
+      if ( level > level0 )
       {
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
         assert( eoc > 1.0 );

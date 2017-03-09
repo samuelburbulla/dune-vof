@@ -10,39 +10,50 @@
 // ColorFunction
 // -------------
 
-template< class GV >
-struct ColorFunction
-  : public Dune::VoF::DataSet < GV, double >
+namespace Dune
 {
-  using GridView = GV;
-  using ThisType = ColorFunction< GridView >;
-  using BaseType = typename Dune::VoF::DataSet< GridView, double >;
-  using ctype = double;
 
-public:
-  ColorFunction ( const GridView &gridView ) : BaseType( gridView ) {}
-
-  void axpy ( const ctype a, ThisType &x )
+  namespace VoF
   {
-    assert( x.size() == this->size() );
 
-    for ( const auto& entity : elements( this->gridView() ) )
-      this->operator[]( entity ) += a * x[ entity ];
-  }
+    template< class GV >
+    struct ColorFunction
+      : public Dune::VoF::DataSet < GV, double >
+    {
+      using GridView = GV;
+      using ThisType = ColorFunction< GridView >;
+      using BaseType = typename Dune::VoF::DataSet< GridView, double >;
+      using ctype = double;
 
-  template< class BinaryInStream >
-  void write ( BinaryInStream &in ) const
-  {
-    for ( const auto &entity : elements( this->gridView() ) )
-      in.writeDouble( this->operator[]( entity ) );
-  }
+    public:
+      ColorFunction ( const GridView &gridView ) : BaseType( gridView ) {}
 
-  template< class BinaryOutStream >
-  void read ( BinaryOutStream &out )
-  {
-    for ( const auto &entity : elements( this->gridView() ) )
-      out.readDouble( this->operator[]( entity ) );
-  }
-};
+      void axpy ( const ctype a, ThisType &x )
+      {
+        assert( x.size() == this->size() );
+
+        for ( const auto& entity : elements( this->gridView() ) )
+          this->operator[]( entity ) += a * x[ entity ];
+      }
+
+      template< class BinaryInStream >
+      void write ( BinaryInStream &in ) const
+      {
+        for ( const auto &entity : elements( this->gridView() ) )
+          in.writeDouble( this->operator[]( entity ) );
+      }
+
+      template< class BinaryOutStream >
+      void read ( BinaryOutStream &out )
+      {
+        for ( const auto &entity : elements( this->gridView() ) )
+          out.readDouble( this->operator[]( entity ) );
+      }
+    };
+
+  } // namespace VoF
+
+} // namespace Dune
+
 
 #endif // #ifndef COLORFUNCTION_HH

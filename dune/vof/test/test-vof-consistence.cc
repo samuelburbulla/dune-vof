@@ -94,11 +94,11 @@ template < class GridView >
 double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters, const double cfl )
 {
   using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
-  using ColorFunction = ColorFunction< GridView >;
+  using ColorFunction = Dune::VoF::ColorFunction< GridView >;
   using Stencils = Dune::VoF::VertexNeighborsStencil< GridView >;
   using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
   using Flags = Dune::VoF::FlagSet< GridView >;
-  using FlagOperator = Dune::VoF::FlagOperator< ColorFunction, Flags >;
+  using FlagOperator = Dune::VoF::FlagOperator< GridView >;
 
   using DataWriter = Dune::VTKSequenceWriter< GridView >;
 
@@ -156,7 +156,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     vtkwriter.write( 1 );
 
   ReconstructionSet reconstructionSet( gridView );
-  auto reconstruction = Dune::VoF::reconstruction( gridView, colorFunction, stencils );
+  auto reconstruction = Dune::VoF::reconstruction( gridView, stencils );
   flagOperator( colorFunction, flags );
   reconstruction( colorFunction, reconstructionSet, flags );
 

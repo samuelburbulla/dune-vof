@@ -5,7 +5,7 @@
 #include <dune/vof/reconstruction/modifiedyoungs.hh>
 #include <dune/vof/reconstructionset.hh>
 
-//#include <dune/vof/reconstruction/modifiedswartz.hh>
+#include <dune/vof/reconstruction/modifiedswartz.hh>
 
 namespace Dune
 {
@@ -19,32 +19,29 @@ namespace Dune
      *
      * \tparam  GridView
      * \tparam  Stencils
-     * \tparam  ColorFunction
      * \param   gv        grid view
-     * \param   cf        discrete function
      * \param   stencils  set of stencils
      * \return [description]
      */
+
     /*
-    template< class GridView, class Stencils, class ColorFunction >
-    static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
+    template< class GridView, class Stencils >
+    static inline auto reconstruction ( const GridView&, Stencils &stencils )
      -> typename std::enable_if< GridView::dimension == 2,
-                                 ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                  ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > > >::type
+                                 ModifiedSwartzReconstruction< GridView, Stencils,
+                                  ModifiedYoungsReconstruction< GridView, Stencils > > >::type
     {
-      return ModifiedSwartzReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-                                           ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils >
+      return ModifiedSwartzReconstruction< GridView, Stencils,
+                                           ModifiedYoungsReconstruction< GridView, Stencils >
                                          >( stencils );
     }
     */
 
-    template< class GridView, class ColorFunction, class Stencils >
-    static inline auto reconstruction ( const GridView&, const ColorFunction&, Stencils &stencils )
-     ->  HeightFunctionReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-          ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >
+    template< class GridView, class Stencils >
+    static inline auto reconstruction ( const GridView&, Stencils &stencils )
+     ->  HeightFunctionReconstruction< GridView, Stencils, ModifiedYoungsReconstruction< GridView, Stencils > >
     {
-      return HeightFunctionReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils,
-              ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet< GridView >, Stencils > >( stencils );
+      return HeightFunctionReconstruction< GridView, Stencils, ModifiedYoungsReconstruction< GridView, Stencils > >( stencils );
     }
 
   } // namespace VoF

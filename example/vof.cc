@@ -66,7 +66,7 @@ try {
 
   GridView gridView( grid.leafGridView() );
 
-  using ColorFunction = ColorFunction< GridView >;
+  using ColorFunction = Dune::VoF::ColorFunction< GridView >;
 
   // Testproblem
   using ProblemType = RotatingCircle< double, GridView::dimensionworld >;

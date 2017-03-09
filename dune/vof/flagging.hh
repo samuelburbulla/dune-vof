@@ -15,23 +15,21 @@ namespace Dune
       /**
        * \brief update set of flags
        *
-       * \tparam  DF  discrete function type
-       * \param color discrete function
+       * \tparam  GV  grid view
        * \param eps   marker tolerance
        */
 
-    template< class DF, class FS >
+    template< class GV >
     struct FlagOperator
     {
-      using ColorFunction = DF;
-      using FlagSet = FS;
-      using GridView = typename ColorFunction::GridView;
+      using GridView = GV;
 
     public:
       explicit FlagOperator ( double eps )
        : eps_( eps )
       {}
 
+      template< class ColorFunction, class FlagSet >
       void operator() ( const ColorFunction& color, FlagSet &flags, bool communicate = false ) const
       {
         // TODO

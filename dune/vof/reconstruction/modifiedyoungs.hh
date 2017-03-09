@@ -21,24 +21,19 @@ namespace Dune
      * \brief   modified Youngs reconstruction operator
      * \details Rider, W.J., Kothe, D.B., Reconstructing Volume Tracking, p. 15ff
      *
-     * \tparam DF   discrete function type
-     * \tparam RS   reconstruction set type
+     * \tparam GV   grid view
      * \tparam StS  stencils type
      */
-    template< class DF, class RS, class StS >
+    template< class GV, class StS >
     struct ModifiedYoungsReconstruction
     {
-      using ColorFunction = DF;
-      using ReconstructionSet = RS;
+      using GridView = GV;
       using StencilSet = StS;
 
-      using GridView = typename ColorFunction::GridView;
-
     private:
-      using Reconstruction = typename ReconstructionSet::DataType;
       using Stencil = typename StencilSet::Stencil;
 
-      using Entity = typename ColorFunction::Entity;
+      using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
       static constexpr int dim = Coordinate::dimension;
@@ -54,12 +49,14 @@ namespace Dune
       /**
        * \brief   (global) operator application
        *
+       * \tparam  ColorFunction
+       * \tparam  ReconstructionSet
        * \tparam  Flags
        * \param   color           color function
        * \param   reconstructions set of interface
        * \param   flags           set of flags
        */
-      template< class Flags >
+      template< class ColorFunction, class ReconstructionSet, class Flags >
       void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = false ) const
       {
         reconstructions.clear();
@@ -68,7 +65,7 @@ namespace Dune
           if ( !flags.isMixed( entity ) )
             continue;
 
-          applyLocal( entity, flags, color, reconstructions[ entity ] );
+          applyLocal( entity, color, flags, reconstructions[ entity ] );
         }
 
         if ( communicate )
@@ -78,14 +75,16 @@ namespace Dune
       /**
        * \brief   (local) operator application
        *
+       * \tparam  ColorFunction
        * \tparam  Flags
+       * \tparam  Reconstruction
        * \param   entity          current element
-       * \param   flags           set of flags
        * \param   color           color functions
-       * \param   reconstructions set of reconstruction
+       * \param   flags           set of flags
+       * \param   reconstruction  single reconstruction
        */
-      template< class Flags >
-      void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
+      template< class ColorFunction, class Flags, class Reconstruction >
+      void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, Reconstruction &reconstruction ) const
       {
         Coordinate normal( 0.0 );
 

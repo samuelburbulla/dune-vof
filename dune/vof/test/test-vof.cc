@@ -72,7 +72,7 @@ try {
 
   for ( int i = level; i < level + numRuns; ++i )
   {
-    ColorFunction< GridView > uh( gridView );
+    Dune::VoF::ColorFunction< GridView > uh( gridView );
     Dune::VoF::average( uh, problem, start, i-level );
     uh.communicate();
 

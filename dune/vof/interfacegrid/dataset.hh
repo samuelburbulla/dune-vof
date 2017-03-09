@@ -9,10 +9,12 @@
 
 #include <dune/geometry/dimension.hh>
 
+#include <dune/vof/colorfunction.hh>
 #include <dune/vof/flagset.hh>
 #include <dune/vof/flagging.hh>
 #include <dune/vof/interfacegrid/geometry.hh>
 #include <dune/vof/mixedcellmapper.hh>
+#include <dune/vof/reconstructionset.hh>
 #include <dune/vof/utility.hh>
 
 namespace Dune
@@ -32,17 +34,15 @@ namespace Dune
       typedef typename Reconstruction::GridView GridView;
 
       typedef VoF::FlagSet< GridView > Flags;
+      typedef VoF::ReconstructionSet< GridView > ReconstructionSet;
 
-      typedef typename Reconstruction::ColorFunction ColorFunction;
-      typedef typename Reconstruction::ReconstructionSet ReconstructionSet;
-
-      typedef VoF::FlagOperator< ColorFunction, Flags > Flagging;
+      typedef VoF::FlagOperator< Flags > Flagging;
 
       typedef typename GridView::template Codim< 0 >::Entity Element;
 
       typedef typename ReconstructionSet::DataType::Coordinate GlobalCoordinate;
 
-      template< class... Args >
+      template< class ColorFunction, class... Args >
       explicit BasicInterfaceGridDataSet ( const ColorFunction &colorFunction, Args &&... args )
         : reconstruction_( std::forward< Args >( args )... ),
           flagging_ ( 1e-6 ),
@@ -58,6 +58,7 @@ namespace Dune
 
       const GridView &gridView () const { return flags().gridView(); }
 
+      template< class ColorFunction >
       void update ( const ColorFunction &colorFunction )
       {
         flagging_( colorFunction, flags_ );
@@ -90,7 +91,6 @@ namespace Dune
       using Base::reconstructionSet;
       using Base::normal;
 
-      typedef typename Base::ColorFunction ColorFunction;
       typedef typename Base::Element Element;
       typedef typename Base::GridView GridView;
       typedef typename Base::GlobalCoordinate GlobalCoordinate;
@@ -104,13 +104,14 @@ namespace Dune
       template< int mydim >
       using Geometry = BasicInterfaceGridGeometry< ctype, mydim, GridView::dimensionworld >;
 
-      template< class... Args >
+      template< class ColorFunction, class... Args >
       explicit InterfaceGridDataSet ( const ColorFunction &colorFunction, Args &&... args )
         : Base( colorFunction, std::forward< Args >( args )... ), indices_( flags() )
       {
         getInterfaceVertices( reconstructionSet(), flags(), vertices_, offsets_ );
       }
 
+      template< class ColorFunction >
       void update ( const ColorFunction &colorFunction )
       {
         Base::update( colorFunction );

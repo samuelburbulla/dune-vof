@@ -114,7 +114,6 @@ namespace Dune
 
       typedef InterfaceGridDataSet< Reconstruction > DataSet;
 
-      typedef typename DataSet::ColorFunction ColorFunction;
       typedef typename DataSet::Flags Flags;
 
       static const int dimension = Traits::dimension;
@@ -130,7 +129,7 @@ namespace Dune
 
       typedef typename Traits::CollectiveCommunication CollectiveCommunication;
 
-      template< class... Args >
+      template< class ColorFunction, class... Args >
       explicit InterfaceGrid ( const ColorFunction &colorFunction, Args &&... args )
         : leafIndexSet_( colorFunction, std::forward< Args >( args )... )
       {}
@@ -205,6 +204,7 @@ namespace Dune
       const Reconstruction &reconstruction () const { return dataSet().reconstruction(); }
       const Flags &flags () const { return dataSet().flags(); }
 
+      template< class ColorFunction >
       void update ( const ColorFunction &colorFunction ) { leafIndexSet_.update( colorFunction ); }
 
     protected:

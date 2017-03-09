@@ -61,13 +61,13 @@ try
   Coordinate axis( 1.0 / std::sqrt( static_cast< double > ( GridView::dimensionworld ) ) );
   Ellipse< double, GridView::dimensionworld > problem( { axis, Dune::VoF::generalizedCrossProduct( axis ) }, { 0.2, 0.5 } );
 #elif GRIDDIM == 3
-  Coordinate axis1 ( { 0.0, 1.0, 0.0 } );
+  Coordinate axis1 ( { 1.0, 0.0, 0.0 } );
   Coordinate axis2 ( { 0.0, 1.0, 0.0 } );
   Coordinate axis3 ( { 0.0, 0.0, 1.0 } );
   Ellipse< double, GridView::dimensionworld > problem( { axis1, axis2, axis3 }, { 0.2, 0.2, 0.4 } );
 #endif
 
-  ColorFunction< GridView > colorFunction( gridView );
+  Dune::VoF::ColorFunction< GridView > colorFunction( gridView );
   Dune::VoF::average( colorFunction, problem );
   colorFunction.communicate();
 
@@ -75,7 +75,7 @@ try
   Stencils stencils( gridView );
 
   // create interface grid
-  using Reconstruction = decltype( Dune::VoF::reconstruction( gridView, colorFunction, stencils ) );
+  using Reconstruction = decltype( Dune::VoF::reconstruction( gridView, stencils ) );
   typedef Dune::VoF::InterfaceGrid< Reconstruction > InterfaceGrid;
 
   InterfaceGrid interfaceGrid( colorFunction, stencils );

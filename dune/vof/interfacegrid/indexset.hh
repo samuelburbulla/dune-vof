@@ -33,7 +33,6 @@ namespace Dune
 
       typedef InterfaceGridDataSet< Reconstruction > DataSet;
 
-      typedef typename DataSet::ColorFunction ColorFunction;
       typedef typename DataSet::Indices::Index IndexType;
 
       typedef std::array< GeometryType, 1 > Types;
@@ -62,8 +61,6 @@ namespace Dune
 
       typedef typename InterfaceGridIndexSetTraits< Grid >::DataSet DataSet;
 
-      typedef typename InterfaceGridIndexSetTraits< Grid >::ColorFunction ColorFunction;
-
       typedef typename InterfaceGridIndexSetTraits< Grid >::IndexType IndexType;
 
       typedef typename InterfaceGridIndexSetTraits< Grid >::Types Types;
@@ -71,7 +68,7 @@ namespace Dune
       template< int codim >
       using Codim = typename InterfaceGridIndexSetTraits< Grid >::template Codim< codim >;
 
-      template< class... Args >
+      template< class ColorFunction, class... Args >
       explicit InterfaceGridIndexSet ( const ColorFunction &colorFunction, Args &&... args )
         : dataSet_( colorFunction, std::forward< Args >( args )... )
       {}
@@ -128,6 +125,7 @@ namespace Dune
         return {{ GeometryType( (mydim < 2 ? GeometryType::cube : GeometryType::none), mydim ) }};
       }
 
+      template< class ColorFunction >
       void update ( const ColorFunction &colorFunction )
       {
         dataSet_.update( colorFunction );
