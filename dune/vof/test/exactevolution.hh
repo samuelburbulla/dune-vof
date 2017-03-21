@@ -12,7 +12,7 @@
 #include <dune/vof/geometry/upwindpolygon.hh>
 #include <dune/vof/geometry/utility.hh>
 
-#include "interpolation.hh"
+#include "../interpolation/interpolations.hh"
 
 
 namespace Dune

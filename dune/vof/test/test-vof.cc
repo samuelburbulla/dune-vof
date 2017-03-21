@@ -73,8 +73,8 @@ try {
   for ( int i = level; i < level + numRuns; ++i )
   {
     Dune::VoF::ColorFunction< GridView > uh( gridView );
-    Dune::VoF::average( uh, problem, start, i-level );
-    uh.communicate();
+    Dune::VoF::Average< ProblemType > average ( problem );
+    average( uh, start, ( gridView.comm().rank() == 0 && i == level ) );
 
     using DataWriter = Dune::VTKSequenceWriter< GridView >;
     const std::string path = "./" + parameters.get< std::string >( "io.path" ) + "/vof-" + std::to_string( i );

@@ -11,8 +11,8 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include <dune/vof/colorfunction.hh>
-#include "interpolation.hh"
-#include "recursiveinterpolation.hh"
+
+#include "../interpolation/interpolations.hh"
 #include "problems/rotatingcircle.hh"
 
 
@@ -91,43 +91,6 @@ namespace Dune
 
       return l1Error;
     }
-
-    template< class GridView, class RS, class Flags, class F >
-    double l1errorRecursive ( const GridView& gridView, const RS &reconstructionSet, const Flags& flags, const F &f, const double time = 0.0, const int level = 0 )
-    {
-      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
-        std::cout << " -- error using recursive algorithm" << std::endl;
-
-      using RangeType = Dune::FieldVector< double, 1 >;
-
-      RecursiveInterpolation< GridView > interpolation ( gridView, 0 );
-
-      double error = 0;
-      for ( const auto &entity : elements( gridView ) )
-      {
-        auto localErrorFunction = [ &reconstructionSet, &flags, entity, f, time ] ( const auto &x )
-        {
-          const auto global = entity.geometry().global( x );
-          RangeType v, w;
-          f.evaluate( global, time, v );
-
-          if ( flags.isFull( entity ) )
-            w = 1.0;
-          else if ( flags.isMixed( entity ) )
-            w = ( reconstructionSet[ entity ].levelSet( global ) > 0.0 );
-          else
-            w = 0.0;
-
-          return static_cast< int >( std::abs( v - w ) + 0.3 );
-        };
-
-        const auto geometry = entity.geometry();
-        const auto refElementGeometry = ReferenceElements< double, GridView::dimension >::general( geometry.type() ).template geometry< 0 >( 0 );
-        error += interpolation.recursiveEvaluation( refElementGeometry, localErrorFunction, 10, true ) * geometry.volume();
-      }
-      return error;
-    }
-
 
     template< class DF >
     double cellwiseL1error ( const DF& uh, RotatingCircle< double, 2 > circle, const double time = 0.0, const int level = 0 )

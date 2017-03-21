@@ -86,7 +86,8 @@ try {
     if ( restartStep == -1 )
     {
       // Use initial data of problem.
-      Dune::VoF::average( uh, problem, start, level );
+      Dune::VoF::Average< ProblemType > average ( problem );
+      average( uh, start, ( gridView.comm().rank() == 0 && level == level0 ) );
     }
     else
     {
@@ -110,9 +111,9 @@ try {
         uh.read( binaryStream );
         std::cout << "Restarted in file " << filename << std::endl;
       }
+      uh.communicate();
     }
 
-    uh.communicate();
 
     bool verbose = ( verboserank == grid.comm().rank() );
 

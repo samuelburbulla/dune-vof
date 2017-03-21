@@ -68,8 +68,8 @@ try
 #endif
 
   Dune::VoF::ColorFunction< GridView > colorFunction( gridView );
-  Dune::VoF::average( colorFunction, problem );
-  colorFunction.communicate();
+  Dune::VoF::Average< Ellipse< double, GridView::dimensionworld > > average ( problem );
+  average( colorFunction );
 
   typedef Dune::VoF::VertexNeighborsStencil< GridView > Stencils;
   Stencils stencils( gridView );

@@ -118,7 +118,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // allocate and initialize objects for data representation
   ColorFunction colorFunction( gridView );
   ColorFunction errorFunction( gridView );
-  ColorFunction uhExact( colorFunction );
   ColorFunction update( gridView );
   Flags flags ( gridView );
   FlagOperator flagOperator ( eps );
@@ -130,11 +129,10 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
 
   DataWriter vtkwriter ( gridView, "vof", path.str(), "~/dune" );
   vtkwriter.addCellData ( colorFunction, "uh" );
-  vtkwriter.addCellData ( uhExact, "u" );
 
   // Initial data
-  Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), colorFunction );
-  Dune::VoF::circleInterpolation( circle.center( 0.0 ), circle.radius( 0.0 ), uhExact );
+  Dune::VoF::Average< ProblemType > average ( circle );
+  average( colorFunction, 0.0, ( gridView.comm().rank() == 0 && level == 0 ) );
 
   // Initial flagging
   flagOperator( colorFunction, flags );
@@ -150,7 +148,6 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   colorFunction.axpy( 1.0, update );
   tp.next();
 
-  Dune::VoF::circleInterpolation( circle.center( tp.time() ), circle.radius( tp.time() ), uhExact );
 
   if ( writeData )
     vtkwriter.write( 1 );

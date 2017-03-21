@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_RECURSIVEINTERPOLATION_HH
-#define DUNE_VOF_RECURSIVEINTERPOLATION_HH
+#ifndef DUNE_VOF_RECURSIVEINTERPOLATIONCUBE_HH
+#define DUNE_VOF_RECURSIVEINTERPOLATIONCUBE_HH
 
 // dune-geometry includes
 #include <dune/geometry/multilineargeometry.hh>
@@ -13,7 +13,7 @@ namespace Dune
     // =================================================
 
     template< class GridView >
-    struct RecursiveInterpolation
+    struct RecursiveInterpolationCube
     {
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using ctype = typename GridView::ctype;
@@ -22,7 +22,7 @@ namespace Dune
       using Refinement = VirtualRefinement< dim, ctype >;
 
     public:
-      RecursiveInterpolation( const GridView &gridView, std::size_t depth ) : gridView_( gridView ), depth_( depth ) {}
+      RecursiveInterpolationCube( const GridView &gridView, std::size_t depth ) : gridView_( gridView ), depth_( depth ) {}
 
       template < class Function, class DiscreteFunction >
       void operator() ( const Function &f, DiscreteFunction &uh )

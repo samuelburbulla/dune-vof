@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_INTERPOLATION_HH
-#define DUNE_VOF_INTERPOLATION_HH
+#ifndef DUNE_VOF_CIRCLEINTERPOLATION_HH
+#define DUNE_VOF_CIRCLEINTERPOLATION_HH
 
 // dune-fem includes
 #include <dune/fem/quadrature/cachingquadrature.hh>

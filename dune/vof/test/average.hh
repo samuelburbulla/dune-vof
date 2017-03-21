@@ -5,13 +5,8 @@
 
 #include <dune/common/exceptions.hh>
 
-#include <dune/geometry/quadraturerules.hh>
-
-#include "interpolation.hh"
-#include "recursiveinterpolation.hh"
-#include "problems/ellipse.hh"
-#include "problems/rotatingcircle.hh"
-#include "problems/slope.hh"
+#include "../interpolation/interpolations.hh"
+#include "problems/problems.hh"
 #include "../geometry/intersect.hh"
 #include "../geometry/halfspace.hh"
 
@@ -23,90 +18,116 @@ namespace Dune
     // Average
     // -------
 
-    template< class DF, class F >
-    void averageRecursive ( DF &u, const F &f, const double time = 0.0, const int level = 0 )
+    /**
+     * \ingroup   Method
+     * \brief     volume of fluid intial data interpolation method
+     *
+     * \tparam  PR  problem type
+     */
+
+    template< class PR >
+    struct Average
     {
-      if( u.gridView().comm().rank() == 0 && level == 0 )
-        std::cout << " -- average using recursive algorithm" << std::endl;
+      using Problem = PR;
 
-      RecursiveInterpolation< typename std::remove_reference< decltype( u.gridView() ) >::type > interpolation ( u.gridView(), 5 );
-      auto function = [ &f, time ]( const auto &x ) { FieldVector< double, 1 > u; f.evaluate( x, time, u ); return u; };
-      interpolation( function, u );
-    }
+      Average ( const Problem& problem ) : problem_( problem ) {}
 
-
-    template< class DF, class F >
-    void average ( DF &u, const F &f, const double time = 0.0, const int level = 0 )
-    {
-      typedef typename DF::GridView::ctype ctype;
-      using RangeType = Dune::FieldVector< ctype, 1 >;
-
-      if( u.gridView().comm().rank() == 0 && level == 0 )
-        std::cout << " -- average using quadrature" << std::endl;
-
-      for( const auto& entity : elements ( u.gridView() ) )
+      template< class ColorFunction >
+      void operator() ( ColorFunction& uh, const double time = 0.0, bool verbose = false )
       {
-        const auto geo = entity.geometry();
+        using GridView = typename std::remove_reference< decltype( uh.gridView() ) >::type;
 
-        // get quadrature rule of order p
-        int p = 19;
-        const auto &rule = Dune::QuadratureRules< ctype, DF::GridView::dimension >::rule( geo.type(), p );
+        #if GridView == SPGrid
+          using Interpolation = RecursiveInterpolationCube< GridView >;
+        #else
+          using Interpolation = RecursiveInterpolation< GridView >;
+        #endif
 
-        // ensure that rule has at least the requested order
-        if( rule.order() < p )
-          DUNE_THROW( Dune::Exception, "Requested quadrature order not available." );
+        if( verbose )
+          std::cout << " -- average using recursive algorithm" << std::endl;
 
-        // compute approximate integral
-        ctype result = 0;
-        for ( const auto qp : rule )
+        auto indicator = [ this, time ]( const auto &x ) { FieldVector< double, 1 > u; this->problem_.evaluate( x, time, u ); return u; };
+
+        Interpolation interpolation ( uh.gridView(), 10 );
+        interpolation( indicator, uh );
+
+        uh.communicate();
+      }
+
+      const Problem& problem_;
+    };
+
+
+    template<>
+    struct Average< Ellipse< double, 2 > >
+    {
+      using Problem = Ellipse< double, 2 >;
+
+      Average ( const Problem& problem ) : problem_( problem ) {}
+
+      template< class ColorFunction >
+      void operator() ( ColorFunction& uh, const double time = 0.0, bool verbose = false )
+      {
+        if( verbose )
+          std::cout << " -- average using intersection algorithm" << std::endl;
+
+        circleInterpolation( problem_.referenceMap(), problem_.volumeElement(), uh );
+
+        uh.communicate();
+      }
+
+      const Problem& problem_;
+    };
+
+    template<>
+    struct Average< RotatingCircle< double, 2 > >
+    {
+      using Problem = RotatingCircle< double, 2 >;
+
+      Average ( const Problem& problem ) : problem_( problem ) {}
+
+      template< class ColorFunction >
+      void operator() ( ColorFunction& uh, const double time = 0.0, bool verbose = false )
+      {
+        if( verbose )
+          std::cout << " -- average using intersection algorithm" << std::endl;
+
+        circleInterpolation( problem_.center( time ), problem_.radius( time ), uh );
+
+        uh.communicate();
+      }
+
+      const Problem& problem_;
+    };
+
+    template<>
+    struct Average< Slope< double, 2 > >
+    {
+      using Problem = Slope< double, 2 >;
+
+      Average ( const Problem& problem ) : problem_( problem ) {}
+
+      template< class ColorFunction >
+      void operator() ( ColorFunction& uh, const double time = 0.0, bool verbose = false )
+      {
+        if( verbose )
+          std::cout << " -- average using intersection algorithm" << std::endl;
+
+        using Coordinate = FieldVector< double, 2 >;
+
+        HalfSpace< Coordinate > halfspace ( problem_.normal(), Coordinate( { 0.5, 0.5 } ) );
+
+        for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
         {
-          RangeType u;
-          f.evaluate( geo.global( qp.position() ), time, u );
-          result += u * qp.weight() * geo.integrationElement( qp.position() );
+          const auto& geo = entity.geometry();
+          uh[ entity ] = intersect( makePolytope( geo ), halfspace, eager ).volume() / geo.volume();
         }
 
-        u[ entity ] = result / geo.volume();
+        uh.communicate();
       }
-    }
 
-    template< class DF >
-    void average ( DF &u, const Ellipse< double, 2 >& e, const double time = 0.0, const int level = 0 )
-    {
-      if( u.gridView().comm().rank() == 0 && level == 0 )
-        std::cout << " -- average using intersection" << std::endl;
-      circleInterpolation( e.referenceMap(), e.volumeElement(), u );
-    }
-
-    template< class DF >
-    void average ( DF &u, const RotatingCircle< double, 2 >& c, const double time = 0.0, const int level = 0 )
-    {
-      if( u.gridView().comm().rank() == 0 && level == 0 )
-        std::cout << " -- average using intersection" << std::endl;
-      circleInterpolation( c.center( time ), c.radius( time ), u );
-    }
-
-    template< class DF >
-    void average ( DF &uh, const Slope< double, 2 >& s, const double time = 0.0, const int level = 0 )
-    {
-      using Coordinate = FieldVector< double, 2 >;
-      if( uh.gridView().comm().rank() == 0 && level == 0 )
-        std::cout << " -- average using intersection" << std::endl;
-      uh.clear();
-
-      HalfSpace< Coordinate > halfspace ( s.normal(), Coordinate( { 0.5, 0.5 } ) );
-
-      for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
-      {
-        const auto& geo = entity.geometry();
-        Dune::VoF::Polygon< Coordinate > polygon = Dune::VoF::makePolytope( geo );
-
-        auto it = intersect( polygon, halfspace );
-        auto part = static_cast< typename decltype( it )::Result > ( it );
-
-        uh[ entity ] = part.volume() / geo.volume();
-      }
-    }
-
+      const Problem& problem_;
+    };
 
   } // namespace VoF
 
