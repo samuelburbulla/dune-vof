@@ -47,6 +47,26 @@ namespace Dune {
         assert( vertices_.size() > 0 );
       }
 
+      bool operator== ( const This &other) const
+      {
+        if ( other.size() != this->size() )
+          return false;
+
+        std::size_t i0;
+        for ( std::size_t i = 0; i < other.size(); ++i )
+          if ( other.vertex( i ) == this->vertex( 0 ) )
+          {
+            i0 = i;
+            break;
+          }
+
+        for ( std::size_t i = 0; i < other.size(); ++i )
+          if ( other.vertex( i + i0 ) != this->vertex( i ) )
+            return false;
+
+        return true;
+      }
+
       /**
        * \brief i-th vertex
        */
@@ -126,6 +146,10 @@ namespace Dune {
 
       Line ( Container vertices )
       : vertices_( std::move( vertices ) )
+      {}
+
+      Line ( const std::vector< Coordinate > &v )
+      : vertices_{{ v[0], v[1] }}
       {}
 
       Line ( const Coordinate& v0, const Coordinate& v1 )
