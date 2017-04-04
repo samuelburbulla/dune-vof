@@ -11,7 +11,7 @@
 //- dune-vof includes
 #include <dune/vof/geometry/halfspace.hh>
 #include <dune/vof/geometry/intersect.hh>
-#include <dune/vof/geometry/utility.hh>
+#include <dune/vof/geometry/polytope.hh>
 
 
 int main(int argc, char** argv)

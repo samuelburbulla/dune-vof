@@ -9,6 +9,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <dune/vof/geometry/algorithm.hh>
+#include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
 
 #include <dune/vof/stencil/heightfunctionstencil.hh>
