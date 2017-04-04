@@ -28,7 +28,7 @@ namespace Dune
    * \nosubgrouping
    **/
   template< class R >
-  struct HostGridAccess< InterfaceGrid< R > >
+  struct HostGridAccess< VoF::InterfaceGrid< R > >
   {
     /** \name Exported Types
      * \{
@@ -36,7 +36,7 @@ namespace Dune
 
     typedef VoF::InterfaceGrid< R > Grid;
 
-    const int dimension = Grid::dimension;
+    static const int dimension = Grid::dimension;
 
     //! type of HostGrid
     typedef typename R::GridView::Grid HostGrid;
@@ -50,8 +50,8 @@ namespace Dune
     template< int codim, class T = void >
     struct Codim;
 
-    template< int codim, std::enable_if_t< (codim == 0) > >
-    struct Codim
+    template< int codim >
+    struct Codim< codim, std::enable_if_t< (codim == 0) > >
     {
       //! type of the InterfaceGrid entity
       typedef Dune::Entity< codim, dimension, const Grid, VoF::InterfaceGridEntity > Entity;
@@ -60,8 +60,8 @@ namespace Dune
       typedef typename HostGrid::template Codim< codim >::Entity HostEntity;
     };
 
-    template< int codim, std::enable_if_t< (codim > 0) && (codim <= dimension) > >
-    struct Codim
+    template< int codim >
+    struct Codim< codim, std::enable_if_t< (codim > 0) && (codim <= dimension) > >
     {};
 
     /**
