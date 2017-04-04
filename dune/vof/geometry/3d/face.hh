@@ -17,6 +17,8 @@ namespace Dune {
 
       Face ( const std::vector< Coord >& nodes ) : nodes_ ( nodes ) {}
 
+      operator bool () const { return !nodes_.empty(); }
+
       std::size_t size () const { return nodes_.size(); }
 
       const Coord& vertex ( const std::size_t index ) const { return nodes_[ index ]; }

@@ -26,6 +26,41 @@ namespace Dune {
     namespace __impl {
 
 
+      template< class Coord >
+      auto intersect ( const Dune::VoF::Face< Coord >& face, const HalfSpace< Coord >& halfSpace ) -> Dune::VoF::Face< Coord >
+      {
+        if ( !halfSpace )
+          return Dune::VoF::Face< Coord >();
+
+        std::vector< Coord > container;
+        container.reserve( face.size() );
+
+        for( std::size_t i = 0; i < face.size(); ++i )
+        {
+          Line< Coord > edge { face.vertex( i ), face.vertex( i%face.size() ) };
+
+          auto l0 = halfSpace.levelSet( edge.vertex( 0 ) );
+          auto l1 = halfSpace.levelSet( edge.vertex( 1 ) );
+
+          if( l0 > 0.0 )
+            container.push_back( edge.vertex( 0 ) );
+
+          if ( ( l0 > 0.0 ) ^ ( l1 > 0.0 ) )
+          {
+            Coord point;
+            point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
+            point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
+
+            container.push_back( point );
+          }
+        }
+
+        if ( container.empty() )
+          return Dune::VoF::Face< Coord >();
+        else
+          return Dune::VoF::Face< Coord >( std::move( container ) );
+      }
+
       /**
        * \ingroup geo3d
        * \brief implementation for an intersection between a polyhedron and a half space
