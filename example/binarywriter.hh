@@ -8,6 +8,7 @@
 
 // dune-common includes
 #include <dune/common/path.hh>
+#include <dune/common/parametertree.hh>
 
 // dune-fem includes
 #include <dune/fem/io/io.hh>

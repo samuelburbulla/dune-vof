@@ -8,6 +8,8 @@
 
 #include <dune/common/fmatrix.hh>
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/utility.hh>
 

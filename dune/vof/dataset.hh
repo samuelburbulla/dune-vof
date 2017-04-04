@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <vector>
 
+#include <dune/grid/common/gridenums.hh>
+#include <dune/grid/common/datahandleif.hh>
+
 namespace Dune
 {
   namespace VoF

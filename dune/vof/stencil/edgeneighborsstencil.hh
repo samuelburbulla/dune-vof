@@ -1,6 +1,11 @@
 #ifndef DUNE_VOF_EDGENEIGHBORSSTENCIL_HH
 #define DUNE_VOF_EDGENEIGHBORSSTENCIL_HH
 
+#include <utility>
+#include <vector>
+
+#include <dune/grid/common/rangegenerators.hh>
+
 namespace Dune
 {
   namespace VoF

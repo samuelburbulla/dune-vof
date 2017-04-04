@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <array>
+#include <numeric>
 
 #include <dune/common/fvector.hh>
 

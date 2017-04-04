@@ -8,6 +8,9 @@
 #include <dune/common/fvector.hh>
 #include <dune/geometry/referenceelements.hh>
 
+//- dune-grid includes
+#include <dune/grid/common/partitionset.hh>
+
 //- local includes
 #include <dune/vof/common/commoperation.hh>
 #include <dune/vof/geometry/intersect.hh>

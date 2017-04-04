@@ -7,6 +7,8 @@
 
 #include <dune/common/exceptions.hh>
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>

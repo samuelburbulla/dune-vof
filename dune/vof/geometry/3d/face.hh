@@ -2,6 +2,7 @@
 #define DUNE_VOF_GEOMETRY_FACE_HH
 
 /* c++ includes */
+#include <cmath>
 #include <vector>
 
 

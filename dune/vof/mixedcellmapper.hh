@@ -8,6 +8,10 @@
 #include <vector>
 
 #include <dune/grid/common/mcmgmapper.hh>
+#include <dune/grid/common/partitionset.hh>
+
+#include <dune/vof/flagset.hh>
+
 
 namespace Dune
 {

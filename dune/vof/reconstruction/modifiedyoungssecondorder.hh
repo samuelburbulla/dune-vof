@@ -26,20 +26,16 @@ namespace Dune
      * \tparam RS   reconstruction set type
      * \tparam StS  stencils type
      */
-    template< class DF, class RS, class StS >
+    template< class GV, class StS >
     struct ModifiedYoungsSecondOrderReconstruction
     {
-      using ColorFunction = DF;
-      using ReconstructionSet = RS;
+      using GridView = GV;
       using StencilSet = StS;
 
-      using GridView = typename ColorFunction::GridView;
-
     private:
-      using Reconstruction = typename ReconstructionSet::DataType;
       using Stencil = typename StencilSet::Stencil;
 
-      using Entity = typename ColorFunction::Entity;
+      using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
       static constexpr int dim = Coordinate::dimension;
@@ -48,7 +44,7 @@ namespace Dune
       using Matrix = FieldMatrix< ctype, derivatives, derivatives >;
       using Vector = FieldVector< ctype, derivatives >;
 
-      using FirstOrderReconstruction = ModifiedYoungsReconstruction< ColorFunction, ReconstructionSet, StencilSet >;
+      using FirstOrderReconstruction = ModifiedYoungsReconstruction< GridView, StencilSet >;
 
     public:
       explicit ModifiedYoungsSecondOrderReconstruction ( const StencilSet &stencils )
@@ -63,20 +59,14 @@ namespace Dune
        * \param   reconstructions set of interface
        * \param   flags           set of flags
        */
-      template< class Flags >
-      double operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
+      template< class ColorFunction, class ReconstructionSet, class Flags >
+      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
       {
-        double elapsedTime = - MPI_Wtime();
-
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
           applyLocal( entity, flags, color, reconstructions[ entity ] );
 
-        elapsedTime += MPI_Wtime();
-
         reconstructions.communicate();
-
-        return elapsedTime;
       }
 
     private:
@@ -89,7 +79,7 @@ namespace Dune
        * \param   color           color functions
        * \param   reconstructions set of reconstruction
        */
-      template< class Flags >
+      template< class Flags, class ColorFunction, class Reconstruction >
       void applyLocal ( const Entity &entity, const Flags &flags, const ColorFunction &color, Reconstruction &reconstruction ) const
       {
         Coordinate normal( 0.0 );

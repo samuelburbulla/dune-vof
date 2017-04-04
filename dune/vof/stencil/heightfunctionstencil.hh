@@ -1,6 +1,8 @@
 #ifndef DUNE_VOF_HEIGHTFUNCTIONSTENCILS_HH
 #define DUNE_VOF_HEIGHTFUNCTIONSTENCILS_HH
 
+#include <dune/grid/spgrid/entity.hh>
+
 namespace Dune
 {
   namespace VoF

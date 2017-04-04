@@ -5,6 +5,9 @@
 #include <dune/geometry/multilineargeometry.hh>
 #include <dune/geometry/virtualrefinement.hh>
 
+#include <dune/vof/geometry/halfspace.hh>
+#include <dune/vof/geometry/intersect.hh>
+
 namespace Dune
 {
   namespace VoF

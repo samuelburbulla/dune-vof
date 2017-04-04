@@ -1,6 +1,9 @@
 #ifndef DUNE_VOF_UTILITY_HH
 #define DUNE_VOF_UTILITY_HH
 
+// dune-common includes
+#include <dune/common/fmatrix.hh>
+
 // dune-vof includes
 #include <dune/vof/geometry/2d/polygon.hh>
 #include <dune/vof/geometry/intersect.hh>

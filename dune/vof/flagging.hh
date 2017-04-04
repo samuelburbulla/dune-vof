@@ -5,6 +5,8 @@
 #include <cmath>
 #include <utility>
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <dune/vof/flagset.hh>
 
 namespace Dune

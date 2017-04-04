@@ -6,7 +6,7 @@
 #include <dune/fem/gridpart/leafgridpart.hh>
 
 // dune-vof includes
-#include <dune/vof/geometry/2d/polygon.hh>
+#include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/intersect.hh>
 
 namespace Dune

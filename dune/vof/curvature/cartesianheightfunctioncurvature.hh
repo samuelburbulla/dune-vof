@@ -6,6 +6,7 @@
 #include <utility>
 
 //- dune-vof includes
+#include <dune/vof/dataset.hh>
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/stencil/heightfunctionstencil.hh>

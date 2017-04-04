@@ -3,6 +3,8 @@
 
 #include <cmath>
 
+#include <dune/common/fvector.hh>
+
 template < class ctype, int dim >
 struct LinearWall
 {
