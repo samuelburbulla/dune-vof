@@ -5,6 +5,7 @@ set(HEADERS
   algorithm.hh
   halfspace.hh
   intersect.hh
+  polytope.hh
   upwindpolygon.hh
   utility.hh
 )
