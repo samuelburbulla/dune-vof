@@ -19,6 +19,26 @@ namespace Dune {
 
       operator bool () const { return !nodes_.empty(); }
 
+      bool operator== ( const Face< Coord > &other) const
+      {
+        if ( other.size() != this->size() )
+          return false;
+
+        std::size_t i0;
+        for ( std::size_t i = 0; i < other.size(); ++i )
+          if ( other.vertex( i ) == this->vertex( 0 ) )
+          {
+            i0 = i;
+            break;
+          }
+
+        for ( std::size_t i = 0; i < other.size(); ++i )
+          if ( other.vertex( (i + i0)%other.size() ) != this->vertex( i ) )
+            return false;
+
+        return true;
+      }
+
       std::size_t size () const { return nodes_.size(); }
 
       const Coord& vertex ( const std::size_t index ) const { return nodes_[ index ]; }
@@ -50,6 +70,7 @@ namespace Dune {
 
           sum += edge.two_norm() * ( center * outerNormal );
         }
+        assert( !std::isnan( sum ) );
         return std::abs( sum ) / 2.0;
       }
 

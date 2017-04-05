@@ -122,7 +122,7 @@ namespace Dune
 
             double u = color[ stencil( i, t ) ];
 
-            if ( u > lastU - tol )
+            if ( u > lastU + tol )
               break;
 
             heights[ i ] += u;
@@ -139,7 +139,7 @@ namespace Dune
 
             double u = color[ stencil( i, t ) ];
 
-            if ( u < lastU + tol )
+            if ( u < lastU - tol )
               u = 1.0;
 
             heights[ i ] += u;

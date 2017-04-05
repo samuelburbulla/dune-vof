@@ -37,7 +37,7 @@ namespace Dune {
 
         for( std::size_t i = 0; i < face.size(); ++i )
         {
-          Line< Coord > edge { face.vertex( i ), face.vertex( i%face.size() ) };
+          Line< Coord > edge { face.vertex( i ), face.vertex( (i+1)%face.size() ) };
 
           auto l0 = halfSpace.levelSet( edge.vertex( 0 ) );
           auto l1 = halfSpace.levelSet( edge.vertex( 1 ) );
