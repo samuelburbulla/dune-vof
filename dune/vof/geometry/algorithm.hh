@@ -110,8 +110,11 @@ namespace Dune {
     template< class Coord >
     auto locateHalfSpace ( const Polyhedron< Coord >& cell, const Coord& innerNormal, double fraction ) -> HalfSpace< Coord >
     {
+      using std::abs;
+      assert( abs( innerNormal.two_norm() - static_cast< double > ( 1.0 ) ) < std::numeric_limits< double >::epsilon() );
+
       Coord outerNormal ( innerNormal );
-      outerNormal /= - outerNormal.two_norm();
+      outerNormal *= -1.0;
 
       fraction = ( fraction > 1.0 ) ? 1.0 : fraction;
       fraction = ( fraction < 0.0 ) ? 0.0 : fraction;

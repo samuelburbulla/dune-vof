@@ -51,7 +51,7 @@ namespace Dune
 
     public:
       explicit HeightFunctionReconstruction ( const VertexStencilSet &vertexStencilSet )
-       : vertexStencilSet_( vertexStencilSet ), initializer_( vertexStencilSet )
+       : vertexStencilSet_( vertexStencilSet ), initializer_( vertexStencilSet ), satisfiesConstraint_( vertexStencilSet_.gridView() )
       {}
 
       /**
@@ -65,7 +65,7 @@ namespace Dune
        * \param   flags           set of flags
        */
       template< class ColorFunction, class ReconstructionSet, class Flags >
-      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = false ) const
+      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = false )
       {
         initializer_( color, reconstructions, flags );
 
@@ -74,7 +74,18 @@ namespace Dune
           if ( !flags.isMixed( entity ) )
             continue;
 
+          satisfiesConstraint( entity ) = 0;
+
           applyLocal( entity, color, flags, reconstructions[ entity ] );
+        }
+
+        for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
+        {
+          if ( !flags.isMixed( entity ) )
+            continue;
+
+          if ( satisfiesConstraint( entity ) == 0 )
+           average( entity, color, flags, reconstructions );
         }
 
         if ( communicate )
@@ -93,7 +104,7 @@ namespace Dune
        * \param   reconstruction  single reconstruction
        */
       template< class ColorFunction, class Flags, class Reconstruction >
-      void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, Reconstruction &reconstruction ) const
+      void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, Reconstruction &reconstruction )
       {
         const Coordinate &normal = reconstruction.innerNormal();
         const Orientation orientation = getOrientation( normal );
@@ -122,7 +133,7 @@ namespace Dune
 
             double u = color[ stencil( i, t ) ];
 
-            if ( u > lastU + tol )
+            if ( u > lastU - tol )
               break;
 
             heights[ i ] += u;
@@ -139,7 +150,7 @@ namespace Dune
 
             double u = color[ stencil( i, t ) ];
 
-            if ( u < lastU - tol )
+            if ( u < lastU + tol )
               u = 1.0;
 
             heights[ i ] += u;
@@ -147,12 +158,14 @@ namespace Dune
           }
         }
 
-        /* Check constraint (seems better without this)
+        // Check constraint
         double uMid = heights[ ( heights.size() - 1 ) / 2 ];
         int effTdown = stencil.effectiveTdown();
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
-        */
+
+
+        satisfiesConstraint( entity ) = 1;
 
         Coordinate newNormal = computeNormal( heights, orientation );
 
@@ -233,10 +246,34 @@ namespace Dune
         return std::make_tuple( dir, sign );
       }
 
+      template< class ColorFunction, class Flags, class ReconstructionSet >
+      void average( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
+      {
+        Coordinate normal ( 0 );// = reconstructions[ entity ].innerNormal();
+        int n = 0;
+        for( const auto& neighbor : vertexStencil( entity ) )
+        {
+          if ( satisfiesConstraint( neighbor ) )
+          {
+            normal += reconstructions[ neighbor ].innerNormal();
+            n++;
+          }
+        }
+        if ( n > 0 )
+        {
+          normalize( normal );
+          reconstructions[ entity ] = locateHalfSpace( makePolytope( entity.geometry() ), normal, color[ entity ] );
+        }
+      }
+
       const VertexStencil &vertexStencil ( const Entity &entity ) const { return vertexStencilSet_[ entity ]; }
+
+      std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ entity ]; }
+      std::size_t satisfiesConstraint ( const Entity &entity ) const { return satisfiesConstraint_[ entity ]; }
 
       const VertexStencilSet &vertexStencilSet_;
       InitialReconstruction initializer_;
+      Dune::VoF::DataSet< GridView, std::size_t > satisfiesConstraint_;
     };
 
   }       // end of namespace VoF
