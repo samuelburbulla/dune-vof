@@ -147,11 +147,12 @@ namespace Dune
           }
         }
 
-        // Check constraint
+        /* Check constraint (seems better without this)
         double uMid = heights[ ( heights.size() - 1 ) / 2 ];
         int effTdown = stencil.effectiveTdown();
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
+        */
 
         Coordinate newNormal = computeNormal( heights, orientation );
 
@@ -197,9 +198,9 @@ namespace Dune
 
         double Hy;
         if ( heights[ 7 ] == 0.0 )
-          Hy = ( heights[ 5 ] - heights[ 1 ] );
+          Hy = ( heights[ 4 ] - heights[ 1 ] );
         else if ( heights[ 1 ] == 0.0 )
-          Hy = ( heights[ 7 ] - heights[ 5 ] );
+          Hy = ( heights[ 7 ] - heights[ 4 ] );
         else
           Hy = ( heights[ 7 ] - heights[ 1 ] ) / 2.0;
 

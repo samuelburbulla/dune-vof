@@ -48,7 +48,7 @@ namespace Dune
 
         auto indicator = [ this, time ]( const auto &x ) { FieldVector< double, 1 > u; this->problem_.evaluate( x, time, u ); return u; };
 
-        Interpolation interpolation ( uh.gridView(), 10 );
+        Interpolation interpolation ( uh.gridView(), 3 );
         interpolation( indicator, uh );
 
         uh.communicate();
