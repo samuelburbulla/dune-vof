@@ -24,7 +24,7 @@ namespace Dune {
         if ( other.size() != this->size() )
           return false;
 
-        std::size_t i0;
+        std::size_t i0 = 0;
         for ( std::size_t i = 0; i < other.size(); ++i )
           if ( other.vertex( i ) == this->vertex( 0 ) )
           {

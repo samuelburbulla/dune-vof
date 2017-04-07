@@ -111,7 +111,7 @@ namespace Dune {
     auto locateHalfSpace ( const Polyhedron< Coord >& cell, const Coord& innerNormal, double fraction ) -> HalfSpace< Coord >
     {
       using std::abs;
-      assert( abs( innerNormal.two_norm() - static_cast< double > ( 1.0 ) ) < std::numeric_limits< double >::epsilon() );
+      assert( abs( innerNormal.two_norm() - static_cast< double > ( 1.0 ) ) < 1e-12 );
 
       Coord outerNormal ( innerNormal );
       outerNormal *= -1.0;
