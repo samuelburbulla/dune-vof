@@ -1,5 +1,6 @@
 set(HEADERS
   heightfunction.hh
+  generalheightfunction.hh
   modifiedswartz.hh
   modifiedyoungs.hh
   modifiedyoungssecondorder.hh
