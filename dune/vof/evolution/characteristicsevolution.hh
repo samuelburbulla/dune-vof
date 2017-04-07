@@ -135,12 +135,27 @@ namespace Dune
       void getNewPosition ( Coordinate& corner,
                             const Velocity& velocity,
                             double time,
-                            double deltaT ) const
+                            double dt ) const
       {
-        Coordinate newPosition = corner;
-        // TODO: Higher order ODE solver!
-        newPosition.axpy( deltaT, velocity( corner, time ) );
-        corner = newPosition;
+        // Runge Kutta 4. Ordnung (Wikipedia: Klassisches Runge-Kutta-Verfahren)
+        Coordinate k1 = velocity( corner, time );
+
+        Coordinate x2 = corner;
+        x2.axpy( dt / 2.0, k1 );
+        Coordinate k2 = velocity( x2, time + dt / 2.0 );
+
+        Coordinate x3 = corner;
+        x3.axpy( dt / 2.0, k2 );
+        Coordinate k3 = velocity( x3, time + dt / 2.0 );
+
+        Coordinate x4 = corner;
+        x4.axpy( dt, k3 );
+        Coordinate k4 = velocity( x4, time + dt );
+
+        corner.axpy( dt * 1.0 / 6.0, k1 );
+        corner.axpy( dt * 1.0 / 3.0, k2 );
+        corner.axpy( dt * 1.0 / 3.0, k3 );
+        corner.axpy( dt * 1.0 / 6.0, k4 );
       }
 
       const GridView& gridView() const { return gridView_; }
