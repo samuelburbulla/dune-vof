@@ -22,6 +22,39 @@ namespace Dune {
     namespace __impl {
 
 
+
+      /**
+       * \ingroup geo2d
+       * \brief implementation for an intersection between a polygon and a polygon
+       *
+       * \tparam  Coord  type of the global coordinate
+       * \return  the intersection polygon
+       */
+      template< class Coord >
+      auto intersect ( const Polygon< Coord >& first, const Polygon< Coord >& second ) -> Polygon< Coord >
+      {
+        if ( first.size() < 3 || second.size() < 3 )
+          return Polygon< Coord >();
+
+        Polygon< Coord > result = second;
+
+        for( int i = 0; i < first.size( 1 ); ++i )
+        {
+          Coord normal = generalizedCrossProduct( first.vertex( (i+1)%first.size() ) - first.vertex( i ) );
+          normalize( normal );
+          const Coord point = first.vertex( i );
+
+          const HalfSpace< Coord > halfspace( normal, point );
+
+          result = intersect( result, halfspace );
+
+          if ( result == Polygon< Coord >() )
+            return Polygon< Coord >();
+        }
+
+        return result;
+      }
+
       /**
        * \ingroup geo2d
        * \brief implementation for an intersection between a polygon and a half space

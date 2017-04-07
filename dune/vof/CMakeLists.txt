@@ -1,5 +1,6 @@
 add_subdirectory(common)
 add_subdirectory(curvature)
+add_subdirectory(evolution)
 add_subdirectory(geometry)
 add_subdirectory(interfacegrid)
 add_subdirectory(interpolation)

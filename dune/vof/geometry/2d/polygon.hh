@@ -52,15 +52,15 @@ namespace Dune {
         if ( other.size() != this->size() )
           return false;
 
-        std::size_t i0;
-        for ( std::size_t i = 0; i < other.size(); ++i )
+        int i0 = 0;
+        for ( int i = 0; i < other.size(); ++i )
           if ( other.vertex( i ) == this->vertex( 0 ) )
           {
             i0 = i;
             break;
           }
 
-        for ( std::size_t i = 0; i < other.size(); ++i )
+        for ( int i = 0; i < other.size(); ++i )
           if ( other.vertex( i + i0 ) != this->vertex( i ) )
             return false;
 
@@ -75,6 +75,13 @@ namespace Dune {
         assert( i < size( 2 ) );
         return vertices()[ i ];
       }
+
+      Coordinate& vertex ( int i )
+      {
+        assert( i < size( 2 ) );
+        return vertices_[ i ];
+      }
+
 
       /**
        * \brief i-th edge
