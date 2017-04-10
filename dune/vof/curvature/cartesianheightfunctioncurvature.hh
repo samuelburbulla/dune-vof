@@ -93,27 +93,47 @@ namespace Dune
         Heights heights ( 0.0 );
 
         for( std::size_t i = 0; i < stencil.columns(); ++i )
-          for( int t = stencil.tdown(); t <= stencil.tup(); ++t )
+        {
+          if ( !stencil.valid( i, 0 ) )
+            continue;
+
+          double u0 = uh[ stencil( i, 0 ) ];
+          heights[ i ] += u0;
+
+          // upwards
+          double lastU = u0;
+
+          for( int t = 1; t <= stencil.tup(); ++t )
           {
             if ( !stencil.valid( i, t ) )
-              continue;
+              break;
 
             double u = uh[ stencil( i, t ) ];
 
-            // local monotonic variation
-            if ( t < 0 )
-            {
-              if ( u < uh[ stencil( i, t+1 ) ] - 1e-8 )
-                u = 1.0;
-            }
-            else if ( t > 0 )
-            {
-              if ( u > uh[ stencil( i, t-1 ) ] + 1e-8 )
-                u = 0.0;
-            }
+            if ( u > lastU - 1e-12 )
+              break;
 
             heights[ i ] += u;
+            lastU = u;
           }
+
+          lastU = u0;
+
+          // downwards
+          for( int t = -1; t >= stencil.tdown(); --t )
+          {
+            if ( !stencil.valid( i, t ) )
+              break;
+
+            double u = uh[ stencil( i, t ) ];
+
+            if ( u < lastU + 1e-12 )
+              u = 1.0;
+
+            heights[ i ] += u;
+            lastU = u;
+          }
+        }
 
         // Constraint
         double uMid = heights[ ( heights.size() - 1 ) / 2 ];
