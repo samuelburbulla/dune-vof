@@ -79,15 +79,6 @@ namespace Dune
           applyLocal( entity, color, flags, reconstructions[ entity ] );
         }
 
-        for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
-        {
-          if ( !flags.isMixed( entity ) )
-            continue;
-
-          if ( satisfiesConstraint( entity ) == 0 )
-           average( entity, color, flags, reconstructions );
-        }
-
         if ( communicate )
           reconstructions.communicate();
       }
@@ -241,6 +232,11 @@ namespace Dune
           dir = i;
           max = std::abs( normal[ i ] );
         }
+
+        // For symmetric considerations use vertical stencil in case of about 45 degrees
+        if ( std::abs( max - 1.0 / std::sqrt( 2.0 ) ) < 1e-3 )
+          dir = dim-1;
+
         int sign = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
 
         return std::make_tuple( dir, sign );
