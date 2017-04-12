@@ -11,6 +11,7 @@
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/utility.hh>
+#include <dune/vof/utility.hh>
 
 #include <dune/vof/stencil/heightfunctionstencil.hh>
 
@@ -111,7 +112,7 @@ namespace Dune
           if ( !stencil.valid( i, 0 ) )
             continue;
 
-          double u0 = color[ stencil( i, 0 ) ];
+          double u0 = clamp( color[ stencil( i, 0 ) ], 0.0, 1.0 );
           heights[ i ] += u0;
 
           // upwards
@@ -122,7 +123,7 @@ namespace Dune
             if ( !stencil.valid( i, t ) )
               break;
 
-            double u = color[ stencil( i, t ) ];
+            double u = clamp( color[ stencil( i, t ) ], 0.0, 1.0 );
 
             if ( u > lastU - tol )
               break;
@@ -139,7 +140,7 @@ namespace Dune
             if ( !stencil.valid( i, t ) )
               break;
 
-            double u = color[ stencil( i, t ) ];
+            double u = clamp( color[ stencil( i, t ) ], 0.0, 1.0 );
 
             if ( u < lastU + tol )
               u = 1.0;

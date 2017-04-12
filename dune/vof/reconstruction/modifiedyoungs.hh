@@ -12,6 +12,7 @@
 
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/utility.hh>
+#include <dune/vof/utility.hh>
 
 namespace Dune
 {
@@ -103,7 +104,7 @@ namespace Dune
           const ctype weight = 1.0 / d.two_norm2();
           d *= weight;
           AtA += outerProduct( d, d );
-          Atb.axpy( weight * ( color[ neighbor ] - colorEn ), d );
+          Atb.axpy( weight * ( clamp( color[ neighbor ], 0.0, 1.0 ) - colorEn ), d );
         }
         AtA.solve( normal, Atb );
 

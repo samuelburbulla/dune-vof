@@ -10,6 +10,7 @@
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/stencil/heightfunctionstencil.hh>
+#include <dune/vof/utility.hh>
 
 
 namespace Dune
@@ -97,7 +98,7 @@ namespace Dune
           if ( !stencil.valid( i, 0 ) )
             continue;
 
-          double u0 = uh[ stencil( i, 0 ) ];
+          double u0 = clamp( uh[ stencil( i, 0 ) ], 0.0, 1.0 );
           heights[ i ] += u0;
 
           // upwards
@@ -108,7 +109,7 @@ namespace Dune
             if ( !stencil.valid( i, t ) )
               break;
 
-            double u = uh[ stencil( i, t ) ];
+            double u = clamp( uh[ stencil( i, t ) ], 0.0, 1.0 );
 
             if ( u > lastU - 1e-12 )
               break;
@@ -125,7 +126,7 @@ namespace Dune
             if ( !stencil.valid( i, t ) )
               break;
 
-            double u = uh[ stencil( i, t ) ];
+            double u = clamp( uh[ stencil( i, t ) ], 0.0, 1.0 );
 
             if ( u < lastU + 1e-12 )
               u = 1.0;

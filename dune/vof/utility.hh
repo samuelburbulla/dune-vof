@@ -48,6 +48,14 @@ namespace Dune
       }
     }
 
+
+    template< class ctype >
+    ctype clamp( ctype v, ctype lo, ctype hi )
+    {
+      return std::max( std::min( v, hi ), lo );
+    }
+
+
   } // namespace VoF
 
 }  // namespace Dune
