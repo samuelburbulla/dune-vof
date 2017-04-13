@@ -37,7 +37,8 @@ namespace Dune {
 
       static constexpr int dimension = 2;
       static constexpr int dimensionworld = Coordinate::dimension;
-      static_assert( dimension <= dimensionworld, "dimension larger than dimensionworld." );
+
+      //static_assert( dimension <= dimensionworld, "dimension larger than dimensionworld." );
 
       Polygon () = default;
 
@@ -109,11 +110,12 @@ namespace Dune {
        */
       Coordinate centroid () const
       {
-        //DUNE_THROW( NotImplemented, "Polygon.centroid() not yet implemented." );
         Coordinate c ( 0 );
-        for( int i = 0; i < size(); i++ )
-          c += vertex( i );
-        c /= size();
+        int n = size( 1 );
+        for( int i = 0; i < n; i++ )
+          c.axpy( ( vertex( i )[ 0 ] * vertex( (i+1)%n )[ 1 ] ) - ( vertex( i )[ 1 ] * vertex( (i+1)%n )[ 0 ] ), vertex( i ) + vertex( (i+1)%n ) );
+
+        c /= 6.0 * volume();
         return c;
       }
 

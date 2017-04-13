@@ -205,6 +205,7 @@ namespace Dune {
 
         const Coordinate center () const
         {
+          // TODO: Implement correct centroid formula!
           Coordinate center ( 0.0 );
           for ( std::size_t i = 0; i < nodeIds_.size(); ++i )
             center += node( i );
