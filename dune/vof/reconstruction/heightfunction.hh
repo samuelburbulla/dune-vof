@@ -105,7 +105,7 @@ namespace Dune
         const auto stencil = Stencil( color.gridView(), entityInfo, orientation );
 
         Heights heights ( 0.0 );
-        double tol = 1e-12;
+        double TOL = 1e-10;
 
         for( std::size_t i = 0; i < stencil.columns(); ++i )
         {
@@ -125,7 +125,7 @@ namespace Dune
 
             double u = clamp( color[ stencil( i, t ) ], 0.0, 1.0 );
 
-            if ( u > lastU - tol )
+            if ( u > lastU - TOL )
               break;
 
             heights[ i ] += u;
@@ -142,7 +142,7 @@ namespace Dune
 
             double u = clamp( color[ stencil( i, t ) ], 0.0, 1.0 );
 
-            if ( u < lastU + tol )
+            if ( u < lastU + TOL )
               u = 1.0;
 
             heights[ i ] += u;

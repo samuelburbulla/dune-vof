@@ -122,7 +122,7 @@ namespace Dune
         Segments segments = computeSegments( color, lines, centroid, h, reconstructions[ entity ] );
 
         Heights heights ( 0.0 );
-        double tol = 1e-12;
+        double TOL = std::numeric_limits< double >::epsilon();
 
         for( std::size_t i = 0; i < noc; ++i )
           for( std::size_t r = 0; r < 2; ++r )
@@ -135,10 +135,10 @@ namespace Dune
             {
               double u = segs[ s ][ 1 ];
 
-              if ( r == 0 && u > lastU + tol )
+              if ( r == 0 && u > lastU - TOL )
                 u = 0.0;
 
-              if ( r == 1 && u < lastU - tol )
+              if ( r == 1 && u < lastU + TOL )
                 u = 1.0;
 
               heights[ i ] += u * segs[ s ][ 0 ];
