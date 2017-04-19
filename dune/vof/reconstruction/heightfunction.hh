@@ -104,8 +104,47 @@ namespace Dune
         const auto entityInfo = GridView::Grid::getRealImplementation( entity ).entityInfo();
         const auto stencil = Stencil( color.gridView(), entityInfo, orientation );
 
-        Heights heights ( 0.0 );
-        double TOL = 1e-10;
+        Heights heights = getHeightValues( color, stencil );
+
+        // Check constraint
+        double uMid = heights[ ( heights.size() - 1 ) / 2 ];
+        int effTdown = stencil.effectiveTdown();
+        if ( uMid < effTdown || uMid > effTdown + 1 )
+          return;
+
+        satisfiesConstraint( entity ) = 1;
+
+        Coordinate newNormal = computeNormal( heights, orientation );
+        reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), newNormal, color[ entity ] );
+      }
+
+    protected:
+      static inline Orientation getOrientation( const Coordinate &normal )
+      {
+        std::size_t dir = 0;
+        double max = std::numeric_limits< double >::min();
+        for ( std::size_t i = 0; i < dim; ++i )
+        if ( std::abs( normal[ i ] ) > max )
+        {
+          dir = i;
+          max = std::abs( normal[ i ] );
+        }
+
+        // For symmetric considerations use vertical stencil in case of about 45 degrees
+        if ( std::abs( max - 1.0 / std::sqrt( 2.0 ) ) < 1e-3 )
+          dir = dim-1;
+
+        int sign = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
+
+        return std::make_tuple( dir, sign );
+      }
+
+      template< class ColorFunction, class Stencil >
+      Heights getHeightValues ( const ColorFunction &color, const Stencil &stencil )
+      {
+        Heights heights( 0.0 );
+
+        const double TOL = 1e-10;
 
         for( std::size_t i = 0; i < stencil.columns(); ++i )
         {
@@ -149,19 +188,7 @@ namespace Dune
             lastU = u;
           }
         }
-
-        // Check constraint
-        double uMid = heights[ ( heights.size() - 1 ) / 2 ];
-        int effTdown = stencil.effectiveTdown();
-        if ( uMid < effTdown || uMid > effTdown + 1 )
-          return;
-
-
-        satisfiesConstraint( entity ) = 1;
-
-        Coordinate newNormal = computeNormal( heights, orientation );
-
-        reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), newNormal, color[ entity ] );
+        return heights;
       }
 
     private:
@@ -223,30 +250,10 @@ namespace Dune
       }
     #endif
 
-      static inline Orientation getOrientation( const Coordinate &normal )
-      {
-        std::size_t dir = 0;
-        double max = std::numeric_limits< double >::min();
-        for ( std::size_t i = 0; i < dim; ++i )
-        if ( std::abs( normal[ i ] ) > max )
-        {
-          dir = i;
-          max = std::abs( normal[ i ] );
-        }
-
-        // For symmetric considerations use vertical stencil in case of about 45 degrees
-        if ( std::abs( max - 1.0 / std::sqrt( 2.0 ) ) < 1e-3 )
-          dir = dim-1;
-
-        int sign = ( normal[ dir ] > 0 ) ? -1.0 : 1.0;
-
-        return std::make_tuple( dir, sign );
-      }
-
       template< class ColorFunction, class Flags, class ReconstructionSet >
       void average( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
       {
-        Coordinate normal ( 0 );// = reconstructions[ entity ].innerNormal();
+        Coordinate normal ( 0 );
         int n = 0;
         for( const auto& neighbor : vertexStencil( entity ) )
         {
@@ -263,6 +270,7 @@ namespace Dune
         }
       }
 
+    protected:
       const VertexStencil &vertexStencil ( const Entity &entity ) const { return vertexStencilSet_[ entity ]; }
 
       std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ entity ]; }
