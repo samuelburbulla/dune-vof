@@ -211,7 +211,7 @@ try {
     ColorFunction dfFlags ( gridView );
 
     using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils >;
-    CurvatureOperator curvatureOperator ( gridView, stencils );
+    CurvatureOperator curvatureOperator ( stencils );
     using CurvatureSet = Dune::VoF::CurvatureSet< GridView >;
     CurvatureSet curvatureSet( gridView );
 

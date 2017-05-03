@@ -100,11 +100,12 @@ namespace Dune
         Vector Atb( 0.0 );
         for ( const auto &neighbor : stencil( entity ) )
         {
+          double colorNb = clamp( color[ neighbor ], 0.0, 1.0 );
           Vector d = neighbor.geometry().center() - center;
           const ctype weight = 1.0 / d.two_norm2();
           d *= weight;
           AtA += outerProduct( d, d );
-          Atb.axpy( weight * ( clamp( color[ neighbor ], 0.0, 1.0 ) - colorEn ), d );
+          Atb.axpy( weight * ( colorNb - colorEn ), d );
         }
         AtA.solve( normal, Atb );
 
