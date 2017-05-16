@@ -34,7 +34,7 @@ namespace Dune
     template< class GV, class StS, class IR >
     struct ModifiedSwartzReconstruction
     {
-      using GridView =GV;
+      using GridView = GV;
       using StencilSet = StS;
       using InitialReconstruction = IR;
 
@@ -46,11 +46,11 @@ namespace Dune
 
     public:
       ModifiedSwartzReconstruction ( const StencilSet &stencils, InitialReconstruction initializer,
-                                     const std::size_t maxIterations = 50 )
+                                     const std::size_t maxIterations = 3 )
        : stencils_( stencils ), initializer_( initializer ), maxIterations_( maxIterations )
       {}
 
-      explicit ModifiedSwartzReconstruction ( const StencilSet &stencils, const std::size_t maxIterations = 50 )
+      explicit ModifiedSwartzReconstruction ( const StencilSet &stencils, const std::size_t maxIterations = 3 )
        : stencils_( stencils ), initializer_( stencils ), maxIterations_( maxIterations )
       {}
 
