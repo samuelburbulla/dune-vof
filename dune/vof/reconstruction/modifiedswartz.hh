@@ -95,58 +95,89 @@ namespace Dune
       template< class ColorFunction, class Flags, class ReconstructionSet >
       void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
       {
-        std::size_t iterations = 0;
         auto &reconstruction = reconstructions[ entity ];
-        Coordinate newNormal, normal = reconstruction.innerNormal();
 
-        const auto geoEn = entity.geometry();
-        const auto& stencilEn = stencil( entity );
-        auto polygonEn = makePolytope( geoEn );
+        Coordinate normal = reconstruction.innerNormal();
+        std::size_t iterations = 0;
+        double residuum;
 
         do
         {
-          auto it1 = intersect( std::cref( polygonEn ), reconstruction.boundary() );
-          auto lineEn = static_cast< typename decltype( it1 )::Result > ( it1 );
+          Coordinate oldNormal = normal;
+          normal = 0;
 
-          newNormal = Coordinate( 0 );
-          for( const auto &neighbor : stencilEn )
+          auto interfaceEn = interface( entity, reconstructions );
+
+          for( const auto &intersection : intersections( color.gridView(), entity ) )
           {
+            if ( !intersection.neighbor() )
+              continue;
+
+            const auto &neighbor = intersection.outside();
+
             if ( !flags.isMixed( neighbor ) )
               continue;
 
-            // disregard empty neighbors
-            if ( reconstructions[ neighbor ].innerNormal() == Coordinate( 0 ) )
-              continue;
+            auto interfaceNb = interface( neighbor, reconstructions );
 
-            auto polygonNb = makePolytope( neighbor.geometry() );
-            auto it2 = intersect( std::cref( polygonNb ), locateHalfSpace( polygonNb, normal, color[ neighbor ] ).boundary() );
-            auto lineNb = static_cast< typename decltype( it2 )::Result > ( it2 );
+            // TODO: 3D
+          #if GRIDDIM == 2
 
-            Coordinate direction = lineNb.centroid() - lineEn.centroid();
-            Coordinate centerNormal = normal;
-            centerNormal.axpy( -(normal * direction) / direction.two_norm2(), direction );
+            Coordinate centerNormal = generalizedCrossProduct( interfaceNb.centroid() - interfaceEn.centroid() );
 
-            if( centerNormal.two_norm2() >= std::numeric_limits< decltype( centerNormal.two_norm2() ) >::epsilon() )
+            if ( centerNormal * oldNormal < 0 )
+              centerNormal *= -1.0;
+            normalize( centerNormal );
+
+            double weight = interfaceNb.volume();
+            normal.axpy( weight, centerNormal );
+
+
+          #elif GRIDDIM == 3
+
+            Coordinate centerNormal( 0.0 );
+
+            for( const auto &intersection2 : intersections( color.gridView(), entity ) )
+            {
+              if ( !intersection2.neighbor() )
+                continue;
+
+              const auto &neighbor2 = intersection2.outside();
+
+              if ( neighbor == neighbor2 )
+                continue;
+
+              if ( !flags.isMixed( neighbor2 ) )
+                continue;
+
+              auto interfaceNb2 = interface( neighbor2, reconstructions );
+
+              centerNormal = generalizedCrossProduct(
+                interfaceNb.centroid()  - interfaceEn.centroid(),
+                interfaceNb2.centroid() - interfaceEn.centroid()
+              );
+
+              if ( centerNormal * oldNormal < 0 )
+                centerNormal *= -1.0;
               normalize( centerNormal );
 
-            // if ( ( centerNormal * normal ) < 0.0 )
-            //   centerNormal *= -1.0;
+              double weight = interfaceNb.volume() * interfaceNb2.volume();
+              normal.axpy( weight, centerNormal );
+            }
+          #endif
 
-            newNormal += centerNormal;
-            assert( !std::isnan( newNormal[0] ) );
           }
 
-          if ( newNormal == Coordinate( 0 ) )
-            break;
+          normalize( normal );
 
-          normalize( newNormal );
+          assert( normal.two_norm() > 0 );
 
-          reconstruction = locateHalfSpace( polygonEn, newNormal, color[ entity ] );
+          reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), normal, color[ entity ] );
 
-          std::swap( newNormal, normal );
+          residuum = 1.0 - ( normal * oldNormal );
           ++iterations;
         }
-        while ( (normal - newNormal).two_norm2() > 1e-8 && iterations < maxIterations_ );
+        while ( residuum > 1e-8 && iterations < maxIterations_ );
       }
 
       const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }

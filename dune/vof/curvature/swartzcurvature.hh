@@ -56,7 +56,7 @@ namespace Dune
       template< class ReconstructionSet, class Flags, class CurvatureSet >
       void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
       {
-        int n = 0;
+        double weights = 0.0;
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate centroidEn = interfaceEn.centroid();
         Coordinate centerEn = entity.geometry().center();
@@ -89,9 +89,6 @@ namespace Dune
           if ( nu12 * reconstructions[ entity ].innerNormal() < 0 )
             continue;
 
-          //if ( ( centerEn - centerNb1 ) *  tanNb1 < 0 )
-            //continue;
-
           for( const auto& neighbor2 : stencil( entity ) )
           {
             if ( !flags.isMixed( neighbor2 ) )
@@ -122,12 +119,6 @@ namespace Dune
             if ( nu23 * reconstructions[ entity ].innerNormal() < 0 )
               continue;
 
-            //if ( ( centerNb2 - centerEn ) *  tanNb2 < 0 )
-              //continue;
-
-            //if ( tanNb1 * tanNb2 < 0 )
-              //continue;
-
             if ( midwayDiff * ( tanNb1 + tanNb2 ) < 0 )
               continue;
 
@@ -136,12 +127,15 @@ namespace Dune
 
             // taking all together
             double M = ( ( muNb2 - muEn ) / triangleNb2 - ( muEn - muNb1 ) / triangleNb1 ) / ( 2.0 * deltaS );
-            curvatureSet[ entity ] += times( nu12, nu23 ) / ( ( 1.0 + M ) * deltaS );
-            ++n;
+
+            double weight = interfaceNb2.volume();
+            curvatureSet[ entity ] += weight * times( nu12, nu23 ) / ( ( 1.0 + M ) * deltaS );
+            weights += weight;
           }
         }
 
-        curvatureSet[ entity ] /= static_cast< double >( n );
+        if ( weights > 0 )
+          curvatureSet[ entity ] /= weights;
       }
 
       const GridView &gridView () const { return gridView_; }
