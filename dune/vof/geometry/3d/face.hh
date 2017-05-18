@@ -15,7 +15,12 @@ namespace Dune {
     {
       Face () {};
 
-      Face ( const std::vector< Coord >& nodes ) : nodes_ ( nodes ) {}
+      Face ( const std::vector< Coord >& nodes ) : nodes_ ( nodes )
+      {
+        assert( nodes.size() > 2 );
+        faceUnitNormal_ = generalizedCrossProduct( vertex( 2 ) - vertex( 1 ), vertex( 0 ) - vertex( 1 ) );
+        faceUnitNormal_ /= faceUnitNormal_.two_norm();
+      }
 
       operator bool () const { return !nodes_.empty(); }
 
@@ -41,42 +46,75 @@ namespace Dune {
 
       std::size_t size () const { return nodes_.size(); }
 
-      const Coord& vertex ( const std::size_t index ) const { return nodes_[ index ]; }
+      const Coord& vertex ( const std::size_t index ) const { return nodes_[ index % size() ]; }
+
+
+      double triangleVolume( const std::vector< Coord > &n ) const
+      {
+        assert ( n.size() == 3 );
+        double sum = 0;
+        for( std::size_t i = 0; i < 3; ++i )
+        {
+          Coord center = n[ (i+1)%3 ] ;
+          center += n[ i ];
+          center *= 0.5;
+
+          Coord edge = n[ (i+1)%3 ];
+          edge -= n[ i ];
+          sum += center * generalizedCrossProduct( edge, faceUnitNormal_ );
+        }
+        return std::abs( sum ) / 2.0;
+      }
 
       Coord centroid () const
       {
-        // TODO: Implement correct centroid formula!
-        Coord center ( 0.0 );
-        for ( std::size_t i = 0; i < nodes_.size(); ++i )
-          center += nodes_[ i ];
-        center *= 1.0 / ( nodes_.size() );
-        return center;
+        Coord c ( 0.0 );
+        for ( std::size_t i = 0; i < size(); ++i )
+          c += nodes_[ i ];
+        c /= static_cast< double >( size() );
+
+        Coord centroid ( 0.0 );
+
+        for( std::size_t i = 0; i < size(); ++i )
+        {
+          double volTriang = triangleVolume( { vertex( i ), vertex( i+1 ), c } );
+          Coord cTriang = c;
+          cTriang += vertex( i );
+          cTriang += vertex( i+1 );
+          cTriang /= 3.0;
+          centroid.axpy( volTriang, cTriang );
+        }
+
+        centroid /= volume();
+        return centroid;
       }
 
       double volume () const
       {
         double sum = 0;
-        Coord normal = generalizedCrossProduct( vertex( 2 ) - vertex( 1 ), vertex( 0 ) - vertex( 1 ) );
-        normal /= normal.two_norm();
-
-        int n = size();
-        for( int i = 0; i < n; i++ )
-        {
-          Coord edge = vertex( (i+1)%n ) - vertex( i );
-          Coord center = vertex( (i+1)%n ) + vertex( i );
-          center *= 0.5;
-
-          Coord outerNormal = generalizedCrossProduct( edge, normal );
-          outerNormal /= outerNormal.two_norm();
-
-          sum += edge.two_norm() * ( center * outerNormal );
-        }
-        assert( !std::isnan( sum ) );
+        for( std::size_t i = 0; i < size(); ++i )
+          sum += edgeCenter( i ) * edgeOuterNormal( i );
         return std::abs( sum ) / 2.0;
       }
 
     private:
+      const Coord edgeOuterNormal( const std::size_t i ) const
+      {
+        Coord edge = vertex( i+1 );
+        edge -= vertex( i );
+        return generalizedCrossProduct( edge, faceUnitNormal_ );
+      }
+
+      const Coord edgeCenter( const std::size_t i ) const
+      {
+        Coord center = vertex( i+1 );
+        center += vertex( i );
+        center *= 0.5;
+        return center;
+      }
+
       const std::vector< Coord > nodes_;
+      Coord faceUnitNormal_;
     };
 
   } // namespace VoF
