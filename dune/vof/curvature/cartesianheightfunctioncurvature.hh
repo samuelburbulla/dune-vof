@@ -67,15 +67,18 @@ namespace Dune
         curvature.communicate();
         this->satisfiesConstraint_.communicate();
 
-        for ( const auto& entity : elements( color.gridView(), Partitions::interiorBorder ) )
+        for ( int i = 0; i < 3; ++i )
         {
-          if ( !flags.isMixed( entity ) )
-            continue;
+          CurvatureSet newCurvature ( color.gridView() );
 
-          if ( this->satisfiesConstraint( entity ) )
-            continue;
+          for ( const auto& entity : elements( color.gridView(), Partitions::interiorBorder ) )
+          {
+            if ( !flags.isMixed( entity ) )
+              continue;
 
-          averageCurvature( entity, curvature );
+            averageCurvature( entity, curvature, flags, newCurvature, (i > 0) );
+          }
+          curvature = newCurvature;
         }
 
         if ( communicate )
@@ -90,7 +93,7 @@ namespace Dune
         const Orientation orientation = this->getOrientation( normal );
 
         const auto entityInfo = GridView::Grid::getRealImplementation( entity ).entityInfo();
-        const Stencil stencil ( color.gridView(), entityInfo, orientation );
+        const Stencil stencil ( color.gridView(), entityInfo, orientation, 1 );
 
         Heights heights = this->getHeightValues( color, stencil );
 
@@ -132,20 +135,31 @@ namespace Dune
       }
     #endif
 
-      template< class CurvatureSet >
-      void averageCurvature( const Entity &entity, CurvatureSet &curvature ) const
+      template< class CurvatureSet, class Flags >
+      void averageCurvature( const Entity &entity, const CurvatureSet &curvature, const Flags &flags, CurvatureSet &newCurvature, bool ignore ) const
       {
         int n = 0;
+
+        if ( this->satisfiesConstraint( entity ) || ignore )
+        {
+          newCurvature[ entity ] += curvature[ entity ];
+          n++;
+        }
+
         for( const auto& neighbor : this->vertexStencil( entity ) )
         {
-          if ( this->satisfiesConstraint( neighbor ) )
+          if ( !flags.isMixed( neighbor ) )
+            continue;
+
+          if ( this->satisfiesConstraint( neighbor ) || ignore )
           {
-            curvature[ entity ] += curvature[ neighbor ];
+            newCurvature[ entity ] += curvature[ neighbor ];
             n++;
           }
         }
+
         if ( n > 0 )
-          curvature[ entity ] /= n;
+          newCurvature[ entity ] /= static_cast< double >( n );
       }
     };
 

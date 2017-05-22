@@ -5,6 +5,7 @@
 #include <dune/vof/reconstruction/modifiedyoungs.hh>
 #include <dune/vof/reconstructionset.hh>
 
+#include <dune/vof/reconstruction/swartz.hh>
 #include <dune/vof/reconstruction/modifiedswartz.hh>
 
 namespace Dune
@@ -24,26 +25,24 @@ namespace Dune
      * \return [description]
      */
 
-    /*
+
     template< class GridView, class Stencils >
     static inline auto reconstruction ( const GridView&, Stencils &stencils )
-     -> typename std::enable_if< GridView::dimension == 2,
-                                 ModifiedSwartzReconstruction< GridView, Stencils,
-                                  ModifiedYoungsReconstruction< GridView, Stencils > > >::type
+     -> ModifiedSwartzReconstruction< GridView, Stencils, ModifiedYoungsReconstruction< GridView, Stencils > >
     {
       return ModifiedSwartzReconstruction< GridView, Stencils,
                                            ModifiedYoungsReconstruction< GridView, Stencils >
                                          >( stencils );
     }
-    */
 
+    /*
     template< class GridView, class Stencils >
     static inline auto reconstruction ( const GridView&, Stencils &stencils )
-     ->  HeightFunctionReconstruction< GridView, Stencils, ModifiedYoungsReconstruction< GridView, Stencils > >
+     ->  ModifiedYoungsReconstruction< GridView, Stencils >
     {
-      return HeightFunctionReconstruction< GridView, Stencils, ModifiedYoungsReconstruction< GridView, Stencils > >( stencils );
+      return ModifiedYoungsReconstruction< GridView, Stencils >( stencils );
     }
-
+    */
   } // namespace VoF
 
 } // namespace Dune

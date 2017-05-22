@@ -28,6 +28,7 @@
 #include <dune/vof/stencil/vertexneighborsstencil.hh>
 #include <dune/vof/geometry/utility.hh>
 #include <dune/vof/geometry/intersect.hh>
+#include <dune/vof/curvature/swartzcurvature.hh>
 #include <dune/vof/curvature/cartesianheightfunctioncurvature.hh>
 
 //- local includes
@@ -43,7 +44,7 @@
 // ---------
 
 template < class GridView >
-double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters )
+double algorithm ( const GridView& gridView, const Dune::ParameterTree &parameters, const int level )
 {
   using DomainVector = Dune::FieldVector< double, GridView::dimensionworld >;
   using ColorFunction = Dune::VoF::ColorFunction< GridView >;
@@ -70,16 +71,14 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   //using ProblemType = Slope< double, GridView::dimensionworld >;
   //ProblemType problem ( 0.125 * M_PI );
 
-  int level = 0;
-
   const double eps = parameters.get< double >( "scheme.epsilon", 1e-6 );
   const bool writeData = parameters.get< bool >( "io.writeData", 0 );
 
   // build domain references for each cell
   Stencils stencils( gridView );
 
-  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils >;
-  CurvatureOperator curvatureOperator ( gridView, stencils );
+  using CurvatureOperator = Dune::VoF::SwartzCurvature< GridView, Stencils >;
+  CurvatureOperator curvatureOperator ( stencils );
   CurvatureSet curvatureSet( gridView );
   ColorFunction curvatureError( gridView );
 
@@ -161,7 +160,7 @@ try {
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int maxLevel = 5;
+  int maxLevel = 10;
 
   std::ofstream errorsFile;
   errorsFile.open( "errors" );
@@ -172,7 +171,7 @@ try {
   for ( ; level < maxLevel; ++level )
   {
     // start time integration
-    double singleL1Error = algorithm( grid.leafGridView(), parameters );
+    double singleL1Error = algorithm( grid.leafGridView(), parameters, level );
 
     double L1Error = grid.comm().sum( singleL1Error );
 
@@ -185,7 +184,7 @@ try {
       if ( level > level0 )
       {
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
-        assert( eoc > 1.0 );
+        //assert( eoc > 1.0 );
       }
 
       std::cout << "Err " << level << ": " << L1Error << std::endl;

@@ -46,11 +46,11 @@ namespace Dune
 
     public:
       ModifiedSwartzReconstruction ( const StencilSet &stencils, InitialReconstruction initializer,
-                                     const std::size_t maxIterations = 3 )
+                                     const std::size_t maxIterations = 10 )
        : stencils_( stencils ), initializer_( initializer ), maxIterations_( maxIterations )
       {}
 
-      explicit ModifiedSwartzReconstruction ( const StencilSet &stencils, const std::size_t maxIterations = 3 )
+      explicit ModifiedSwartzReconstruction ( const StencilSet &stencils, const std::size_t maxIterations = 10 )
        : stencils_( stencils ), initializer_( stencils ), maxIterations_( maxIterations )
       {}
 
@@ -99,14 +99,17 @@ namespace Dune
 
         Coordinate normal = reconstruction.innerNormal();
         std::size_t iterations = 0;
-        double residuum;
+        double residuum = 0.0;
+
+        const auto polytope = makePolytope( entity.geometry() );
 
         do
         {
           Coordinate oldNormal = normal;
           normal = 0;
 
-          auto interfaceEn = interface( entity, reconstructions );
+          const auto hs = locateHalfSpace( polytope, oldNormal, color[ entity ] );
+          auto interfaceEn = intersect( polytope, hs.boundary(), eager );
 
           for( const auto &intersection : intersections( color.gridView(), entity ) )
           {
@@ -118,7 +121,9 @@ namespace Dune
             if ( !flags.isMixed( neighbor ) )
               continue;
 
-            auto interfaceNb = interface( neighbor, reconstructions );
+            const auto polytopeNb = makePolytope( neighbor.geometry() );
+            const auto hsNb = locateHalfSpace( polytopeNb, oldNormal, color[ neighbor ] );
+            auto interfaceNb = intersect( polytopeNb, hsNb.boundary(), eager );
 
             // TODO: 3D
           #if GRIDDIM == 2
@@ -134,7 +139,7 @@ namespace Dune
 
 
           #elif GRIDDIM == 3
-
+            static_assert( false, 'Swartz is not runnig appropiately in 3D yet!');
             Coordinate centerNormal( 0.0 );
 
             for( const auto &intersection2 : intersections( color.gridView(), entity ) )
@@ -150,7 +155,13 @@ namespace Dune
               if ( !flags.isMixed( neighbor2 ) )
                 continue;
 
-              auto interfaceNb2 = interface( neighbor2, reconstructions );
+              if ( color.gridView().indexSet().index( neighbor2 ) > color.gridView().indexSet().index( neighbor ) )
+                continue;
+
+              const auto polytopeNb2 = makePolytope( neighbor2.geometry() );
+              const auto hsNb2 = locateHalfSpace( polytopeNb2, oldNormal, color[ neighbor2 ] );
+              auto interfaceNb2 = intersect( polytopeNb2, hsNb2.boundary(), eager );
+
 
               centerNormal = generalizedCrossProduct(
                 interfaceNb.centroid()  - interfaceEn.centroid(),
@@ -161,7 +172,7 @@ namespace Dune
                 centerNormal *= -1.0;
               normalize( centerNormal );
 
-              double weight = interfaceNb.volume() * interfaceNb2.volume();
+              double weight = 1.0;
               normal.axpy( weight, centerNormal );
             }
           #endif
@@ -172,12 +183,12 @@ namespace Dune
 
           assert( normal.two_norm() > 0 );
 
-          reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), normal, color[ entity ] );
+          reconstruction = locateHalfSpace( polytope, normal, color[ entity ] );
 
           residuum = 1.0 - ( normal * oldNormal );
           ++iterations;
         }
-        while ( residuum > 1e-8 && iterations < maxIterations_ );
+        while ( residuum > 1e-12 && iterations < maxIterations_ );
       }
 
       const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }

@@ -157,7 +157,7 @@ namespace Dune
 
       typedef Dune::EntitySeed< Grid, InterfaceGridEntitySeed< codimension, Grid > > EntitySeed;
       typedef Dune::Geometry< mydimension, dimensionworld, Grid, InterfaceGridGeometry > Geometry;
-      typedef Dune::Geometry< mydimension, dimension, Grid, InterfaceGridGeometry > LocalGeometry; 
+      typedef Dune::Geometry< mydimension, dimension, Grid, InterfaceGridGeometry > LocalGeometry;
 
       template< int codim >
       struct Codim

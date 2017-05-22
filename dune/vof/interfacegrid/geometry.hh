@@ -24,13 +24,13 @@ namespace Dune
     struct BasicPolygonGeometry
     {
       typedef ct ctype;
-      
+
       static const int mydimension = 2;
       static const int coorddimension = cdim;
-      
+
       typedef FieldVector< ctype, mydimension > LocalCoordinate;
       typedef FieldVector< ctype, coorddimension > GlobalCoordinate;
-      
+
       typedef FieldMatrix< ctype, mydimension, coorddimension > JacobianTransposed;
       typedef FieldMatrix< ctype, coorddimension, mydimension > JacobianInverseTransposed;
 
@@ -186,7 +186,7 @@ namespace Dune
       typedef typename Base::GlobalCoordinate GlobalCoordinate;
 
       BasicInterfaceGridGeometry ( const GlobalCoordinate &x, const GlobalCoordinate &y )
-        : Base( ReferenceElements< ctype, 1 >::cube(), x, { y - x } ) 
+        : Base( ReferenceElements< ctype, 1 >::cube(), x, { y - x } )
       {}
 
       BasicInterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize )

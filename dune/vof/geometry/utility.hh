@@ -150,6 +150,7 @@ namespace Dune
     template< class Coord >
     auto normalize ( Coord &v ) -> void_t< decltype( std::declval< Coord >().two_norm() ) >
     {
+      assert( v.two_norm() > 0.0 );
       v /= v.two_norm();
     }
 

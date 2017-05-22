@@ -33,8 +33,8 @@ namespace Dune
       static constexpr int noc = std::pow( 3, dim-1 );
 
     public:
-      explicit HeightFunctionStencil ( const GridView &gridView, const EntityInfo &entityInfo, const Orientation &orientation )
-       : gridView_( gridView ), tup_( 3 ), entityInfo_( entityInfo ), orientation_( orientation )
+      explicit HeightFunctionStencil ( const GridView &gridView, const EntityInfo &entityInfo, const Orientation &orientation, const double tup = 3 )
+       : gridView_( gridView ), tup_( tup ), entityInfo_( entityInfo ), orientation_( orientation )
       {}
 
       std::size_t columns() const { return noc; }

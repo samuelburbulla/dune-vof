@@ -120,9 +120,6 @@ namespace Dune
         if ( !flags.isMixed( entity ) )
           continue;
 
-        if ( curvature[ entity ] == 0.0 )
-          continue;
-
         auto polygon = makePolytope( entity.geometry() );
         auto it = intersect( polygon, reconstructions[ entity ].boundary() );
         auto interface = static_cast< typename decltype( it )::Result > ( it );
