@@ -240,6 +240,14 @@ namespace Dune {
         DUNE_THROW( InvalidStateException, "Invalid GeometryType." );
     }
 
+    template< class Geometry >
+    static inline auto makeLine( const Geometry& geometry ) -> Line< typename Geometry::GlobalCoordinate >
+    {
+      return Line< typename Geometry::GlobalCoordinate > { geometry.corner( 0 ), geometry.corner( 1 ) };
+    }
+
+
+
     template< class Geometry, class Map >
     static inline auto makePolygon( const Geometry& geometry, Map&& map )
       -> Polygon< typename Geometry::GlobalCoordinate >

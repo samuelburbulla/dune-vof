@@ -17,14 +17,24 @@ namespace Dune
     // ------------
     template < class Geometry >
     static inline auto makePolytope ( const Geometry& geometry )
-      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2, Polygon< typename Geometry::GlobalCoordinate > >::type
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2 && Geometry::mydimension == 2, 
+      Polygon< typename Geometry::GlobalCoordinate > >::type
     {
       return makePolygon ( geometry );
     }
 
+    template < class Geometry >
+    static inline auto makePolytope ( const Geometry& geometry )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2 && Geometry::mydimension == 1, 
+      Line< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makeLine ( geometry );
+    }
+
     template < class Geometry, class Map >
     static inline auto makePolytope ( const Geometry& geometry, Map&& map )
-      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2, Polygon< typename Geometry::GlobalCoordinate > >::type
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2,
+      Polygon< typename Geometry::GlobalCoordinate > >::type
     {
       return makePolygon ( geometry, std::forward< Map >( map ) );
     }

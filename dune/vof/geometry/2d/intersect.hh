@@ -179,6 +179,40 @@ namespace Dune {
         }
       }
 
+      /**
+       * \ingroup geo2d
+       * \brief implementation for an intersection between an edge and a hyperplane
+       *
+       * \tparam  Coord  type of the global coordinate
+       * \return  the intersection edge segment
+       */
+      template< class Coord >
+      auto intersect ( const Line< Coord >& edge, const HyperPlane< Coord >& plane ) -> std::vector< Coord >
+      {
+        std::vector< Coord > points;
+
+        if ( !plane )
+          return points;
+
+        auto l0 = plane.levelSet( edge.vertex( 0 ) );
+        auto l1 = plane.levelSet( edge.vertex( 1 ) );
+
+        if ( l0 >= 0.0 && l1 >= 0.0 )
+          return points;
+        else if ( l0 < 0.0 && l1 < 0.0 )
+          return points;
+        else
+        {
+          Coord point;
+          point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
+          point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
+
+          points.push_back( point );
+
+          return points;
+        }
+      }
+
     } // namespace __impl
 
   } // namespace VoF
