@@ -39,7 +39,7 @@ namespace Dune
       template< class DF, class ReconstructionSet, class Flags, class CurvatureSet >
       void operator() ( const DF &color, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
       {
-        for ( const auto& entity : elements( gridView() ) )
+        for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           curvatureSet[ entity ] = 0.0;
 
@@ -47,6 +47,15 @@ namespace Dune
             continue;
 
           applyLocal( entity, reconstructions, flags, curvatureSet );
+        }
+
+        for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
+        {
+          if ( !flags.isMixed( entity ) )
+            continue;
+
+          if ( curvatureSet[ entity ] == 0.0 )
+            averageCurvature( entity, flags, curvatureSet );
         }
 
         curvatureSet.communicate();
@@ -136,6 +145,24 @@ namespace Dune
 
         if ( weights > 0 )
           curvatureSet[ entity ] /= weights;
+      }
+
+      template< class CurvatureSet, class Flags >
+      void averageCurvature( const Entity &entity, const Flags &flags, CurvatureSet &curvatureSet ) const
+      {
+        int n = 0;
+
+        for ( const auto& neighbor : stencil( entity ) )
+        {
+          if ( !flags.isMixed( neighbor ) )
+            continue;
+
+          curvatureSet[ entity ] += curvatureSet[ neighbor ];
+          n++;
+        }
+
+        if ( n > 0 )
+          curvatureSet[ entity ] /= static_cast< double >( n );
       }
 
       const GridView &gridView () const { return gridView_; }

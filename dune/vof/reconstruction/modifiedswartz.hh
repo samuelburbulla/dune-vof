@@ -111,13 +111,8 @@ namespace Dune
           const auto hs = locateHalfSpace( polytope, oldNormal, color[ entity ] );
           auto interfaceEn = intersect( polytope, hs.boundary(), eager );
 
-          for( const auto &intersection : intersections( color.gridView(), entity ) )
+          for( const auto &neighbor : stencil( entity ) )
           {
-            if ( !intersection.neighbor() )
-              continue;
-
-            const auto &neighbor = intersection.outside();
-
             if ( !flags.isMixed( neighbor ) )
               continue;
 
@@ -142,13 +137,8 @@ namespace Dune
             static_assert( false, 'Swartz is not runnig appropiately in 3D yet!');
             Coordinate centerNormal( 0.0 );
 
-            for( const auto &intersection2 : intersections( color.gridView(), entity ) )
+            for( const auto &neighbor2 : stencil( entity ) )
             {
-              if ( !intersection2.neighbor() )
-                continue;
-
-              const auto &neighbor2 = intersection2.outside();
-
               if ( neighbor == neighbor2 )
                 continue;
 
