@@ -8,6 +8,7 @@
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/2d/polygon.hh>
 #include <dune/vof/geometry/3d/polyhedron.hh>
+#include <dune/vof/geometry/1d/upwindpolygon.hh>
 #include <dune/vof/geometry/2d/upwindpolygon.hh>
 #include <dune/vof/geometry/3d/upwindpolygon.hh>
 #include <dune/vof/geometry/utility.hh>
@@ -28,6 +29,13 @@ namespace Dune
      * \param   iGeometry intersection geometry
      * \param   v         upwind shift
      */
+    template< class IntersectionGeometry, class Coordinate >
+    inline auto upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v )
+      -> typename std::enable_if< Coordinate::dimension == 1, Line< typename IntersectionGeometry::GlobalCoordinate > >::type
+    {
+      return upwindPolygon1d( iGeometry, v );
+    }
+
     template< class IntersectionGeometry, class Coordinate >
     inline auto upwindPolygon ( const IntersectionGeometry& iGeometry, const Coordinate& v )
       -> typename std::enable_if< Coordinate::dimension == 2, Polygon< typename IntersectionGeometry::GlobalCoordinate > >::type

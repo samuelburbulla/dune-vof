@@ -16,20 +16,23 @@ struct LinearWall
 
   void evaluate ( const DomainType &x, double t, RangeType &u ) const
   {
-    double pos = 0.4;
-    double width = 0.3;
+    u = ( x[0] <= pos + t * speed_  ) ? 1.0 : 0.0;
+  }
 
-    u = ( std::abs( x[0] - t * speed_ - pos ) <= width ) ? 1.0 : 0.0;
+  RangeType jump ( double t ) const
+  {
+    return pos + t * speed_;
   }
 
   void velocityField ( const DomainType &x, const double t, DomainType &rot ) const
   {
+    rot = 0;
     rot[ 0 ] = speed_;
-    rot[ 1 ] = 0.0;
   }
 
 private:
   double speed_ = 0.02;
+  double pos = 0.3;
 
 };
 

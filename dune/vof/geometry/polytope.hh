@@ -4,6 +4,7 @@
 #include <functional>
 #include <type_traits>
 
+#include <dune/vof/geometry/1d/point.hh>
 #include <dune/vof/geometry/2d/polygon.hh>
 #include <dune/vof/geometry/3d/polyhedron.hh>
 
@@ -15,6 +16,14 @@ namespace Dune
 
     // makePolytope
     // ------------
+        template < class Geometry >
+    static inline auto makePolytope ( const Geometry& geometry )
+      -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 1, 
+      Line< typename Geometry::GlobalCoordinate > >::type
+    {
+      return makeLine ( geometry );
+    }
+
     template < class Geometry >
     static inline auto makePolytope ( const Geometry& geometry )
       -> typename std::enable_if< Geometry::GlobalCoordinate::dimension == 2 && Geometry::mydimension == 2, 

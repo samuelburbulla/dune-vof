@@ -187,29 +187,23 @@ namespace Dune {
        * \return  the intersection edge segment
        */
       template< class Coord >
-      auto intersect ( const Line< Coord >& edge, const HyperPlane< Coord >& plane ) -> std::vector< Coord >
+      Point< Coord > intersect ( const Line< Coord >& edge, const HyperPlane< Coord >& plane )
       {
-        std::vector< Coord > points;
-
         if ( !plane )
-          return points;
+          return Point< Coord >();
 
         auto l0 = plane.levelSet( edge.vertex( 0 ) );
         auto l1 = plane.levelSet( edge.vertex( 1 ) );
 
-        if ( l0 >= 0.0 && l1 >= 0.0 )
-          return points;
-        else if ( l0 < 0.0 && l1 < 0.0 )
-          return points;
+        if (( l0 >= 0.0 && l1 >= 0.0 ) || ( l0 < 0.0 && l1 < 0.0 ))
+          return Point< Coord >();
         else
         {
           Coord point;
           point.axpy( -l1 / ( l0 - l1 ), edge.vertex( 0 ) );
           point.axpy(  l0 / ( l0 - l1 ), edge.vertex( 1 ) );
 
-          points.push_back( point );
-
-          return points;
+          return Point< Coord >( point );
         }
       }
 

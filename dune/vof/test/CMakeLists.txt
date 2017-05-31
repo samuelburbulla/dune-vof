@@ -1,5 +1,5 @@
 # copy data to build source to make tests work
-set( TESTDATAFILES 2dgrid.dgf 3dgrid.dgf parameter )
+set( TESTDATAFILES 1dgrid.dgf 2dgrid.dgf 3dgrid.dgf parameter )
 foreach( file ${TESTDATAFILES} )
   configure_file( ${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY )
 endforeach()

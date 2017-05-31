@@ -1,0 +1,14 @@
+DGF
+Interval
+0     #p0
+1     #p1
+10     #nx ny
+#DGF
+
+BOUNDARYDOMAIN
+default 42
+#BOUNDARYDOMAIN
+
+GridParameter
+overlap 3
+#GridParameter

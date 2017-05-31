@@ -69,6 +69,10 @@ namespace Dune
       {
         initializer()( color, reconstructions, flags );
 
+        #if GRIDDIM == 1
+          return;
+        #endif 
+          
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
           if ( !flags.isMixed( entity ) )

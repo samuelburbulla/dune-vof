@@ -92,6 +92,46 @@ namespace Dune
       return l1Error;
     }
 
+    
+    template< class GridView, class RS, class Flags >
+    double l1error ( const GridView &gridView, const RS &reconstructionSet, const Flags &flags, LinearWall< double, 1 > wall, const double time = 0.0, const int level = 0 )
+    {
+      if( gridView.comm().rank() == 0 && level == 0 && time == 0.0 )
+        std::cout << " -- error using intersection" << std::endl;
+
+      double l1Error = 0.0;
+
+      ColorFunction< GridView > uhExact( gridView );
+      Dune::VoF::Average< LinearWall< double, 1 > > average ( wall );
+      average( uhExact, time );
+
+      for ( auto entity : elements( gridView, Partitions::interior ) )
+      {
+        double volume = entity.geometry().volume();
+
+        double T1 = uhExact[ entity ] * volume;
+        double T0 = volume - T1;
+
+        if ( !flags.isMixed( entity ) )
+        {
+          double c = ( flags.isFull( entity ) ) ? 1.0 : 0.0;
+          l1Error += T0 * std::abs( c ) + T1 * std::abs( 1.0 - c );
+        }
+        else
+        {
+          auto entityAsPolytope = makePolytope( entity.geometry() );
+          auto calculatedOnePart = intersect( entityAsPolytope, reconstructionSet[ entity ], eager );
+          typename RS::DataType exactHS ( -1.0, wall.jump( time ) );
+          double sharedOneVolume = intersect( calculatedOnePart, exactHS, eager ).volume();
+
+          l1Error += ( T1 - sharedOneVolume ) + ( calculatedOnePart.volume() - sharedOneVolume );
+        }
+      }
+
+      return l1Error;
+    }
+
+
     template< class DF >
     double cellwiseL1error ( const DF& uh, RotatingCircle< double, 2 > circle, const double time = 0.0, const int level = 0 )
     {

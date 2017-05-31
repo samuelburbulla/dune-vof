@@ -173,6 +173,10 @@ namespace Dune
       explicit BasicInterfaceGridGeometry ( const GlobalCoordinate &x )
         : Base( ReferenceElements< ctype, 0 >::cube(), x, {} )
       {}
+
+      explicit BasicInterfaceGridGeometry ( const GlobalCoordinate &normal, const GlobalCoordinate *cbegin, std::size_t csize  )
+        : Base( ReferenceElements< ctype, 0 >::cube(), cbegin[ 0 ], {} )
+      {}
     };
 
     template< class ctype, int cdim >

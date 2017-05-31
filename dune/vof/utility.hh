@@ -38,7 +38,6 @@ namespace Dune
         auto segment = interface( entity, reconstructions );
 
         assert( segment.size() > 0 );
-        assert( segment.vertex( 0 ) != segment.vertex( 1 ) );
 
         offset += segment.size();
         offsets.push_back( offset );

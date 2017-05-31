@@ -54,8 +54,16 @@ namespace Dune {
      * \param polygon   polygon
      * \param normal    normal vector
      * \param fraction  volume fraction
-     * \tparam  Coord  global coordinate type
+     * \tparam  Coord   global coordinate type
      */
+
+        template< class Coord >
+    auto locateHalfSpace ( const Line< Coord >& line, const Coord& normal, double fraction ) -> HalfSpace< Coord >
+    {
+      return HalfSpace< Coord >( normal, line.centroid() + line.volume() * normal * ( 0.5 - fraction ) );
+    }
+
+
     template< class Coord >
     auto locateHalfSpace ( const Polygon< Coord >& polygon, const Coord& normal, double fraction ) -> HalfSpace< Coord >
     {

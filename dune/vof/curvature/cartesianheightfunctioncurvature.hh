@@ -114,7 +114,12 @@ namespace Dune
         curvature[ entity ] = kappa( heights, deltaX );
       }
 
-    # if GRIDDIM == 2
+    # if GRIDDIM == 1
+      double kappa ( const Heights &heights, const double dx ) const
+      {
+        return 0;
+      }
+    # elif GRIDDIM == 2
       double kappa ( const Heights &heights, const double dx ) const
       {
         double Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;

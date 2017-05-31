@@ -129,6 +129,39 @@ namespace Dune
       const Problem& problem_;
     };
 
+
+    template<>
+    struct Average< LinearWall< double, 1 > >
+    {
+      using Problem = LinearWall< double, 1 >;
+
+      Average ( const Problem& problem ) : problem_( problem ) {}
+
+      template< class ColorFunction >
+      void operator() ( ColorFunction& uh, const double time = 0.0, bool verbose = false )
+      {
+        if( verbose )
+          std::cout << " -- average using intersection algorithm" << std::endl;
+
+        for ( const auto& entity : elements( uh.gridView(), Partitions::interior ) )
+        {
+          typename Problem::RangeType jump = problem_.jump( time );
+
+          const auto& geo = entity.geometry();
+          if ( geo.corner(0) < jump && geo.corner(1) < jump )
+            uh[ entity ] = 1;
+          else if ( geo.corner(0) > jump && geo.corner(1) > jump )
+            uh[ entity ] = 0;
+          else
+            uh[ entity ] = ( jump - geo.corner(0) ) / geo.volume();
+        }
+
+        uh.communicate();
+      }
+
+      const Problem& problem_;
+    };
+
   } // namespace VoF
 
 } // namespace Dune

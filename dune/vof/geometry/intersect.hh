@@ -17,6 +17,7 @@
 
 #include <dune/vof/geometry/halfspace.hh>
 #include <dune/vof/geometry/utility.hh>
+#include <dune/vof/geometry/1d/point.hh>
 #include <dune/vof/geometry/2d/intersect.hh>
 #include <dune/vof/geometry/3d/intersect.hh>
 
