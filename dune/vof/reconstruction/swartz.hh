@@ -64,6 +64,8 @@ namespace Dune
       template< class ColorFunction, class ReconstructionSet, class Flags >
       void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags ) const
       {
+        initializer_( color, reconstructions, flags );
+
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
           if ( !flags.isMixed( entity ) )
@@ -91,23 +93,18 @@ namespace Dune
       void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
       {
         auto &reconstruction = reconstructions[ entity ];
-        Coordinate normal = Coordinate( 0.5 ) - entity.geometry().center();
-        normal /= normal.two_norm();
+        Coordinate normal = reconstruction.innerNormal();
         Coordinate normalOld = normal;
 
         const auto geometry = entity.geometry();
         Coordinate center = geometry.center();
         const double colorEn = clamp( color[ entity ], 0.0, 1.0 );
 
-
-
         auto fInverse = [ &normalOld ] ( const auto &geometry, const auto color )
         {
           const auto polytope = makePolytope( geometry );
           const auto hs = locateHalfSpace( polytope, normalOld, color );
           return hs.levelSet( geometry.center() );
-
-          //return ( color - 0.5 ) * std::pow( geometry.volume(), 1.0 / dim );
         };
 
         auto computeNormal = [ normalOld ] ( const Coordinate &x1, const Coordinate &x2, const double a1, const double a2, Coordinate &normal ) -> int
@@ -186,7 +183,8 @@ namespace Dune
 
             n += computeNormal( center, centerNb, sigmaEn, sigmaNb, normal );
           }
-          normal /= static_cast< double >( n );
+          if( n == 0 )
+            return;
           normalize( normal );
     break; // makes second order too!
         }
