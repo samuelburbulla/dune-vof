@@ -37,7 +37,7 @@ namespace Dune
       {}
 
       template< class DF, class ReconstructionSet, class Flags, class CurvatureSet >
-      void operator() ( const DF &color, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
+      void operator() ( const DF &color, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet, bool communicate = false )
       {
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
@@ -49,16 +49,22 @@ namespace Dune
           applyLocal( entity, reconstructions, flags, curvatureSet );
         }
 
+        curvatureSet.communicate();
+
+        CurvatureSet newCurvature ( curvatureSet );
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
           if ( !flags.isMixed( entity ) )
             continue;
 
           if ( curvatureSet[ entity ] == 0.0 )
-            averageCurvature( entity, flags, curvatureSet );
-        }
+            averageCurvature( entity, curvatureSet, flags, newCurvature );
 
-        curvatureSet.communicate();
+        }
+        curvatureSet = newCurvature;
+
+        if ( communicate )
+          curvatureSet.communicate();
       }
 
     private:
@@ -137,7 +143,7 @@ namespace Dune
             // taking all together
             double M = ( ( muNb2 - muEn ) / triangleNb2 - ( muEn - muNb1 ) / triangleNb1 ) / ( 2.0 * deltaS );
 
-            double weight = interfaceNb2.volume();
+            double weight = 1.0; //interfaceNb1.volume() * interfaceNb2.volume();
             curvatureSet[ entity ] += weight * times( nu12, nu23 ) / ( ( 1.0 + M ) * deltaS );
             weights += weight;
           }
@@ -148,7 +154,7 @@ namespace Dune
       }
 
       template< class CurvatureSet, class Flags >
-      void averageCurvature( const Entity &entity, const Flags &flags, CurvatureSet &curvatureSet ) const
+      void averageCurvature( const Entity &entity, const CurvatureSet &curvatureSet, const Flags &flags, CurvatureSet &newCurvature ) const
       {
         int n = 0;
 
@@ -157,12 +163,12 @@ namespace Dune
           if ( !flags.isMixed( neighbor ) )
             continue;
 
-          curvatureSet[ entity ] += curvatureSet[ neighbor ];
+          newCurvature[ entity ] += curvatureSet[ neighbor ];
           n++;
         }
 
         if ( n > 0 )
-          curvatureSet[ entity ] /= static_cast< double >( n );
+          newCurvature[ entity ] /= static_cast< double >( n );
       }
 
       const GridView &gridView () const { return gridView_; }
