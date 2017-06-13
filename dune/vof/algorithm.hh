@@ -54,7 +54,7 @@ namespace Dune
       double operator() ( ColorFunction& uh, double start, double end, int level = 0 )
       {
         // Create operators
-        auto reconstructionOperator = reconstruction( gridView_, stencils_ );
+        auto reconstructionOperator = reconstruction( stencils_ );
         auto flagOperator = FlagOperator< GridView >( eps_ );
         auto evolutionOperator = evolution( gridView_ );
 

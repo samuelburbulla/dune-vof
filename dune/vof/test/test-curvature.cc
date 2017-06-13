@@ -88,7 +88,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   ReconstructionSet reconstructionSet( gridView );
   Flags flags ( gridView );
   auto flagOperator = FlagOperator( eps );
-  auto reconstruction = Dune::VoF::reconstruction( gridView, stencils );
+  auto reconstruction = Dune::VoF::reconstruction( stencils );
 
   ColorFunction normalX( gridView );
   ColorFunction normalY( gridView );

@@ -2,14 +2,14 @@
 #define DUNE_VOF_RECONSTRUCTION_HH
 
 #include <dune/vof/reconstruction/heightfunction.hh>
-#include <dune/vof/reconstruction/modifiedyoungs.hh>
-#include <dune/vof/reconstructionset.hh>
-
-#include <dune/vof/reconstruction/swartz.hh>
 #include <dune/vof/reconstruction/modifiedswartz.hh>
+#include <dune/vof/reconstruction/modifiedyoungs.hh>
+#include <dune/vof/reconstruction/swartz.hh>
+#include <dune/vof/reconstructionset.hh>
 
 namespace Dune
 {
+
   namespace VoF
   {
 
@@ -26,12 +26,13 @@ namespace Dune
      */
 
 
-    template< class GridView, class Stencils >
-    static inline auto reconstruction ( const GridView&, Stencils &stencils )
-     -> ModifiedSwartzReconstruction< GridView, Stencils, ModifiedYoungsReconstruction< GridView, Stencils > >
+    template< class Stencils >
+    static inline auto reconstruction ( Stencils &stencils )
+     -> ModifiedSwartzReconstruction< typename Stencils::GridView, Stencils,
+                                      ModifiedYoungsReconstruction< typename Stencils::GridView, Stencils > >
     {
-      return ModifiedSwartzReconstruction< GridView, Stencils,
-                                           ModifiedYoungsReconstruction< GridView, Stencils >
+      return ModifiedSwartzReconstruction< typename Stencils::GridView, Stencils,
+                                           ModifiedYoungsReconstruction< typename Stencils::GridView, Stencils >
                                          >( stencils );
     }
 

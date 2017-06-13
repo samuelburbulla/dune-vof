@@ -153,7 +153,7 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
     vtkwriter.write( 1 );
 
   ReconstructionSet reconstructionSet( gridView );
-  auto reconstruction = Dune::VoF::reconstruction( gridView, stencils );
+  auto reconstruction = Dune::VoF::reconstruction( stencils );
   flagOperator( colorFunction, flags );
   reconstruction( colorFunction, reconstructionSet, flags );
 

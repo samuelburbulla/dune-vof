@@ -201,7 +201,7 @@ try {
 
     using ReconstructionSet = Dune::VoF::ReconstructionSet< GridView >;
     ReconstructionSet reconstructions( gridView );
-    auto reconstruction = Dune::VoF::reconstruction( gridView, stencils );
+    auto reconstruction = Dune::VoF::reconstruction( stencils );
 
     const double eps = parameters.get< double >( "scheme.eps", 1e-9 );
 
