@@ -81,10 +81,13 @@ try
   Stencils stencils( gridView );
 
   // create interface grid
-  using Reconstruction = decltype( Dune::VoF::reconstruction( stencils ) );
-  typedef Dune::VoF::InterfaceGrid< Reconstruction > InterfaceGrid;
+  // using Reconstruction = decltype( Dune::VoF::reconstruction( stencils ) );
+  // typedef Dune::VoF::InterfaceGrid< Reconstruction > InterfaceGrid;
 
-  InterfaceGrid interfaceGrid( colorFunction, stencils );
+  // InterfaceGrid interfaceGrid( colorFunction, stencils );
+
+  auto interfaceGrid = ifGrid( colorFunction, Dune::VoF::reconstruction( stencils ) );
+  using InterfaceGrid = std::decay_t< decltype( interfaceGrid ) >;
 
   // perform check
   if( InterfaceGrid::dimension < 2 )
