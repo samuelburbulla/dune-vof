@@ -36,8 +36,8 @@ namespace Dune
     private:
       using BaseType = HeightFunctionReconstruction< GV, VNST, ModifiedYoungsReconstruction< GV, VNST > >;
     public:
-      using GridView = GV;
-      using VertexNeighborStencils = VNST;
+      using GridView = typename BaseType::GridView;
+      using StencilSet = typename BaseType::StencilSet;
       using Stencil = Dune::VoF::HeightFunctionStencil< GridView >;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
@@ -47,16 +47,17 @@ namespace Dune
       using Orientation = std::tuple< int, int >;
 
     public:
-      explicit CartesianHeightFunctionCurvature ( const VertexNeighborStencils &vertexNeighborStencils )
+      explicit CartesianHeightFunctionCurvature ( const StencilSet &vertexNeighborStencils )
         : BaseType( vertexNeighborStencils ) {}
 
       template< class ColorFunction, class ReconstructionSet, class Flags, class CurvatureSet >
-      void operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvature, bool communicate = false )
+      void operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Flags &flags,
+                        CurvatureSet &curvature, bool communicate = false ) const
       {
         for ( const auto& entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {
           curvature[ entity ] = 0.0;
-          this->satisfiesConstraint( entity ) = 0;
+          satisfiesConstraint_[ entity ] = 0;
 
           if ( !flags.isMixed( entity ) )
             continue;
@@ -65,7 +66,7 @@ namespace Dune
         }
 
         curvature.communicate();
-        this->satisfiesConstraint_.communicate();
+        satisfiesConstraint_.communicate();
 
         for ( int i = 0; i < 3; ++i )
         {
@@ -86,8 +87,12 @@ namespace Dune
       }
 
     private:
+      using BaseType::satisfiesConstraint_;
+      using BaseType::vertexStencil;
+
       template< class ColorFunction, class ReconstructionSet, class CurvatureSet >
-      void applyLocal ( const Entity &entity, const ColorFunction &color, const ReconstructionSet &reconstructions, CurvatureSet &curvature )
+      void applyLocal ( const Entity &entity, const ColorFunction &color, const ReconstructionSet &reconstructions,
+                        CurvatureSet &curvature ) const
       {
         const Coordinate &normal = reconstructions[ entity ].innerNormal();
         const Orientation orientation = this->getOrientation( normal );
@@ -109,7 +114,7 @@ namespace Dune
           if ( heights[ i ] == 0.0 )
             return;
 
-        this->satisfiesConstraint( entity ) = 1;
+        satisfiesConstraint_[ entity ] = 1;
 
         curvature[ entity ] = kappa( heights, deltaX );
       }
@@ -145,18 +150,18 @@ namespace Dune
       {
         int n = 0;
 
-        if ( this->satisfiesConstraint( entity ) || ignore )
+        if ( satisfiesConstraint_[ entity ] || ignore )
         {
           newCurvature[ entity ] += curvature[ entity ];
           n++;
         }
 
-        for( const auto& neighbor : this->vertexStencil( entity ) )
+        for( const auto& neighbor : vertexStencil( entity ) )
         {
           if ( !flags.isMixed( neighbor ) )
             continue;
 
-          if ( this->satisfiesConstraint( neighbor ) || ignore )
+          if ( satisfiesConstraint_[ neighbor ] || ignore )
           {
             newCurvature[ entity ] += curvature[ neighbor ];
             n++;

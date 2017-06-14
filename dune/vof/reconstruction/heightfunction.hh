@@ -34,11 +34,11 @@ namespace Dune
     struct HeightFunctionReconstruction
     {
       using GridView = GV;
-      using VertexStencilSet = StS;
+      using StencilSet = StS;
       using InitialReconstruction = IR;
 
     private:
-      using VertexStencil = typename VertexStencilSet::Stencil;
+      using VertexStencil = typename StencilSet::Stencil;
 
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
@@ -51,7 +51,7 @@ namespace Dune
       using Orientation = std::tuple< int, int >;
 
     public:
-      explicit HeightFunctionReconstruction ( const VertexStencilSet &vertexStencilSet )
+      explicit HeightFunctionReconstruction ( const StencilSet &vertexStencilSet )
        : vertexStencilSet_( vertexStencilSet ), initializer_( vertexStencilSet ), satisfiesConstraint_( vertexStencilSet_.gridView() )
       {}
 
@@ -66,7 +66,8 @@ namespace Dune
        * \param   flags           set of flags
        */
       template< class ColorFunction, class ReconstructionSet, class Flags >
-      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = false )
+      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags,
+                        bool communicate = false ) const
       {
         initializer_( color, reconstructions, flags );
 
@@ -75,7 +76,7 @@ namespace Dune
           if ( !flags.isMixed( entity ) )
             continue;
 
-          satisfiesConstraint( entity ) = 0;
+          satisfiesConstraint_[ entity ] = 0;
 
           applyLocal( entity, color, flags, reconstructions[ entity ] );
         }
@@ -96,7 +97,7 @@ namespace Dune
        * \param   reconstruction  single reconstruction
        */
       template< class ColorFunction, class Flags, class Reconstruction >
-      void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, Reconstruction &reconstruction )
+      void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, Reconstruction &reconstruction ) const
       {
         const Coordinate &normal = reconstruction.innerNormal();
         const Orientation orientation = getOrientation( normal );
@@ -112,7 +113,7 @@ namespace Dune
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
 
-        satisfiesConstraint( entity ) = 1;
+        satisfiesConstraint_[ entity ] = 1;
 
         Coordinate newNormal = computeNormal( heights, orientation );
         reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), newNormal, color[ entity ] );
@@ -140,7 +141,7 @@ namespace Dune
       }
 
       template< class ColorFunction, class Stencil >
-      Heights getHeightValues ( const ColorFunction &color, const Stencil &stencil )
+      Heights getHeightValues ( const ColorFunction &color, const Stencil &stencil ) const
       {
         Heights heights( 0.0 );
 
@@ -257,7 +258,7 @@ namespace Dune
         int n = 0;
         for( const auto& neighbor : vertexStencil( entity ) )
         {
-          if ( satisfiesConstraint( neighbor ) )
+          if ( satisfiesConstraint_[ neighbor ] )
           {
             normal += reconstructions[ neighbor ].innerNormal();
             n++;
@@ -273,12 +274,9 @@ namespace Dune
     protected:
       const VertexStencil &vertexStencil ( const Entity &entity ) const { return vertexStencilSet_[ entity ]; }
 
-      std::size_t &satisfiesConstraint ( const Entity &entity ) { return satisfiesConstraint_[ entity ]; }
-      std::size_t satisfiesConstraint ( const Entity &entity ) const { return satisfiesConstraint_[ entity ]; }
-
-      const VertexStencilSet &vertexStencilSet_;
+      const StencilSet &vertexStencilSet_;
       InitialReconstruction initializer_;
-      Dune::VoF::DataSet< GridView, std::size_t > satisfiesConstraint_;
+      mutable Dune::VoF::DataSet< GridView, std::size_t > satisfiesConstraint_;
     };
 
   }       // end of namespace VoF

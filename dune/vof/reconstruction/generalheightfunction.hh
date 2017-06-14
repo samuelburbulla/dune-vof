@@ -33,7 +33,7 @@ namespace Dune
     struct GeneralHeightFunctionReconstruction
     {
       using GridView = GV;
-      using VertexStencilSet = VSt;
+      using StencilSet = VSt;
       using InitialReconstruction = IR;
 
     private:
@@ -52,7 +52,7 @@ namespace Dune
       using Heights = Dune::FieldVector< double, noc >;
 
     public:
-      explicit GeneralHeightFunctionReconstruction ( const VertexStencilSet &vertexStencilSet ) : initializer_( vertexStencilSet ) {}
+      explicit GeneralHeightFunctionReconstruction ( const StencilSet &vertexStencilSet ) : initializer_( vertexStencilSet ) {}
 
       /**
        * \brief   (global) operator application

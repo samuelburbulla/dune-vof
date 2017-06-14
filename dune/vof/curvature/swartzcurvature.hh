@@ -27,17 +27,18 @@ namespace Dune
     struct SwartzCurvature
     {
       using GridView = GV;
-      using Stencils = ST;
+      using StencilSet = ST;
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
     public:
-      explicit SwartzCurvature ( const Stencils &stencils )
+      explicit SwartzCurvature ( const StencilSet &stencils )
        : gridView_( stencils.gridView() ), stencils_( stencils )
       {}
 
       template< class DF, class ReconstructionSet, class Flags, class CurvatureSet >
-      void operator() ( const DF &color, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet, bool communicate = false )
+      void operator() ( const DF &color, const ReconstructionSet &reconstructions, const Flags &flags,
+                         CurvatureSet &curvatureSet, bool communicate = false ) const
       {
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {
@@ -69,7 +70,7 @@ namespace Dune
 
     private:
       template< class ReconstructionSet, class Flags, class CurvatureSet >
-      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
+      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet ) const
       {
         double weights = 0.0;
         auto interfaceEn = interface( entity, reconstructions );
@@ -154,7 +155,8 @@ namespace Dune
       }
 
       template< class CurvatureSet, class Flags >
-      void averageCurvature( const Entity &entity, const CurvatureSet &curvatureSet, const Flags &flags, CurvatureSet &newCurvature ) const
+      void averageCurvature( const Entity &entity, const CurvatureSet &curvatureSet, const Flags &flags,
+                             CurvatureSet &newCurvature ) const
       {
         int n = 0;
 
@@ -175,7 +177,7 @@ namespace Dune
       const auto &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }
 
       GridView gridView_;
-      const Stencils &stencils_;
+      const StencilSet &stencils_;
     };
 
   } // namespace VoF

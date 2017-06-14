@@ -42,7 +42,7 @@ namespace Dune
       {}
 
       template< class CurvatureSet >
-      void operator() ( const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
+      void operator() ( const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet ) const
       {
         for ( const auto& entity : elements( gridView() ) )
         {
@@ -59,7 +59,8 @@ namespace Dune
 
     private:
       template< class CurvatureSet >
-      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags, CurvatureSet &curvatureSet )
+      void applyLocal ( const Entity &entity, const ReconstructionSet &reconstructions, const Flags &flags,
+                        CurvatureSet &curvatureSet ) const
       {
         double dx2uSum = 0.0;
         double dx2uw = 0.0;
