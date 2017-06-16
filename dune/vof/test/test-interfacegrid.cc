@@ -28,12 +28,6 @@
 #include "problems/ellipse.hh"
 
 
-template< class C, class R >
-auto ifGrid ( const C& color, R rOp ) -> Dune::VoF::InterfaceGrid< R >
-{
-  return Dune::VoF::InterfaceGrid< R >( color, std::move( rOp ) );
-}
-
 // main
 // ----
 
@@ -81,12 +75,7 @@ try
   Stencils stencils( gridView );
 
   // create interface grid
-  // using Reconstruction = decltype( Dune::VoF::reconstruction( stencils ) );
-  // typedef Dune::VoF::InterfaceGrid< Reconstruction > InterfaceGrid;
-
-  // InterfaceGrid interfaceGrid( colorFunction, stencils );
-
-  auto interfaceGrid = ifGrid( colorFunction, Dune::VoF::reconstruction( stencils ) );
+  auto interfaceGrid = Dune::VoF::interfaceGrid( colorFunction, Dune::VoF::reconstruction( stencils ) );
   using InterfaceGrid = std::decay_t< decltype( interfaceGrid ) >;
 
   // perform check
