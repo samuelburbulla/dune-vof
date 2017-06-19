@@ -120,6 +120,10 @@ namespace Dune
             if ( !flags.isMixed( neighbor ) )
               continue;
 
+            // sufficient condition for existence of solution
+            if ( std::abs( color[ neighbor ] - color[ entity ] ) > 0.7 )
+              continue;
+
             const auto polytopeNb = makePolytope( neighbor.geometry() );
             const auto hsNb = locateHalfSpace( polytopeNb, oldNormal, color[ neighbor ] );
             auto interfaceNb = intersect( polytopeNb, hsNb.boundary(), eager );
@@ -133,9 +137,8 @@ namespace Dune
               centerNormal *= -1.0;
             normalize( centerNormal );
 
-            double weight = interfaceNb.volume();
+            double weight = 1.0;
             normal.axpy( weight, centerNormal );
-
 
           #elif GRIDDIM == 3
             static_assert( false, 'Swartz is not runnig appropiately in 3D yet!');
@@ -172,6 +175,9 @@ namespace Dune
           #endif
 
           }
+
+          if ( normal.two_norm() < 0.5 )
+            return;
 
           normalize( normal );
 
