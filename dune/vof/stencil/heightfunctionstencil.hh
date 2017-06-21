@@ -54,32 +54,45 @@ namespace Dune
       Entity operator() ( const std::size_t c, const int t ) const
       {
         EntityInfo entityInfo( entityInfo_ );
-        entityInfo.id() = getMultiIndex( c, t );
+        entityInfo.id() = getMultiIndex< dim >( c, t );
         entityInfo.update();
         return EntityImpl( entityInfo );
       }
 
       bool valid ( const std::size_t c, const int t ) const
       {
-        return entityInfo_.gridLevel().template partition< All_Partition >().contains( getMultiIndex( c, t ), entityInfo_.partitionNumber() );
+        return entityInfo_.gridLevel().template partition< All_Partition >().contains( getMultiIndex< dim >( c, t ), entityInfo_.partitionNumber() );
       }
 
-      MultiIndex getMultiIndex( const std::size_t c, const int t ) const
+      template < int dimension >
+      auto getMultiIndex( const std::size_t c, const int t ) const
+       -> typename std::enable_if< dimension == 2, MultiIndex >::type
       {
         MultiIndex m;
 
         int i = std::get< 0 >( orientation_ );
         int j = std::get< 1 >( orientation_ );
 
-      #if GRIDDIM == 2
         m[ 1 - i ] += ( c - 1 ) * ( i == 0 ? -1 : 1 );
         m[ i ] += t;
         m *= j;
-      #elif GRIDDIM == 3
+
+        m *= 2;
+        return m + entityInfo_.id();
+      }
+
+      template < int dimension >
+      auto getMultiIndex( const std::size_t c, const int t ) const
+       -> typename std::enable_if< dimension == 3, MultiIndex >::type
+      {
+        MultiIndex m;
+
+        int i = std::get< 0 >( orientation_ );
+        int j = std::get< 1 >( orientation_ );
+
         m[ i ] += j * t;
         m[ (i+1)%3 ] += ( ( c % 3 ) - 1 ) * -j;
         m[ (i+2)%3 ] += ( ( c / 3 ) - 1 );
-      #endif
 
         m *= 2;
         return m + entityInfo_.id();

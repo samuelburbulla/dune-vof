@@ -115,7 +115,7 @@ namespace Dune
 
         satisfiesConstraint_[ entity ] = 1;
 
-        Coordinate newNormal = computeNormal( heights, orientation );
+        Coordinate newNormal = computeNormal< dim >( heights, orientation );
         reconstruction = locateHalfSpace( makePolytope( entity.geometry() ), newNormal, color[ entity ] );
       }
 
@@ -193,8 +193,9 @@ namespace Dune
       }
 
     private:
-    #if GRIDDIM == 2
-      Coordinate computeNormal ( const Heights &heights, const Orientation &orientation ) const
+      template < int dimension >
+      auto computeNormal ( const Heights &heights, const Orientation &orientation ) const
+       -> typename std::enable_if< dimension == 2, Coordinate >::type
       {
         double Hx;
         if ( heights[ 0 ] == 0.0 )
@@ -218,8 +219,9 @@ namespace Dune
         return newNormal;
       }
 
-    #elif GRIDDIM == 3
-      Coordinate computeNormal ( const Heights &heights, const Orientation &orientation ) const
+      template < int dimension >
+      auto computeNormal ( const Heights &heights, const Orientation &orientation ) const
+       -> typename std::enable_if< dimension == 3, Coordinate >::type
       {
         double Hx;
         if ( heights[ 5 ] == 0.0 )
@@ -249,7 +251,6 @@ namespace Dune
         normalize( newNormal );
         return newNormal;
       }
-    #endif
 
       template< class ColorFunction, class Flags, class ReconstructionSet >
       void average( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const

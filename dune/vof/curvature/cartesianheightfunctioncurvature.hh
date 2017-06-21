@@ -108,7 +108,7 @@ namespace Dune
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
 
-        double deltaX = std::pow( entity.geometry().volume(), 1.0 / dim );
+        double deltaX = std::pow( entity.geometry().volume(), 1.0 / dim ); // TODO: implement better approach
 
         for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
           if ( heights[ i ] == 0.0 )
@@ -116,24 +116,29 @@ namespace Dune
 
         satisfiesConstraint_[ entity ] = 1;
 
-        curvature[ entity ] = kappa( heights, deltaX );
+        curvature[ entity ] = kappa< dim >( heights, deltaX );
       }
 
-    # if GRIDDIM == 1
-      double kappa ( const Heights &heights, const double dx ) const
+      template < int dimension >
+      auto kappa ( const Heights &heights, const double dx ) const
+       -> typename std::enable_if< dimension == 1, double >::type
       {
         return 0;
       }
-    # elif GRIDDIM == 2
-      double kappa ( const Heights &heights, const double dx ) const
+
+      template < int dimension >
+      auto kappa ( const Heights &heights, const double dx ) const
+       -> typename std::enable_if< dimension == 2, double >::type
       {
         double Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;
         double Hxx = ( heights[ 2 ] - 2 * heights[ 1 ] + heights[ 0 ] ) / dx;
 
         return - Hxx / std::pow( 1.0 + Hx * Hx, 3.0 / 2.0 );
       }
-    #elif GRIDDIM == 3
-      double kappa ( const Heights &heights, const double dx ) const
+
+      template < int dimension >
+      auto kappa ( const Heights &heights, const double dx ) const
+       -> typename std::enable_if< dimension == 3, double >::type
       {
         double Hx = ( heights[ 5 ] - heights[ 3 ] ) / 2.0;
         double Hy = ( heights[ 7 ] - heights[ 1 ] ) / 2.0;
@@ -143,7 +148,6 @@ namespace Dune
 
         return - ( Hxx + Hyy + Hxx * Hy * Hy + Hyy * Hx * Hx - 2.0 * Hxy * Hx * Hy ) / ( std::pow( 1.0 + Hx * Hx + Hy * Hy, 3.0 / 2.0 ) );
       }
-    #endif
 
       template< class CurvatureSet, class Flags >
       void averageCurvature( const Entity &entity, const CurvatureSet &curvature, const Flags &flags, CurvatureSet &newCurvature, bool ignore ) const
