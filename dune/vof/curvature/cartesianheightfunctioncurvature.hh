@@ -108,7 +108,10 @@ namespace Dune
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
 
-        double deltaX = std::pow( entity.geometry().volume(), 1.0 / dim ); // TODO: implement better approach
+        const Dune::FieldMatrix< double, dim, dim > &jac = entity.geometry().jacobianTransposed( Coordinate( 0.0 ) );
+        const int o = std::get< 0 >( orientation );
+        const double deltaX = jac[ dim - o ][ dim - o ];
+        // TODO: use different deltaXs for the two directions in 3D
 
         for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
           if ( heights[ i ] == 0.0 )
