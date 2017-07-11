@@ -110,7 +110,7 @@ namespace Dune
 
         const Dune::FieldMatrix< double, dim, dim > &jac = entity.geometry().jacobianTransposed( Coordinate( 0.0 ) );
         const int o = std::get< 0 >( orientation );
-        const double deltaX = jac[ dim - o ][ dim - o ];
+        const double deltaX = jac[ dim - o - 1 ][ dim - o - 1 ];
         // TODO: use different deltaXs for the two directions in 3D
 
         for( std::size_t i = 0; i < decltype( stencil )::noc; ++i )
