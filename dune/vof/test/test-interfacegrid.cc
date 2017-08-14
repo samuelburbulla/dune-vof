@@ -28,12 +28,6 @@
 #include "problems/ellipse.hh"
 
 
-template< class C, class R >
-auto ifGrid ( const C& color, R rOp ) -> Dune::VoF::InterfaceGrid< R >
-{
-  return Dune::VoF::InterfaceGrid< R >( color, std::move( rOp ) );
-}
-
 // main
 // ----
 
@@ -81,10 +75,8 @@ try
   Stencils stencils( gridView );
 
   // create interface grid
-  using Reconstruction = decltype( Dune::VoF::reconstruction( stencils ) );
-  typedef Dune::VoF::InterfaceGrid< Reconstruction > InterfaceGrid;
-
-  InterfaceGrid interfaceGrid( colorFunction, stencils );
+  auto interfaceGrid = Dune::VoF::interfaceGrid( colorFunction, Dune::VoF::reconstruction( stencils ) );
+  using InterfaceGrid = std::decay_t< decltype( interfaceGrid ) >;
 
   // perform check
   if( InterfaceGrid::dimension < 2 )
@@ -105,10 +97,14 @@ try
   vtkWriter.addCellData( indexSet, "index" );
   vtkWriter.write( "test-interfacegrid-color" );
 
-  std::vector< double > normals( interfaceGrid.leafGridView().indexSet().size( 0 ) * GridView::dimensionworld );
-  for ( const auto &entity : elements( interfaceGrid.leafGridView() ) )
-    for ( std::size_t i = 0; i < GridView::dimensionworld; ++i )
-      normals[ interfaceGrid.leafGridView().indexSet().index( entity ) * GridView::dimensionworld + i ] = interfaceGrid.dataSet().reconstructionSet()[ entity.impl().hostElement() ].innerNormal()[ i ];
+  std::vector< double > normals( interfaceGrid.leafGridView().indexSet().size( 0 ) * 3, 0.0 );
+  for( const auto &entity : elements( interfaceGrid.leafGridView() ) )
+  {
+    const auto index = interfaceGrid.leafGridView().indexSet().index( entity );
+    const auto &reconstruction = interfaceGrid.dataSet().reconstructionSet()[ entity.impl().hostElement() ];
+    for( std::size_t i = 0; i < GridView::dimensionworld; ++i )
+      normals[ index * 3 + i ] = reconstruction.innerNormal()[ i ];
+  }
 
   Dune::VTKWriter< InterfaceGrid::LeafGridView > interfaceVtkWriter( interfaceGrid.leafGridView() );
   interfaceVtkWriter.addCellData( normals, "normals", 3 );

@@ -2,6 +2,7 @@
 #define DUNE_VOF_INTERFACEGRID_GRID_HH
 
 #include <cstddef>
+#include <utility>
 
 #include <dune/grid/common/grid.hh>
 
@@ -214,6 +215,18 @@ namespace Dune
       mutable LocalIdSet localIdSet_;
       mutable GlobalIdSet globalIdSet_;
     };
+
+
+
+    // interfaceGrid
+    // -------------
+    
+    template< class ColorFunction, class Reconstruction >
+    inline static auto interfaceGrid ( const ColorFunction &color, Reconstruction reconstruction ) 
+      -> InterfaceGrid< Reconstruction >
+    {
+      return InterfaceGrid< Reconstruction >( color, std::move( reconstruction ) );
+    }
 
   } // namespace VoF
 
