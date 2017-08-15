@@ -19,6 +19,7 @@
 
 // dune-vof includes
 #include <dune/vof/colorfunction.hh>
+#include <dune/vof/eoc.hh>
 #include "../dune/vof/test/average.hh"
 #include "../dune/vof/test/problems/linearwall.hh"
 #include "../dune/vof/test/problems/rotatingcircle.hh"
@@ -72,10 +73,11 @@ try {
   using ProblemType = RotatingCircle< double, GridView::dimensionworld >;
   ProblemType problem;
 
+  const double dx0 = 1.0 / 8.0 * std::pow( 2.0, -level0 );
+  Dune::EocOutput eocOutput ( "errors", dx0, level0, 2 );
 
   // EOC Calculation
   // ===============
-  double oldError = 0;
   for( int level = level0; level <= level0+repeats; ++level )
   {
     // Initialize Data
@@ -127,16 +129,9 @@ try {
     double error = grid.comm().sum( partError );
 
     if ( grid.comm().rank() == 0 )
-    {
-      const double l1eoc = log( oldError / error ) / M_LN2;
-      std::cout << "L1-Error =" << std::setw( 16 ) << error << std::endl;
-
-      if ( level > level0 )
-        std::cout << "L1 EOC( " << std::setw( 2 ) << level << " ) = " << std::setw( 11 ) << l1eoc << std::endl;
-    }
+      eocOutput.add( error );
 
     grid.globalRefine( refineStepsForHalf );
-    oldError = error;
   }
 
   return 0;

@@ -14,6 +14,7 @@ set(HEADERS
   colorfunction.hh
   curvatureset.hh
   dataset.hh
+  eoc.hh
   evolution.hh
   flagging.hh
   flagset.hh
