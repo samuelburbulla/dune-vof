@@ -74,7 +74,7 @@ try {
   ProblemType problem;
 
   const double dx0 = 1.0 / 8.0 * std::pow( 2.0, -level0 );
-  Dune::EocOutput eocOutput ( "errors", dx0, level0, 2 );
+  Dune::EocOutput eocOutput ( "errors", dx0, level0, 2, GridView::dimension );
 
   // EOC Calculation
   // ===============
