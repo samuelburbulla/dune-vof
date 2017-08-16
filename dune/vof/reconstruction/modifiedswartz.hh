@@ -215,6 +215,9 @@ namespace Dune
                 interfaceNb2.centroid() - interfaceEn.centroid()
               );
 
+              if ( centerNormal.two_norm() < 0.5 )
+                continue;
+
               if ( centerNormal * oldNormal < 0 )
                 centerNormal *= -1.0;
               normalize( centerNormal );
