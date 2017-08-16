@@ -202,8 +202,8 @@ namespace Dune
               if ( !flags.isMixed( neighbor2 ) )
                 continue;
 
-              if ( color.gridView().indexSet().index( neighbor2 ) > color.gridView().indexSet().index( neighbor ) )
-                continue;
+              //if ( color.gridView().indexSet().index( neighbor2 ) > color.gridView().indexSet().index( neighbor ) )
+              //  continue;
 
               const auto polytopeNb2 = makePolytope( neighbor2.geometry() );
               const auto hsNb2 = locateHalfSpace( polytopeNb2, oldNormal, color[ neighbor2 ] );
@@ -215,16 +215,16 @@ namespace Dune
                 interfaceNb2.centroid() - interfaceEn.centroid()
               );
 
-              if ( centerNormal.two_norm() < 0.5 )
+              if ( centerNormal.two_norm() < 1e-12 )
                 continue;
 
               if ( centerNormal * oldNormal < 0 )
                 centerNormal *= -1.0;
               normalize( centerNormal );
-            }
 
-            double weight = 1.0;
-            normal.axpy( weight, centerNormal );
+              double weight = 1.0;
+              normal.axpy( weight, centerNormal );
+            }
           }
 
           if ( normal.two_norm() < 0.5 )
