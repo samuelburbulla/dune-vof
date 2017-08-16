@@ -25,7 +25,7 @@ namespace Dune
     template< class GridView >
     class MixedCellMapper
     {
-      typedef MultipleCodimMultipleGeomTypeMapper< GridView, MCMGElementLayout > ElementMapper;
+      typedef MultipleCodimMultipleGeomTypeMapper< GridView > ElementMapper;
 
       typedef typename ElementMapper::Index ElementIndex;
 
