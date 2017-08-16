@@ -44,6 +44,8 @@ namespace Dune
       using Entity = typename decltype(std::declval< GridView >().template begin< 0 >())::Entity;
       using Coordinate = typename Entity::Geometry::GlobalCoordinate;
 
+      static constexpr int dim = GridView::dimension;
+
     public:
       ModifiedSwartzReconstruction ( const StencilSet &stencils, InitialReconstruction initializer,
                                      const std::size_t maxIterations = 10 )
@@ -86,7 +88,7 @@ namespace Dune
 
     private:
       /**
-       * \brief   (local) operator application
+       * \brief   (local) operator application for 2d
        *
        * \tparam  ColorFunction
        * \tparam  Flags
@@ -97,7 +99,8 @@ namespace Dune
        * \param   reconstructions  set of reconstruction
        */
       template< class ColorFunction, class Flags, class ReconstructionSet >
-      void applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
+      auto applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
+       -> std::enable_if_t< Coordinate::dimension == 2, void >
       {
         auto &reconstruction = reconstructions[ entity ];
 
@@ -120,16 +123,9 @@ namespace Dune
             if ( !flags.isMixed( neighbor ) )
               continue;
 
-            // sufficient condition for existence of solution
-            if ( std::abs( color[ neighbor ] - color[ entity ] ) > 0.7 )
-              continue;
-
             const auto polytopeNb = makePolytope( neighbor.geometry() );
             const auto hsNb = locateHalfSpace( polytopeNb, oldNormal, color[ neighbor ] );
             auto interfaceNb = intersect( polytopeNb, hsNb.boundary(), eager );
-
-            // TODO: 3D
-          #if GRIDDIM == 2
 
             Coordinate centerNormal = generalizedCrossProduct( interfaceNb.centroid() - interfaceEn.centroid() );
 
@@ -139,9 +135,63 @@ namespace Dune
 
             double weight = 1.0;
             normal.axpy( weight, centerNormal );
+          }
 
-          #elif GRIDDIM == 3
-            static_assert( false, 'Swartz is not runnig appropiately in 3D yet!');
+          if ( normal.two_norm() < 0.5 )
+            return;
+
+          normalize( normal );
+
+          assert( normal.two_norm() > 0 );
+
+          reconstruction = locateHalfSpace( polytope, normal, color[ entity ] );
+
+          residuum = 1.0 - ( normal * oldNormal );
+          ++iterations;
+        }
+        while ( residuum > 1e-12 && iterations < maxIterations_ ); // residuum is always positive
+      }
+
+      /**
+       * \brief   (local) operator application for 3d
+       *
+       * \tparam  ColorFunction
+       * \tparam  Flags
+       * \tparam  ReconstructionSet
+       * \param   entity          current element
+       * \param   flags           set of flags
+       * \param   color           color functions
+       * \param   reconstructions  set of reconstruction
+       */
+      template< class ColorFunction, class Flags, class ReconstructionSet >
+      auto applyLocal ( const Entity &entity, const ColorFunction &color, const Flags &flags, ReconstructionSet &reconstructions ) const
+       -> std::enable_if_t< Coordinate::dimension == 3, void >
+      {
+        auto &reconstruction = reconstructions[ entity ];
+
+        Coordinate normal = reconstruction.innerNormal();
+        std::size_t iterations = 0;
+        double residuum = 0.0;
+
+        const auto polytope = makePolytope( entity.geometry() );
+
+        do
+        {
+          Coordinate oldNormal = normal;
+          normal = 0;
+
+          const auto hs = locateHalfSpace( polytope, oldNormal, color[ entity ] );
+          auto interfaceEn = intersect( polytope, hs.boundary(), eager );
+
+          for( const auto &neighbor : stencil( entity ) )
+          {
+            if ( !flags.isMixed( neighbor ) )
+              continue;
+
+            const auto polytopeNb = makePolytope( neighbor.geometry() );
+            const auto hsNb = locateHalfSpace( polytopeNb, oldNormal, color[ neighbor ] );
+            auto interfaceNb = intersect( polytopeNb, hsNb.boundary(), eager );
+
             Coordinate centerNormal( 0.0 );
 
             for( const auto &neighbor2 : stencil( entity ) )
@@ -168,12 +218,10 @@ namespace Dune
               if ( centerNormal * oldNormal < 0 )
                 centerNormal *= -1.0;
               normalize( centerNormal );
-
-              double weight = 1.0;
-              normal.axpy( weight, centerNormal );
             }
-          #endif
 
+            double weight = 1.0;
+            normal.axpy( weight, centerNormal );
           }
 
           if ( normal.two_norm() < 0.5 )
@@ -188,7 +236,7 @@ namespace Dune
           residuum = 1.0 - ( normal * oldNormal );
           ++iterations;
         }
-        while ( residuum > 1e-12 && iterations < maxIterations_ );
+        while ( residuum > 1e-12 && iterations < maxIterations_ ); // residuum is always positive
       }
 
       const Stencil &stencil ( const Entity &entity ) const { return stencils_[ entity ]; }

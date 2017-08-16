@@ -28,10 +28,10 @@ namespace Dune
 
     template< class Stencils >
     static inline auto reconstruction ( Stencils &stencils )
-     -> HeightFunctionReconstruction< typename Stencils::GridView, Stencils,
+     -> ModifiedSwartzReconstruction< typename Stencils::GridView, Stencils,
                                       ModifiedYoungsReconstruction< typename Stencils::GridView, Stencils > >
     {
-      return HeightFunctionReconstruction< typename Stencils::GridView, Stencils,
+      return ModifiedSwartzReconstruction< typename Stencils::GridView, Stencils,
                                            ModifiedYoungsReconstruction< typename Stencils::GridView, Stencils >
                                          >( stencils );
     }
