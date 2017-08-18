@@ -2,6 +2,7 @@
 #define PROBLEMS_HH
 
 #include "ellipse.hh"
+#include "hills.hh"
 #include "linearwall.hh"
 #include "rotatingcircle.hh"
 #include "sflow.hh"
