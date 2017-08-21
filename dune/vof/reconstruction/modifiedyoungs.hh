@@ -107,6 +107,22 @@ namespace Dune
           AtA += outerProduct( d, d );
           Atb.axpy( weight * ( colorNb - colorEn ), d );
         }
+
+        // give boundary neighbors a color value of 0.5
+        for ( const auto &intersection : intersections( color.gridView(), entity ) )
+        {
+          if ( !intersection.neighbor() )
+          {
+            double colorNb = 0.5;
+            Vector d = intersection.geometry().center() - center;
+            d *= 2.0;
+            const ctype weight = 1.0 / d.two_norm2();
+            d *= weight;
+            AtA += outerProduct( d, d );
+            Atb.axpy( weight * ( colorNb - colorEn ), d );
+          }
+        }
+
         AtA.solve( normal, Atb );
 
         if( normal.two_norm2() < std::numeric_limits< ctype >::epsilon() )

@@ -197,10 +197,13 @@ namespace Dune
       auto computeNormal ( const Heights &heights, const Orientation &orientation ) const
        -> typename std::enable_if< dimension == 2, Coordinate >::type
       {
+        using std::abs;
+        const auto eps = std::numeric_limits< double >::epsilon();
+
         double Hx;
-        if ( heights[ 0 ] == 0.0 )
+        if ( abs( heights[ 0 ] ) < eps )
           Hx = ( heights[ 2 ] - heights[ 1 ] );
-        else if ( heights[ 2 ] == 0.0 )
+        else if ( abs( heights[ 2 ] ) < eps )
           Hx = ( heights[ 1 ] - heights[ 0 ] );
         else
           Hx = ( heights[ 2 ] - heights[ 0 ] ) / 2.0;
