@@ -107,11 +107,13 @@ namespace Dune
 
         Heights heights = getHeightValues( color, stencil );
 
+        /*
         // Check constraint
         double uMid = heights[ ( heights.size() - 1 ) / 2 ];
         int effTdown = stencil.effectiveTdown();
         if ( uMid < effTdown || uMid > effTdown + 1 )
           return;
+        */
 
         satisfiesConstraint_[ entity ] = 1;
 
@@ -165,7 +167,7 @@ namespace Dune
 
             double u = clamp( color[ stencil( i, t ) ], 0.0, 1.0 );
 
-            if ( u > lastU - TOL )
+            if ( u > lastU - TOL  && !( u > 1.0 - TOL ) )
               break;
 
             heights[ i ] += u;
@@ -182,7 +184,7 @@ namespace Dune
 
             double u = clamp( color[ stencil( i, t ) ], 0.0, 1.0 );
 
-            if ( u < lastU + TOL )
+            if ( u < lastU + TOL && !( u < TOL ) )
               u = 1.0;
 
             heights[ i ] += u;
