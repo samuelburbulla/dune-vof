@@ -68,7 +68,7 @@ namespace Dune
         curvature.communicate();
         satisfiesConstraint_.communicate();
 
-        for ( int i = 0; i < 3; ++i )
+        for ( int i = 0; i < 1; ++i )
         {
           CurvatureSet newCurvature ( color.gridView() );
 
@@ -77,7 +77,7 @@ namespace Dune
             if ( !flags.isMixed( entity ) )
               continue;
 
-            averageCurvature( entity, curvature, flags, newCurvature, (i > 0) );
+            averageCurvature( entity, curvature, flags, newCurvature, (i == 0) );
           }
           curvature = newCurvature;
         }
@@ -153,11 +153,18 @@ namespace Dune
       }
 
       template< class CurvatureSet, class Flags >
-      void averageCurvature( const Entity &entity, const CurvatureSet &curvature, const Flags &flags, CurvatureSet &newCurvature, bool ignore ) const
+      void averageCurvature( const Entity &entity, const CurvatureSet &curvature, const Flags &flags, CurvatureSet &newCurvature, bool firstTurn ) const
       {
+        newCurvature[ entity ] = 0;
         int n = 0;
 
-        if ( satisfiesConstraint_[ entity ] || ignore )
+        if ( firstTurn && satisfiesConstraint_[ entity ] )
+        {
+          newCurvature[ entity ] = curvature[ entity ];
+          return;
+        }
+
+        if ( satisfiesConstraint_[ entity ] )
         {
           newCurvature[ entity ] += curvature[ entity ];
           n++;
@@ -168,7 +175,7 @@ namespace Dune
           if ( !flags.isMixed( neighbor ) )
             continue;
 
-          if ( satisfiesConstraint_[ neighbor ] || ignore )
+          if ( satisfiesConstraint_[ neighbor ] )
           {
             newCurvature[ entity ] += curvature[ neighbor ];
             n++;
