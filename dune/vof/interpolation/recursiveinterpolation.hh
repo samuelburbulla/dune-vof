@@ -139,11 +139,11 @@ namespace Dune
         std::vector< LocalCoordinate > subCoordinates;
 
         Refinement &refinement = buildRefinement< dim, ctype >( embedding.type(), embedding.type() );
-        for( auto sit = refinement.vBegin( 1 ), send = refinement.vEnd( 1 ); sit != send; ++sit )
+        for( auto sit = refinement.vBegin( Dune::refinementLevels( 1 ) ), send = refinement.vEnd( Dune::refinementLevels( 1 ) ); sit != send; ++sit )
           subCoordinates.push_back( embedding.global( sit.coords() ) );
 
         double value = 0.0;
-        for( auto sit = refinement.eBegin( 1 ), send = refinement.eEnd( 1 ); sit != send; ++sit )
+        for( auto sit = refinement.eBegin( Dune::refinementLevels( 1 ) ), send = refinement.eEnd( Dune::refinementLevels( 1 ) ); sit != send; ++sit )
         {
           std::vector< LocalCoordinate > subCorners;
           for( int i : sit.vertexIndices() )
