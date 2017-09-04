@@ -60,7 +60,7 @@ namespace Dune
        * \param   flags           set of flags
        */
       template< class ColorFunction, class ReconstructionSet, class Flags >
-      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = false ) const
+      void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags, bool communicate = true ) const
       {
         reconstructions.clear();
         for ( const auto &entity : elements( color.gridView(), Partitions::interiorBorder ) )

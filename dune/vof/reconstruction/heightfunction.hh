@@ -67,7 +67,7 @@ namespace Dune
        */
       template< class ColorFunction, class ReconstructionSet, class Flags >
       void operator() ( const ColorFunction &color, ReconstructionSet &reconstructions, const Flags &flags,
-                        bool communicate = false ) const
+                        bool communicate = true ) const
       {
         initializer_( color, reconstructions, flags );
 

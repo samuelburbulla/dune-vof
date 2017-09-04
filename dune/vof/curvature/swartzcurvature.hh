@@ -38,7 +38,7 @@ namespace Dune
 
       template< class DF, class ReconstructionSet, class Flags, class CurvatureSet >
       void operator() ( const DF &color, const ReconstructionSet &reconstructions, const Flags &flags,
-                         CurvatureSet &curvatureSet, bool communicate = false ) const
+                         CurvatureSet &curvatureSet, bool communicate = true ) const
       {
         for ( const auto& entity : elements( gridView(), Partitions::interiorBorder ) )
         {

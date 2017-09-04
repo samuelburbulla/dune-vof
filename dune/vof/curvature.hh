@@ -13,7 +13,7 @@ namespace Dune
     template< class Stencils >
     static inline auto curvature ( Stencils& stencils ) -> SwartzCurvature< typename Stencils::GridView, Stencils >
     {
-      return SwartzCurvature< typename Stencils::GridView, Stencils >( stencils );
+      return CartesianHeightFunctionCurvature< typename Stencils::GridView, Stencils >( stencils );
     }
 
   } // namespace VoF

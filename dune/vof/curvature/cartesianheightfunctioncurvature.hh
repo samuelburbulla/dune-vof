@@ -52,7 +52,7 @@ namespace Dune
 
       template< class ColorFunction, class ReconstructionSet, class Flags, class CurvatureSet >
       void operator() ( const ColorFunction &color, const ReconstructionSet &reconstructions, const Flags &flags,
-                        CurvatureSet &curvature, bool communicate = false ) const
+                        CurvatureSet &curvature, bool communicate = true ) const
       {
         for ( const auto& entity : elements( color.gridView(), Partitions::interiorBorder ) )
         {

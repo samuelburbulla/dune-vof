@@ -32,7 +32,7 @@ namespace Dune
       {}
 
       template< class ColorFunction, class FlagSet >
-      void operator() ( const ColorFunction& color, FlagSet &flags, bool communicate = false ) const
+      void operator() ( const ColorFunction& color, FlagSet &flags, bool communicate = true ) const
       {
         // TODO
         //if ( communicate )
