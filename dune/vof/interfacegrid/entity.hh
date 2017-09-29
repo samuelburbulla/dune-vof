@@ -68,7 +68,7 @@ namespace Dune
 
       PartitionType partitionType () const { return hostElement().partitionType(); }
 
-      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube : GeometryType::none), mydimension ); }
+      GeometryType type () const { return mydimension < 2 ? GeometryTypes::cube( mydimension ) : GeometryTypes::none( mydimension ); }
 
       const DataSet &dataSet () const { assert( dataSet_ ); return *dataSet_; }
       const HostElement &hostElement () const { return hostElement_; }

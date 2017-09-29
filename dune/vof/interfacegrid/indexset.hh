@@ -126,7 +126,7 @@ namespace Dune
       {
         assert( (codim >= 0) && (codim <= dimension) );
         const int mydim = dimension - codim;
-        return {{ GeometryType( (mydim < 2 ? GeometryType::cube : GeometryType::none), mydim ) }};
+        return {{ mydim < 2 ? GeometryTypes::cube( mydim ) : GeometryTypes::none( mydim ) }};
       }
 
       template< class ColorFunction >
