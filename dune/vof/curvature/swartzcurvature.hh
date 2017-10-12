@@ -75,7 +75,6 @@ namespace Dune
         double weights = 0.0;
         auto interfaceEn = interface( entity, reconstructions );
         Coordinate centroidEn = interfaceEn.centroid();
-        Coordinate centerEn = entity.geometry().center();
 
         //second moment: mu = |I|^2/12
         double muEn = interfaceEn.volume();
@@ -88,7 +87,6 @@ namespace Dune
 
           auto interfaceNb1 = interface( neighbor1, reconstructions );
           Coordinate centroidNb1 = interfaceNb1.centroid();
-          Coordinate centerNb1 = neighbor1.geometry().center();
 
           Coordinate midwayNb1 = centroidNb1 + centroidEn;
           midwayNb1 *= 0.5;
@@ -115,7 +113,6 @@ namespace Dune
 
             auto interfaceNb2 = interface( neighbor2, reconstructions );
             Coordinate centroidNb2 = interfaceNb2.centroid();
-            Coordinate centerNb2 = neighbor2.geometry().center();
 
             Coordinate midwayNb2 = centroidNb2 + centroidEn;
             midwayNb2 *= 0.5;
