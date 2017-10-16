@@ -80,7 +80,7 @@ namespace Dune
         return Geometry( dataSet().geometry( Grid::getRealImplementation( inside_ ).hostElement(), indexInInside(), Dune::Dim< mydimension >() ) );
       }
 
-      GeometryType type () const { return GeometryType( (mydimension < 2 ? GeometryType::cube : GeometryType::none), mydimension ); }
+      GeometryType type () const { return mydimension < 2 ? GeometryTypes::cube( mydimension ) : GeometryTypes::none( mydimension ); }
 
       int indexInInside () const { return indexInInside_; }
       int indexInOutside () const { return -1; }

@@ -40,7 +40,7 @@ try {
 
   for ( int i = 0; i < numRuns; ++i )
   {
-    const auto& entity = grid.leafGridView().begin< 0 >();
+    const auto& entity = *grid.leafGridView().begin< 0 >();
     const auto& geoEn = entity.geometry();
     const auto& polytope = Dune::VoF::makePolytope( geoEn );
 

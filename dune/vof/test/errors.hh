@@ -12,8 +12,10 @@
 
 #include <dune/vof/colorfunction.hh>
 
+#include "average.hh"
 #include "../interpolation/interpolations.hh"
 #include "problems/rotatingcircle.hh"
+#include "problems/linearwall.hh"
 
 
 namespace Dune
@@ -92,7 +94,7 @@ namespace Dune
       return l1Error;
     }
 
-    
+
     template< class GridView, class RS, class Flags >
     double l1error ( const GridView &gridView, const RS &reconstructionSet, const Flags &flags, LinearWall< double, 1 > wall, const double time = 0.0, const int level = 0 )
     {
@@ -102,7 +104,7 @@ namespace Dune
       double l1Error = 0.0;
 
       ColorFunction< GridView > uhExact( gridView );
-      Dune::VoF::Average< LinearWall< double, 1 > > average ( wall );
+      Average< LinearWall< double, 1 > > average ( wall );
       average( uhExact, time );
 
       for ( auto entity : elements( gridView, Partitions::interior ) )

@@ -38,6 +38,8 @@ namespace Dune
       {
         typedef typename HostIdSet::IdType HostId;
 
+        IdType () : hostId_( 0 ), codimAndSubEntity_( 0 ) {};
+
         IdType ( HostId hostId, int codim, int subEntity )
           : hostId_( std::move( hostId ) ),
             codimAndSubEntity_( (static_cast< std::uint32_t >( codim ) << 24) | static_cast< std::uint32_t >( subEntity ) )

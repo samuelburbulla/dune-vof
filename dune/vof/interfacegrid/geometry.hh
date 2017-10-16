@@ -70,7 +70,7 @@ namespace Dune
         return abs( volume / ctype( 2 ) );
       }
 
-      GeometryType type () const noexcept { return GeometryType( GeometryType::none, mydimension ); }
+      GeometryType type () const noexcept { return GeometryTypes::none( mydimension ); }
 
       bool affine () const
       {

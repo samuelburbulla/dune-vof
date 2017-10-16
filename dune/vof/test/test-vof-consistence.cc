@@ -171,7 +171,7 @@ try {
   Dune::ParameterTreeParser::readINITree( "parameter", parameters );
   Dune::ParameterTreeParser::readOptions( argc, argv, parameters );
 
-  for ( double cfl = 0.25; cfl >= 0.25; cfl *= 0.5 )
+  for ( double cfl = 1; cfl >= 0.25; cfl *= 0.5 )
   {
     std::cout << std::endl << "CFL=" << cfl << std::endl;
 
@@ -185,24 +185,24 @@ try {
     gridPtr->loadBalance();
     GridType& grid = *gridPtr;
 
-    int level = parameters.get< int >( "grid.level" );
+    int level0 = parameters.get< int >( "grid.level" );
     const int refineStepsForHalf = Dune::DGFGridInfo< GridType >::refineStepsForHalf();
 
-    grid.globalRefine( refineStepsForHalf * level );
+    grid.globalRefine( refineStepsForHalf * level0 );
 
-    int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level;
+    int maxLevel = parameters.get<int>( "grid.runs", 1 ) + level0;
 
-    for ( ; level < maxLevel; ++level )
+    for ( int level = level0; level < maxLevel; ++level )
     {
       // start time integration
       auto error = algorithm( grid.leafGridView(), parameters, cfl );
 
 
       // print errors and eoc
-      if ( level > 0 )
+      if ( lastError > 1e-12 )
       {
         const double eoc = ( log( lastError ) - log( error ) ) / M_LN2;
-
+        assert( eoc > 1.0 );
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
       }
 

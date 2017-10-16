@@ -77,7 +77,11 @@ double algorithm ( const GridView& gridView, const Dune::ParameterTree &paramete
   // build domain references for each cell
   Stencils stencils( gridView );
 
+#if GRIDDIM == 2
   using CurvatureOperator = Dune::VoF::SwartzCurvature< GridView, Stencils >;
+#else
+  using CurvatureOperator = Dune::VoF::CartesianHeightFunctionCurvature< GridView, Stencils >;
+#endif
   CurvatureOperator curvatureOperator ( stencils );
   CurvatureSet curvatureSet( gridView );
   ColorFunction curvatureError( gridView );
@@ -160,7 +164,7 @@ try {
 
   grid.globalRefine( refineStepsForHalf * level );
 
-  int maxLevel = 10;
+  int maxLevel = 1;
 
   std::ofstream errorsFile;
   errorsFile.open( "errors" );
@@ -184,7 +188,7 @@ try {
       if ( level > level0 )
       {
         std::cout << "  EOC " << level << ": " << eoc << std::endl;
-        //assert( eoc > 1.0 );
+        assert( eoc > 1.0 );
       }
 
       std::cout << "Err " << level << ": " << L1Error << std::endl;
