@@ -1,5 +1,5 @@
 Module: dune-vof
-Version: 2017.09
+Version: 2.6
 Maintainer: sambu@posteo.de
-Depends: dune-grid (>= 2.6) dune-geometry (>= 2.6) dune-common (>= 2.6) dune-spgrid (>= 2.6)
-Suggests: dune-fem (>= 2.6) dune-alugrid dune-fempy dune-corepy
+Depends: dune-grid (>= 2.6) dune-spgrid (>= 2.6)
+Suggests: dune-fem (>= 2.6) dune-alugrid (>= 2.6) dune-fempy (>= 2.6) dune-python (>= 2.6)
