@@ -73,6 +73,10 @@ namespace Dune
         : dataSet_( colorFunction, std::forward< Args >( args )... )
       {}
 
+      InterfaceGridIndexSet ( const This &other )
+        : dataSet_( other.dataSet_ )
+      {}
+
       InterfaceGridIndexSet ( This &&other )
         : dataSet_( std::move( other.dataSet_ ) )
       {}
