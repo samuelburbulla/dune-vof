@@ -1,6 +1,9 @@
 #ifndef DUNE_VOF_EOC_HH
 #define DUNE_VOF_EOC_HH
 
+#include <cmath>
+
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 

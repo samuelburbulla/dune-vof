@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_GEOMETRY_FACE_HH
-#define DUNE_VOF_GEOMETRY_FACE_HH
+#ifndef DUNE_VOF_GEOMETRY_3D_FACE_HH
+#define DUNE_VOF_GEOMETRY_3D_FACE_HH
 
 /* c++ includes */
 #include <cmath>
@@ -121,4 +121,4 @@ namespace Dune {
 
 } // namespace Dune
 
-#endif // DUNE_VOF_GEOMETRY_FACE_HH
+#endif // DUNE_VOF_GEOMETRY_3D_FACE_HH

@@ -6,6 +6,7 @@
 
 //- local includes
 #include <dune/vof/geometry/utility.hh>
+#include <dune/vof/geometry/2d/polygon.hh>
 
 namespace Dune
 {

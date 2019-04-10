@@ -5,7 +5,8 @@
 #include <cmath>
 #include <utility>
 
-//- dune-grid includes
+#include <dune/grid/common/rangegenerators.hh>
+
 #include <dune/vof/geometry/intersect.hh>
 #include <dune/vof/geometry/utility.hh>
 

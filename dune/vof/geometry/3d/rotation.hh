@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_GEOMETRY_ROTATION_HH
-#define DUNE_VOF_GEOMETRY_ROTATION_HH
+#ifndef DUNE_VOF_GEOMETRY_3D_ROTATION_HH
+#define DUNE_VOF_GEOMETRY_3D_ROTATION_HH
 
 /* dune includes */
 #include <dune/common/fvector.hh>
@@ -56,4 +56,4 @@ namespace Dune
 
 } // namespace Dune
 
-#endif // #ifndef DUNE_VOF_GEOMETRY_ROTATION_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_3D_ROTATION_HH

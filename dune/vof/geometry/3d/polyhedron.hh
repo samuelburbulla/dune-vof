@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_GEOMETRY_POLYHEDRON_HH
-#define DUNE_VOF_GEOMETRY_POLYHEDRON_HH
+#ifndef DUNE_VOF_GEOMETRY_3D_POLYHEDRON_HH
+#define DUNE_VOF_GEOMETRY_3D_POLYHEDRON_HH
 
 /* c++ includes */
 #include <array>
@@ -450,4 +450,4 @@ namespace Dune {
 
 } // end of namespace Dune
 
-#endif // #ifndef DUNE_VOF_GEOMETRY_POLYHEDRON_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_3D_POLYHEDRON_HH

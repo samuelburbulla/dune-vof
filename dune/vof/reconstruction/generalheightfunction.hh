@@ -10,6 +10,8 @@
 
 #include <dune/common/fmatrix.hh>
 
+#include <dune/grid/common/rangegenerators.hh>
+
 #include <dune/vof/geometry/algorithm.hh>
 #include <dune/vof/geometry/polytope.hh>
 #include <dune/vof/geometry/2d/intersect.hh>

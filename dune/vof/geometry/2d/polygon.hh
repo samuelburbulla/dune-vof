@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_GEOMETRY_POLYGON_HH
-#define DUNE_VOF_GEOMETRY_POLYGON_HH
+#ifndef DUNE_VOF_GEOMETRY_2D_POLYGON_HH
+#define DUNE_VOF_GEOMETRY_2D_POLYGON_HH
 
 #include <cassert>
 
@@ -267,4 +267,4 @@ namespace Dune {
 
 } // namespace Dune
 
-#endif // #ifndef DUNE_VOF_GEOMETRY_POLYGON_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_2D_POLYGON_HH

@@ -1,5 +1,5 @@
-#ifndef DUNE_VOF_GEOMETRY_POINT_HH
-#define DUNE_VOF_GEOMETRY_POINT_HH
+#ifndef DUNE_VOF_GEOMETRY_1D_POINT_HH
+#define DUNE_VOF_GEOMETRY_1D_POINT_HH
 
 #include <cassert>
 #include <utility>
@@ -79,4 +79,4 @@ namespace Dune {
 
 } // namespace Dune
 
-#endif // #ifndef DUNE_VOF_GEOMETRY_POINT_HH
+#endif // #ifndef DUNE_VOF_GEOMETRY_1D_POINT_HH

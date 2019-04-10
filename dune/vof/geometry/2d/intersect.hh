@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <dune/vof/geometry/halfspace.hh>
+#include <dune/vof/geometry/1d/point.hh>
 #include <dune/vof/geometry/2d/polygon.hh>
 
 namespace Dune {
