@@ -1,6 +1,7 @@
 #ifndef DUNE_VOF_HEIGHTFUNCTIONSTENCILS_HH
 #define DUNE_VOF_HEIGHTFUNCTIONSTENCILS_HH
 
+#include <dune/common/power.hh>
 #include <dune/grid/spgrid/entity.hh>
 
 namespace Dune
@@ -30,7 +31,7 @@ namespace Dune
 
       using Orientation = std::tuple< int, int >;
 
-      static constexpr int noc = std::pow( 3, dim-1 );
+      static constexpr int noc = StaticPower< 3, dim-1 >::power;
 
     public:
       explicit HeightFunctionStencil ( const GridView &gridView, const EntityInfo &entityInfo, const Orientation &orientation, const double tup = 3 )
